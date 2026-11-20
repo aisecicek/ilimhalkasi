@@ -1,0 +1,550 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""HTTP smoke tests for the İlim Halkası API.
+
+The suite is completely self-contained: it copies the application sources and
+a *copy* of the database into a temporary directory, starts the copied server
+on a free local port and talks to it over HTTP.  The live ``ilimhalkasi.db``
+and the live server on port 8765 are never touched.
+
+Run from the project root::
+
+    python -m unittest discover -s tests -v
+"""
+
+from __future__ import annotations
+
+import http.cookiejar
+import json
+import os
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+import urllib.error
+import urllib.request
+import uuid
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Only these files are copied; nothing in the project directory is modified.
+SOURCE_FILES = (
+    "server.py",
+    "scholars_data.py",
+    "index.html",
+    "app.js",
+    "i18n.js",
+    "styles.css",
+    "favicon.svg",
+    "logo.svg",
+)
+DB_FILENAME = "ilimhalkasi.db"
+
+ADMIN_EMAIL = "admin@ilimhalkasi.local"
+ADMIN_PASSWORD = "k9Mq-c5gipJRP41-"  # documented in README.md
+REQUEST_TIMEOUT = 5
+STARTUP_TIMEOUT = 20
+
+
+def _free_port() -> int:
+    """Ask the OS for an unused localhost port (avoids clashing with 8765)."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
+def _new_opener() -> tuple[urllib.request.OpenerDirector, http.cookiejar.CookieJar]:
+    jar = http.cookiejar.CookieJar()
+    return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar)), jar
+
+
+def _request(
+    opener: urllib.request.OpenerDirector,
+    method: str,
+    path: str,
+    payload: dict | None = None,
+    timeout: int = REQUEST_TIMEOUT,
+) -> tuple[int, dict]:
+    """Return (http_status, parsed_json). HTTP error bodies are parsed too."""
+    data = None
+    headers: dict[str, str] = {}
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    request = urllib.request.Request(
+        "http://127.0.0.1:{}{}".format(_CURRENT_PORT, path),
+        data=data,
+        headers=headers,
+        method=method,
+    )
+    try:
+        with opener.open(request, timeout=timeout) as response:
+            status = int(response.status)
+            raw = response.read()
+    except urllib.error.HTTPError as exc:
+        status = int(exc.code)
+        try:
+            raw = exc.read()
+        finally:
+            exc.close()
+    if not raw:
+        return status, {}
+    try:
+        body = json.loads(raw.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        body = {}
+    return status, body if isinstance(body, dict) else {}
+
+
+# Set by the test class before any request is made.  Keeping the base URL in a
+# module-level variable keeps the request helper small and avoids passing the
+# port through every single call.
+_CURRENT_PORT = 0
+
+
+def _marker(prefix: str) -> str:
+    return "smoke-{}-{}".format(prefix, uuid.uuid4().hex[:10])
+
+
+class SmokeAPITests(unittest.TestCase):
+    """End-to-end checks against an isolated, temporary server instance."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        global _CURRENT_PORT
+
+        cls._tmp = tempfile.TemporaryDirectory(prefix="ilimhalkasi-smoke-")
+        cls.tmp_dir = Path(cls._tmp.name)
+        try:
+            for filename in SOURCE_FILES:
+                source = PROJECT_ROOT / filename
+                if not source.is_file():
+                    raise RuntimeError("Missing source file required by smoke tests: " + filename)
+                shutil.copy2(source, cls.tmp_dir / filename)
+            shutil.copy2(PROJECT_ROOT / DB_FILENAME, cls.tmp_dir / DB_FILENAME)
+
+            cls.port = _free_port()
+            _CURRENT_PORT = cls.port
+            cls.base_url = "http://127.0.0.1:{}".format(cls.port)
+
+            server_path = cls.tmp_dir / "server.py"
+            source_text = server_path.read_text(encoding="utf-8")
+            patched, count = re.subn(
+                r"(?m)^PORT(?:\s*:\s*int)?\s*=\s*\d+\s*$",
+                "PORT = {}".format(cls.port),
+                source_text,
+                count=1,
+            )
+            if count != 1:
+                raise RuntimeError("Could not rewrite PORT in the copied server.py")
+            # DB_PATH is `BASE / "ilimhalkasi.db"` and BASE is the copied file's
+            # directory, so the server now necessarily uses the copied DB.
+            server_path.write_text(patched, encoding="utf-8")
+
+            env = os.environ.copy()
+            env["PYTHONUNBUFFERED"] = "1"
+            env["IH_ADMIN_PASSWORD"] = ADMIN_PASSWORD
+            # Deterministic password-reset behaviour: always use the local
+            # outbox inside the temporary directory, never a real SMTP server.
+            for name in ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "SMTP_USE_TLS"):
+                env.pop(name, None)
+            # Enable the development reset link explicitly.  This makes the
+            # admin-exclusion assertion meaningful: a normal user DOES get a
+            # dev_link, while the admin account must never receive one.
+            env["ILIMHALKASI_DEV_RESET_LINK"] = "1"
+
+            cls.log_handle = (cls.tmp_dir / "server.log").open("wb")
+            cls.proc = subprocess.Popen(
+                [sys.executable, "server.py"],
+                cwd=str(cls.tmp_dir),
+                stdout=cls.log_handle,
+                stderr=subprocess.STDOUT,
+                env=env,
+            )
+            cls._wait_until_ready()
+
+            cls.admin_opener, cls.admin_jar = _new_opener()
+            status, body = _request(
+                cls.admin_opener,
+                "POST",
+                "/api/login",
+                {"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+            )
+            if status != 200 or not body.get("user"):
+                raise RuntimeError("Admin login failed during test setup: {} {}".format(status, body))
+
+            cls.anon_opener, _ = _new_opener()
+            cls._book_id = None
+        except Exception:
+            cls._stop_resources()
+            raise
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._stop_resources()
+
+    @classmethod
+    def _stop_resources(cls) -> None:
+        proc = getattr(cls, "proc", None)
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=5)
+        handle = getattr(cls, "log_handle", None)
+        if handle is not None and not handle.closed:
+            handle.close()
+        tmp = getattr(cls, "_tmp", None)
+        if tmp is not None:
+            tmp.cleanup()
+
+    @classmethod
+    def _log_tail(cls) -> str:
+        path = cls.tmp_dir / "server.log"
+        try:
+            return path.read_text(encoding="utf-8", errors="replace")[-2000:]
+        except OSError:
+            return ""
+
+    @classmethod
+    def _wait_until_ready(cls) -> None:
+        deadline = time.monotonic() + STARTUP_TIMEOUT
+        last_error = None
+        while time.monotonic() < deadline:
+            if cls.proc.poll() is not None:
+                raise RuntimeError(
+                    "Test server exited during startup.\n" + cls._log_tail()
+                )
+            try:
+                with urllib.request.urlopen(cls.base_url + "/api/me", timeout=1) as response:
+                    response.read()
+                return
+            except urllib.error.HTTPError:
+                # Any HTTP response means the server is listening.
+                return
+            except urllib.error.URLError as exc:
+                last_error = exc
+                time.sleep(0.1)
+        raise RuntimeError(
+            "Test server did not start within {}s: {}\n{}".format(
+                STARTUP_TIMEOUT, last_error, cls._log_tail()
+            )
+        )
+
+    # ---- small helpers -------------------------------------------------
+
+    def get(self, path: str, opener=None) -> tuple[int, dict]:
+        return _request(opener or self.admin_opener, "GET", path)
+
+    def post(self, path: str, payload: dict | None = None, opener=None) -> tuple[int, dict]:
+        return _request(opener or self.admin_opener, "POST", path, payload if payload is not None else {})
+
+    def bootstrap(self, opener=None) -> dict:
+        status, body = self.get("/api/bootstrap", opener=opener)
+        self.assertEqual(status, 200, "bootstrap failed: {}".format(body))
+        return body
+
+    def book_id(self) -> int:
+        if self.__class__._book_id is None:
+            status, body = self.get("/api/books?limit=1")
+            self.assertEqual(status, 200, "book catalogue failed: {}".format(body))
+            books = body.get("books") or []
+            self.assertTrue(books, "test catalogue contains no books")
+            self.__class__._book_id = int(books[0]["id"])
+        return self.__class__._book_id
+
+    def register_user(self) -> tuple[urllib.request.OpenerDirector, dict]:
+        suffix = uuid.uuid4().hex[:10]
+        opener, _ = _new_opener()
+        status, body = self.post(
+            "/api/register",
+            {
+                "email": "smoke.{}@example.test".format(suffix),
+                "username": "smk{}".format(suffix)[:20],
+                "display_name": "Smoke {}".format(suffix[:5]),
+                "password": "SmokeTest-{}".format(suffix),
+            },
+            opener=opener,
+        )
+        self.assertEqual(status, 200, "registration failed: {}".format(body))
+        self.assertTrue(body.get("user"))
+        return opener, body["user"]
+
+    # ---- tests ---------------------------------------------------------
+
+    def test_public_health_and_bootstrap_keys(self) -> None:
+        """Public endpoints respond, and an authenticated bootstrap has the core keys."""
+        status, _ = self.get("/", opener=self.anon_opener)
+        self.assertEqual(status, 200, "static index should be publicly served")
+
+        status, body = self.get("/api/me", opener=self.anon_opener)
+        self.assertEqual(status, 200)
+        self.assertIn("user", body)
+
+        data = self.bootstrap()
+        for key in ("user", "books", "posts", "shelf", "lists", "stats"):
+            self.assertIn(key, data, "bootstrap is missing key: " + key)
+        self.assertEqual(data["user"].get("email"), ADMIN_EMAIL)
+
+    def test_admin_login_succeeds(self) -> None:
+        opener, jar = _new_opener()
+        status, body = self.post(
+            "/api/login", {"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}, opener=opener
+        )
+        self.assertEqual(status, 200, "admin login failed: {}".format(body))
+        self.assertTrue(body.get("user"))
+        self.assertTrue(body["user"].get("is_admin"))
+        self.assertEqual(body["user"].get("email"), ADMIN_EMAIL)
+        self.assertTrue(len(jar) > 0, "login should set a session cookie")
+
+    def test_unauthenticated_bootstrap_has_no_user(self) -> None:
+        status, body = self.get("/api/bootstrap", opener=self.anon_opener)
+        # The server may expose bootstrap publicly (200) or require auth (401);
+        # in neither case may an anonymous caller receive user/admin data.
+        self.assertIn(status, (200, 401), "unexpected bootstrap status: {}".format(body))
+        self.assertIsNone(body.get("user"))
+        self.assertNotIn("admin", body)
+
+    def test_shelf_accepts_valid_book(self) -> None:
+        book_id = self.book_id()
+        status, body = self.post("/api/shelf", {"book_id": book_id, "status": "reading", "page": 1})
+        self.assertEqual(status, 200, "valid shelf update failed: {}".format(body))
+        self.assertTrue(body.get("ok"))
+
+        shelf = self.bootstrap().get("shelf") or []
+        self.assertTrue(any(int(entry.get("book_id", 0)) == book_id for entry in shelf))
+
+    def test_shelf_rejects_invalid_page(self) -> None:
+        status, body = self.post(
+            "/api/shelf", {"book_id": self.book_id(), "status": "reading", "page": "abc"}
+        )
+        self.assertEqual(status, 400, "non-numeric page should be a 400: {}".format(body))
+        self.assertIn("error", body)
+
+    def test_lists_create_dedupe_and_add_book(self) -> None:
+        name = _marker("list")
+        book_id = self.book_id()
+
+        status, body = self.post("/api/lists", {"name": name})
+        self.assertEqual(status, 200, "list creation failed: {}".format(body))
+        created = body.get("list") or {}
+        self.assertEqual(created.get("name"), name)
+        self.assertTrue(created.get("id"))
+
+        status, duplicate = self.post("/api/lists", {"name": name})
+        self.assertEqual(status, 200, "duplicate list request failed: {}".format(duplicate))
+        self.assertEqual(
+            (duplicate.get("list") or {}).get("id"),
+            created.get("id"),
+            "duplicate list name must return the existing list",
+        )
+
+        status, added = self.post("/api/lists/add", {"list_id": created["id"], "book_id": book_id})
+        self.assertEqual(status, 200, "adding a book to a list failed: {}".format(added))
+        self.assertTrue(added.get("ok"))
+        self.assertEqual(added.get("list_id"), created["id"])
+
+        lists = [item for item in (self.bootstrap().get("lists") or []) if item.get("name") == name]
+        self.assertEqual(len(lists), 1, "duplicate name created a second list")
+        self.assertTrue(
+            any(int(book.get("id", 0)) == book_id for book in lists[0].get("books") or []),
+            "added book is missing from the list in bootstrap",
+        )
+
+    def test_posts_recent_like_and_comment(self) -> None:
+        marker = _marker("post")
+        status, body = self.post(
+            "/api/posts",
+            {"text": marker, "book": "Smoke Test Book", "writer": "Tester", "type": "quote"},
+        )
+        self.assertEqual(status, 201, "post creation failed: {}".format(body))
+        post = body.get("post") or {}
+        post_id = post.get("id")
+        self.assertTrue(post_id)
+        self.assertEqual(post.get("text"), marker)
+
+        status, recent = self.get("/api/posts/recent?after=0")
+        self.assertEqual(status, 200, "recent posts failed: {}".format(recent))
+        self.assertTrue(
+            any(int(item.get("id", 0)) == post_id for item in recent.get("posts") or []),
+            "newly created post is absent from /api/posts/recent",
+        )
+
+        status, like = self.post("/api/posts/{}/like".format(post_id))
+        self.assertEqual(status, 200, "post like failed: {}".format(like))
+        self.assertIn("active", like)
+        self.assertIn("count", like)
+
+        comment_text = _marker("comment")
+        status, comment_body = self.post(
+            "/api/posts/{}/comments".format(post_id), {"text": comment_text}
+        )
+        self.assertEqual(status, 201, "comment creation failed: {}".format(comment_body))
+        comment = comment_body.get("comment") or {}
+        self.assertTrue(comment.get("id"))
+        self.assertEqual(comment.get("text"), comment_text)
+
+        status, comment_like = self.post("/api/comments/{}/like".format(comment["id"]))
+        self.assertEqual(status, 200, "comment like failed: {}".format(comment_like))
+        self.assertIn("active", comment_like)
+        self.assertIn("count", comment_like)
+
+    def test_invalid_targets_return_clean_404(self) -> None:
+        cases = (
+            ("/api/posts/999999/like", {}),
+            ("/api/comments/999999/like", {}),
+            ("/api/debates/999999/answers", {"text": _marker("answer")}),
+            ("/api/follow/999999", {}),
+        )
+        for path, payload in cases:
+            with self.subTest(path=path):
+                try:
+                    status, body = self.post(path, payload)
+                except urllib.error.URLError as exc:
+                    self.fail("{} dropped the connection: {}".format(path, exc))
+                self.assertEqual(status, 404, "{} returned {} ({})".format(path, status, body))
+                self.assertIn("error", body, "{} did not return JSON error: {}".format(path, body))
+
+    def test_forgot_password_excludes_admin(self) -> None:
+        status, body = self.post("/api/forgot-password", {"email": ADMIN_EMAIL}, opener=self.anon_opener)
+        self.assertEqual(status, 200, "forgot-password failed: {}".format(body))
+        self.assertTrue(body.get("ok"))
+        self.assertNotIn("dev_link", body, "admin/system accounts must not get a reset link")
+
+        # Positive control: an ordinary user still gets the local dev link.
+        normal_opener, user = self.register_user()
+        status, normal_body = self.post(
+            "/api/forgot-password", {"email": user["email"]}, opener=normal_opener
+        )
+        self.assertEqual(status, 200)
+        self.assertIn("dev_link", normal_body, "normal users should still get a reset link")
+
+    def test_non_admin_cannot_use_admin_endpoints(self) -> None:
+        opener, user = self.register_user()
+        self.assertFalse(user.get("is_admin"))
+
+        data = self.bootstrap(opener=opener)
+        self.assertNotIn("admin", data, "non-admin bootstrap must not contain admin payload")
+
+        for path, payload in (
+            ("/api/admin/announcements", {"title": "nope", "body": "nope"}),
+            ("/api/admin/books/1/moderate", {"hidden": 1, "reason": "nope"}),
+            ("/api/admin/users/1/block", {}),
+        ):
+            with self.subTest(path=path):
+                status, body = self.post(path, payload, opener=opener)
+                self.assertEqual(status, 403, "{} returned {} ({})".format(path, status, body))
+                self.assertIn("error", body)
+
+    def test_follow_and_mention_create_notifications(self) -> None:
+        """Follows and @mentions appear in the recipient's bootstrap payload."""
+        opener_a, user_a = self.register_user()
+        opener_b, user_b = self.register_user()
+
+        status, body = self.post(
+            "/api/follow", {"user_id": user_b["id"], "action": "follow"}, opener=opener_a
+        )
+        self.assertEqual(status, 200, "follow failed: {}".format(body))
+        self.assertTrue(body.get("following"))
+
+        marker = _marker("mention")
+        status, body = self.post(
+            "/api/posts",
+            {
+                "text": "{} @{}".format(marker, user_b["username"]),
+                "book": "Smoke Test Book",
+                "type": "quote",
+            },
+            opener=opener_a,
+        )
+        self.assertEqual(status, 201, "post with mention failed: {}".format(body))
+
+        notes = self.bootstrap(opener=opener_b).get("notifications") or []
+        kinds = {item.get("kind") for item in notes}
+        self.assertIn("follow", kinds, "follow notification missing: {}".format(notes))
+        self.assertIn("mention", kinds, "mention notification missing: {}".format(notes))
+
+        status, endpoint_body = self.get("/api/notifications", opener=opener_b)
+        self.assertEqual(status, 200, "notifications endpoint failed: {}".format(endpoint_body))
+        self.assertTrue(
+            any(item.get("kind") == "mention" for item in endpoint_body.get("notifications") or []),
+            "notifications endpoint is missing the mention",
+        )
+
+        mention = next(item for item in notes if item.get("kind") == "mention")
+        self.assertEqual((mention.get("actor") or {}).get("id"), user_a["id"])
+        self.assertIn(marker, mention.get("text", ""))
+
+    def test_circle_post_creates_notification_for_members(self) -> None:
+        """A post inside a halka notifies the other members."""
+        opener_a, _ = self.register_user()
+        opener_b, _ = self.register_user()
+
+        name = _marker("halka")
+        status, body = self.post(
+            "/api/groups/halka", {"name": name, "description": "Smoke circle"}, opener=opener_a
+        )
+        self.assertEqual(status, 201, "halka creation failed: {}".format(body))
+        group_id = body.get("id")
+        self.assertTrue(group_id)
+
+        status, body = self.post(
+            "/api/groups/{}/join".format(group_id), opener=opener_b
+        )
+        self.assertEqual(status, 200, "joining halka failed: {}".format(body))
+        self.assertTrue(body.get("ok"))
+
+        marker = _marker("circle-post")
+        status, body = self.post(
+            "/api/posts",
+            {"text": marker, "book": "Smoke Test Book", "group_id": group_id},
+            opener=opener_a,
+        )
+        self.assertEqual(status, 201, "circle post failed: {}".format(body))
+
+        notes = self.bootstrap(opener=opener_b).get("notifications") or []
+        circle_note = next((item for item in notes if item.get("kind") == "circle_post"), None)
+        self.assertIsNotNone(circle_note, "circle post notification missing: {}".format(notes))
+        self.assertEqual((circle_note.get("group") or {}).get("id"), group_id)
+        self.assertIn(marker, circle_note.get("text", ""))
+
+    def test_direct_message_creates_notification(self) -> None:
+        """A message in a small chat notifies the other participant."""
+        opener_a, user_a = self.register_user()
+        opener_b, user_b = self.register_user()
+
+        for actor, target in ((opener_a, user_b), (opener_b, user_a)):
+            status, body = self.post(
+                "/api/follow", {"user_id": target["id"], "action": "follow"}, opener=actor
+            )
+            self.assertEqual(status, 200, "mutual follow failed: {}".format(body))
+
+        status, body = self.post(
+            "/api/groups/direct", {"username": user_b["username"]}, opener=opener_a
+        )
+        self.assertEqual(status, 201, "direct chat creation failed: {}".format(body))
+        group_id = body.get("id")
+        self.assertTrue(group_id)
+
+        marker = _marker("dm")
+        status, body = self.post(
+            "/api/groups/{}/messages".format(group_id), {"text": marker}, opener=opener_a
+        )
+        self.assertEqual(status, 201, "group message failed: {}".format(body))
+
+        notes = self.bootstrap(opener=opener_b).get("notifications") or []
+        message_note = next((item for item in notes if item.get("kind") == "group_message"), None)
+        self.assertIsNotNone(message_note, "group message notification missing: {}".format(notes))
+        self.assertEqual((message_note.get("group") or {}).get("id"), group_id)
+        self.assertIn(marker, message_note.get("text", ""))
+
+
+if __name__ == "__main__":
+    unittest.main()

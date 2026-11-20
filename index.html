@@ -1,0 +1,1509 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="İlim Halkası — ilim halkaları, kitaplar ve hatıratlar için sakin bir okuma dünyası." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <title>İlim Halkası · Birlikte ilim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600&family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- SOL MENÜ -->
+    <aside class="sidebar" aria-label="Ana menü">
+      <div class="brand">
+        <a class="brand-link" href="#home" data-view="home" title="İlim Halkası">
+          <span class="brand-mark" data-emblem aria-hidden="true"></span>
+          <span class="brand-text">
+            <strong class="brand-name"><span>İlim</span><span>Halkası</span></strong>
+            <small>birlikte ilim</small>
+          </span>
+        </a>
+        <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Menüyü daralt veya genişlet" title="Menüyü aç / kapat"><i data-lucide="panel-left-close"></i></button>
+      </div>
+
+      <nav class="side-nav">
+        <p class="nav-label nav-label--long">ANA AKIŞ</p>
+        <button class="nav-item is-active" data-view="home" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="house"></i></span> Ana Sayfa
+        </button>
+        <button class="nav-item" data-view="library" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="library"></i></span> Kütüphane
+        </button>
+        <button class="nav-item" data-view="discover" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="compass"></i></span> Keşfet
+        </button>
+        <button class="nav-item" data-view="users" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="users"></i></span> Kullanıcılar
+        </button>
+        <button class="nav-item" data-view="authors" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="feather"></i></span> Yazarlar
+        </button>
+        <button class="nav-item" data-view="lists" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="list"></i></span> Listeler / Seçkiler
+        </button>
+
+        <p class="nav-label nav-label--spaced nav-label--long">SOSYAL VE KİŞİSEL ALAN</p>
+        <button class="nav-item" data-view="circles" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="users-round"></i></span> İlim Halkaları
+        </button>
+        <button class="nav-item" data-view="journal" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="pen-line"></i></span> Hatıratım
+        </button>
+        <button class="nav-item" data-view="messages" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="message-circle"></i></span> Mesajlar
+        </button>
+
+        <p class="nav-label nav-label--spaced nav-label--long">HESABIM VE YÖNETİM</p>
+        <button class="nav-item" data-view="profile" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="user-round"></i></span> Profilim
+        </button>
+        <button class="nav-item" data-view="stats" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="chart-no-axes-column-increasing"></i></span> İstatistiklerim
+        </button>
+        <button class="nav-item" data-view="settings" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="settings-2"></i></span> Ayarlar
+        </button>
+        <button class="nav-item" data-view="about" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="info"></i></span> Biz Kimiz?
+        </button>
+        <button class="nav-item" data-view="support" type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="mail"></i></span> Şikayet & Talepler
+        </button>
+        <button class="nav-item nav-item--admin" data-view="admin" data-admin-only hidden type="button">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="shield"></i></span> Yönetim Paneli
+        </button>
+        <button class="nav-item nav-item--logout" type="button" id="logout-btn">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="log-out"></i></span> Çıkış Yap
+        </button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <button class="btn btn-gold btn-block" type="button" id="new-circle-btn">+ Yeni Halka Kur</button>
+        <div class="side-user" data-view="profile" title="Profilimi aç" role="button" tabindex="0">
+          <span class="avatar avatar--olive" id="side-avatar">M</span>
+          <span class="side-user-info">
+            <strong id="side-name">—</strong>
+            <small id="side-handle">@—</small>
+          </span>
+          <span class="online-dot" title="Çevrimiçi"></span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ORTA SÜTUN -->
+    <div class="main-column">
+      <header class="topbar">
+        <button class="top-brand" id="top-brand" type="button" data-view="home" aria-label="İlim Halkası — ana sayfa" title="Ana sayfa"><span><b>İlim</b> Halkası</span></button>
+        <div class="search-wrap">
+          <label class="searchbox">
+            <i data-lucide="search" aria-hidden="true"></i>
+            <input id="global-search" type="search" placeholder="Kitap, kullanıcı, yazar veya halka ara..." aria-label="Ara" autocomplete="off" />
+          </label>
+          <div class="global-search-results" id="global-search-results" hidden></div>
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn" type="button" id="notifications-btn" data-i18n-aria="Duyurular" aria-label="Duyurular" aria-expanded="false" aria-controls="notifications-panel">
+            <i data-lucide="bell" aria-hidden="true"></i><i class="badge-dot"></i>
+          </button>
+          <button class="icon-btn" type="button" data-view="support" data-i18n-aria="Şikayet ve talepler" aria-label="Şikayet ve talepler"><i data-lucide="mail" aria-hidden="true"></i></button>
+          <button class="icon-btn top-logout" id="top-logout-btn" type="button" data-i18n-aria="Çıkış Yap" data-i18n-title="Çıkış Yap" aria-label="Çıkış Yap" title="Çıkış Yap"><i data-lucide="log-out" aria-hidden="true"></i></button>
+          <span class="top-divider"></span>
+          <button class="avatar-button" type="button" data-view="profile" data-i18n-aria="Profilime git" aria-label="Profilime git">
+            <span class="avatar avatar--small avatar--copper" id="top-avatar">M</span>
+          </button>
+        </div>
+
+        <div class="notifications-panel" id="notifications-panel" hidden>
+          <div class="notifications-head">
+            <strong data-i18n="Bildirim merkezi">Bildirim merkezi</strong>
+            <button class="icon-btn icon-btn--tiny" type="button" id="notifications-mark-read" data-i18n-title="Tümünü okundu işaretle" title="Tümünü okundu işaretle" aria-label="Tümünü okundu işaretle">✓</button>
+          </div>
+          <div class="notifications-list" id="notifications-list"></div>
+          <div class="notifications-foot">
+            <button class="text-btn" type="button" id="notifications-close" data-i18n="Kapat">Kapat</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+
+        <!-- ============ ANA SAYFA ============ -->
+        <section class="view is-active" id="view-home" aria-labelledby="greeting-title">
+          <div class="greeting">
+            <div class="greeting-copy">
+              <p class="besmele" lang="ar" dir="rtl">بسم الله الرحمن الرحيم</p>
+              <p class="eyebrow" id="greeting-date">BUGÜN</p>
+              <h1 id="greeting-title">Selamün Aleyküm</h1>
+              <p class="greeting-sub">Rabbim, ilmimi ve anlayışımı artır. (Tâhâ, 114)</p>
+              <div class="greeting-stats" id="greeting-stats"></div>
+              <div class="greeting-actions">
+                <button class="btn btn-outline btn-sm" type="button" id="share-quote-btn"><i data-lucide="share-2"></i> <span data-i18n="Paylaşım yap">Paylaşım yap</span></button>
+                <button class="btn btn-ghost btn-sm" type="button" id="theme-cycle-btn" title="Temayı değiştir"><i data-lucide="palette"></i> <span id="theme-cycle-label">Medine</span></button>
+                <button class="text-btn" type="button" data-view="profile">Profilime git →</button>
+              </div>
+            </div>
+            <div class="greeting-arch" data-watermark aria-hidden="true"></div>
+          </div>
+
+          <div class="announcement-strip" id="home-announcements" aria-live="polite"></div>
+
+          <section class="home-books" aria-labelledby="home-books-title">
+            <div class="page-head page-head--small">
+              <div>
+                <h2 id="home-books-title">Önerilenler</h2>
+                <p>İslami ilimler ve dünya klasikleri; birlikte okumak için iyi bir başlangıç.</p>
+              </div>
+              <button class="text-btn" type="button" data-view="library">Tüm kitaplar →</button>
+            </div>
+            <div class="home-book-columns">
+              <div class="home-book-group">
+                <h3><i data-lucide="book-open"></i> İslami Kitaplar</h3>
+                <div class="home-book-grid" id="home-islamic-books"></div>
+              </div>
+              <div class="home-book-group">
+                <h3><i data-lucide="globe"></i> Dünya Klasikleri</h3>
+                <div class="home-book-grid" id="home-classic-books"></div>
+              </div>
+            </div>
+          </section>
+
+          <div class="feed-head">
+            <div>
+              <h2>Akış</h2>
+              <p>Takip ettiklerin ve keşfedebileceğin alıntı ve incelemeler.</p>
+            </div>
+            <button class="text-btn" type="button" id="refresh-feed">↻ Yenile</button>
+          </div>
+
+          <div class="feed-controls">
+            <div class="tabs" role="tablist" aria-label="Akış türü">
+              <button class="tab is-active" role="tab" aria-selected="true" data-tab="discover" type="button">Keşfet</button>
+              <button class="tab" role="tab" aria-selected="false" data-tab="following" type="button">Takip Edilenler</button>
+            </div>
+            <div class="control-row">
+              <div class="chips" role="group" aria-label="İçerik filtresi">
+                <button class="chip is-active" data-filter="all" type="button">Tümü</button>
+                <button class="chip" data-filter="quote" type="button">Alıntılar</button>
+                <button class="chip" data-filter="review" type="button">İncelemeler</button>
+              </div>
+              <label class="sortbox">
+                <span>Sırala:</span>
+                <select id="sort-select" aria-label="Sıralama">
+                  <option value="recent" selected>En yeni</option>
+                  <option value="likes">En Çok Beğenilen</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="feed" id="feed" aria-live="polite"></div>
+          <div class="feed-empty" id="feed-empty" hidden>Henüz bir paylaşım yok.</div>
+        </section>
+
+        <!-- ============ KÜTÜPHANE ============ -->
+        <section class="view" id="view-library" aria-labelledby="library-title">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">KÜTÜPHANE</p>
+              <h1 id="library-title">Kütüphane</h1>
+              <p>İslami ilimlerden dünya klasiklerine; kapak, tür ve özet bilgileriyle büyüyen bir kütüphane.</p>
+            </div>
+            <button class="btn btn-outline btn-sm" type="button" id="book-add-btn">+ Kitap Ekle</button>
+          </div>
+          <form class="book-search-form" id="book-search-form" hidden>
+            <input id="book-search-input" type="search" placeholder="Kitap adı veya yazar yaz" aria-label="Kitap ara" />
+            <button class="btn btn-gold btn-sm" type="submit">Ara</button>
+          </form>
+          <div class="book-search-results" id="book-search-results" hidden></div>
+          <div class="book-filters" id="book-filters" aria-label="Kütüphane filtreleri">
+            <label class="field"><span>Kitap ara</span><input id="filter-q" type="search" placeholder="Başlık veya yazar" /></label>
+            <label class="field"><span>Yazar</span>
+              <span class="filter-search">
+                <input id="filter-author" type="search" list="filter-authors" placeholder="Yazar ara veya seç" autocomplete="off" />
+                <button class="filter-search-btn" type="button" data-filter-search="author" aria-label="Yazar ara" title="Yazar ara"><i data-lucide="search"></i></button>
+              </span>
+              <datalist id="filter-authors"></datalist>
+            </label>
+            <label class="field"><span>TÜR</span>
+              <select id="filter-topic">
+                <option value="" data-i18n="Tüm türler">Tüm türler</option>
+              </select>
+            </label>
+            <label class="field"><span>Dönem</span><select id="filter-decade"><option value="">Tüm yıllar</option></select></label>
+            <label class="field"><span>Yayınevi</span>
+              <span class="filter-search">
+                <input id="filter-publisher" type="search" list="filter-publishers" placeholder="Yayınevi ara veya seç" autocomplete="off" />
+                <button class="filter-search-btn" type="button" data-filter-search="publisher" aria-label="Yayınevi ara" title="Yayınevi ara"><i data-lucide="search"></i></button>
+              </span>
+              <datalist id="filter-publishers"></datalist>
+            </label>
+            <label class="field"><span>Sırala</span>
+              <select id="filter-sort">
+                <option value="title">Başlığa göre</option>
+                <option value="year_desc">En yeni yıla göre</option>
+                <option value="rating">Puana göre</option>
+                <option value="newest">Son eklenenler</option>
+              </select>
+            </label>
+            <button class="btn btn-outline btn-sm book-filter-reset" type="button" id="filter-reset">Filtreleri temizle</button>
+          </div>
+          <div class="book-grid" id="book-grid"></div>
+        </section>
+
+        <!-- ============ KEŞFET ============ -->
+        <section class="view" id="view-discover" aria-labelledby="discover-title">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">Keşfet</p>
+              <h1 id="discover-title">İlim halkasını birlikte büyütelim</h1>
+              <p>Platform genelindeki en yeni içerikleri, popüler kitapları ve listeleri gösteren ana sayfa.</p>
+            </div>
+            <button class="btn btn-gold btn-sm" type="button" id="invite-btn"><i data-lucide="user-plus"></i> Arkadaşlarını Davet Et</button>
+          </div>
+
+          <div class="page-head page-head--small">
+            <div><h2>En yeni paylaşımlar</h2><p>Akıştan henüz düşmüş alıntılar ve incelemeler.</p></div>
+            <button class="text-btn" type="button" data-view="home">Akışa git →</button>
+          </div>
+          <div class="writing-list" id="discover-latest-posts"></div>
+
+          <div class="page-head page-head--small">
+            <div><h2>Popüler kitaplar</h2><p>Kütüphanede en çok ilgi gören eserler.</p></div>
+            <button class="text-btn" type="button" data-view="library">Tüm kitaplar →</button>
+          </div>
+          <div class="home-book-grid" id="discover-popular-books"></div>
+
+          <div class="page-head page-head--small">
+            <div><h2>Listeler ve seçkiler</h2><p>Ekibimizin sizler için hazırladığı bazı seçkiler.</p></div>
+            <button class="text-btn" type="button" data-view="lists">Tüm listeler →</button>
+          </div>
+          <div class="curriculum-grid" id="discover-curated-lists"></div>
+        </section>
+
+        <!-- ============ KULLANICILAR ============ -->
+        <section class="view" id="view-users" aria-labelledby="users-title">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">KULLANICILAR</p>
+              <h1 id="users-title">İlim yolcuları</h1>
+              <p>Platformdaki diğer ilim yolcularını ara, profillerini incele ve takip et.</p>
+            </div>
+            <button class="btn btn-gold btn-sm" type="button" id="users-invite-btn"><i data-lucide="user-plus"></i> Arkadaşlarını Davet Et</button>
+          </div>
+
+          <div class="discover-search-card">
+            <div>
+              <h2>Kullanıcı adıyla ara</h2>
+              <p class="rail-muted">@kullanıcıadı veya görünen ad ile ara; profiline gidip takip edebilirsin.</p>
+            </div>
+            <form id="user-search-form" class="inline-form">
+              <input id="user-search-input" type="search" placeholder="Örn. ckaise" aria-label="Kullanıcı ara" autocomplete="off" />
+              <button class="btn btn-outline btn-sm" type="submit">Ara</button>
+            </form>
+            <div class="user-search-results" id="user-search-results"></div>
+          </div>
+
+          <div class="page-head page-head--small">
+            <div><h2>Önerilen kullanıcılar</h2></div>
+          </div>
+          <div class="user-card-grid" id="recommended-users"></div>
+        </section>
+
+        <!-- ============ LİSTELER / SEÇKİLER ============ -->
+        <section class="view" id="view-lists" aria-labelledby="lists-title">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">LİSTELER / SEÇKİLER</p>
+              <h1 id="lists-title">Listeler ve seçkiler</h1>
+              <p>Ekibimiz tarafından hazırlanan seçkilerimiz, ve oluşturduğunuz kitap listeleri.</p>
+            </div>
+          </div>
+
+          <div class="page-head page-head--small">
+            <div><h2>Ekip Seçkileri</h2><p>Ekibimizin sizler için seçtiği kitaplar.</p></div>
+            <button class="text-btn" type="button" data-view="authors">Tüm yazarlar →</button>
+          </div>
+          <div class="curriculum-grid" id="list-curricula"></div>
+
+          <div class="page-head page-head--small">
+            <div><h2>Listelerim</h2><p>Oluşturduğunuz listeler.</p></div>
+            <button class="text-btn" type="button" data-view="profile">Profilde gör →</button>
+          </div>
+          <div id="list-my-lists"></div>
+        </section>
+
+        <!-- ============ HERKESİN PROFİLİ ============ -->
+        <section class="view" id="view-public-profile" aria-labelledby="public-profile-title">
+          <button class="text-btn public-back" id="public-back-btn" type="button">← Geri dön</button>
+          <div class="profile-hero profile-hero--public">
+            <span class="avatar-frame"><span class="avatar avatar--xl avatar--olive" id="public-avatar">?</span><span class="frame-star">✦</span></span>
+            <div class="profile-identity">
+              <div class="identity-title">
+                <h1 id="public-profile-title">—</h1>
+                <span class="title-badge" id="public-title-badge">❖ Mülâzım</span>
+              </div>
+              <p id="public-handle-line">@—</p>
+              <p class="profile-bio" id="public-bio" hidden></p>
+              <div class="follow-counts" id="public-follow-counts"></div>
+            </div>
+            <div class="public-actions">
+              <button class="btn btn-outline btn-sm" type="button" id="public-message-btn"><i data-lucide="message-circle"></i> Mesaj At</button>
+              <button class="btn btn-gold btn-sm" type="button" id="public-follow-btn">Takip Et</button>
+              <div class="more-wrap">
+                <button class="icon-btn more-btn" type="button" id="public-more-btn" aria-label="Daha fazla işlem" aria-expanded="false">⋯</button>
+                <div class="more-menu" id="public-more-menu" hidden>
+                  <button type="button" id="public-block-btn">Engelle</button>
+                  <button type="button" id="public-report-btn">Bildir</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="page-head page-head--small">
+            <div><h2>Kitap Rafları</h2><p>Okudukları, okumak istedikleri ve yarım bıraktıkları.</p></div>
+          </div>
+          <div class="shelf-grid" id="public-shelf"></div>
+
+          <div class="page-head page-head--small">
+            <div><h2>İncelemeleri ve Alıntıları</h2><p>Kitaplara bıraktığı izler.</p></div>
+          </div>
+          <div class="writing-list" id="public-posts"></div>
+
+        </section>
+
+        <!-- ============ HALKALAR & MECLİSLER ============ -->
+        <section class="view" id="view-circles" aria-labelledby="circles-title">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">BİRLİKTE İLİM</p>
+              <h1 id="circles-title">Halkalar ve meclisler</h1>
+              <p>Birlikte okuyacağınız, müzakere edeceğiniz ve öğrendiklerinizi kaydedeceğiniz alanlar.</p>
+            </div>
+            <div class="head-actions">
+              <button class="btn btn-outline btn-sm" type="button" data-open-halka>+ Halka Kur</button>
+              <button class="btn btn-gold btn-sm" type="button" data-open-meclis>+ Meclis Kur</button>
+            </div>
+          </div>
+          <div class="community-functions" aria-label="Halka ve meclislerin işlevleri">
+            <article class="function-card">
+              <span class="function-icon"><i data-lucide="book-open"></i></span>
+              <h3>Ortak okuma</h3>
+              <p data-i18n="Aynı eseri birlikte oku, ilerlemeyi paylaş.">Aynı eseri birlikte oku, ilerlemeyi paylaş.</p>
+            </article>
+            <article class="function-card">
+              <span class="function-icon"><i data-lucide="messages-square"></i></span>
+              <h3>Müzakere</h3>
+              <p>Sorularını sor, farklı bakış açılarıyla birlikte düşün.</p>
+            </article>
+            <article class="function-card">
+              <span class="function-icon"><i data-lucide="quote"></i></span>
+              <h3>Paylaşım</h3>
+              <p data-i18n="Öne çıkan alıntıları ve incelemeleri halkayla paylaş.">Öne çıkan alıntıları ve incelemeleri halkayla paylaş.</p>
+            </article>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Halka veya meclis">
+            <button class="tab is-active" role="tab" aria-selected="true" data-community-tab="circles" type="button">İlim Halkalarım</button>
+            <button class="tab" role="tab" aria-selected="false" data-community-tab="meclis" type="button">İlim Meclislerim</button>
+          </div>
+
+          <div id="community-circles">
+            <div class="circle-grid" id="circle-grid"></div>
+            <div class="page-head page-head--small">
+              <div><h2>Katılabileceğin Halkalar</h2><p>Bir halkaya katıldığında üstteki listeye eklenir.</p></div>
+            </div>
+            <div class="discover-grid" id="discover-circles"></div>
+          </div>
+
+          <div id="community-meclis" hidden>
+            <div class="meclis-grid" id="meclis-grid"></div>
+          </div>
+
+        </section>
+
+        <!-- ============ HALKA AKIŞI ============ -->
+        <section class="view" id="view-circle-feed" aria-labelledby="circle-feed-title">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">İLİM HALKASI</p>
+              <h1 id="circle-feed-title">Halka akışı</h1>
+              <p id="circle-feed-desc">Bu halkanın alıntıları ve incelemeleri.</p>
+            </div>
+            <div class="head-actions">
+              <button class="btn btn-outline btn-sm" type="button" id="circle-feed-back"><span data-i18n="← Halkalara dön">← Halkalara dön</span></button>
+              <button class="btn btn-gold btn-sm" type="button" id="circle-feed-share"><span data-i18n="+ Paylaşım yap">+ Paylaşım yap</span></button>
+            </div>
+          </div>
+          <div id="circle-feed" class="feed"></div>
+          <div class="feed-empty" id="circle-feed-empty" data-i18n="Henüz bu halkada paylaşım yok." hidden>Henüz bu halkada paylaşım yok.</div>
+        </section>
+
+        <!-- ============ MÜFREDATLAR ============ -->
+        <section class="view" id="view-curricula" aria-labelledby="curricula-title">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">REHBER ONAYLI YOLLAR</p>
+              <h1 id="curricula-title">Nereden başlayacağını bilmek de ilmin bir parçası</h1>
+              <p>Bilgi sınırsız; yol haritası kıymetli. Nitelikli rehberlerin hazırladığı sıralı müfredatlar.</p>
+            </div>
+          </div>
+          <div class="curriculum-intro">
+            <span class="verified-seal">✓</span>
+            <div><strong>Rehber onaylı</strong><p>Her liste ilim ehli, akademisyen veya kıdemli okurlar tarafından gözden geçirilir. Rozetli rehberleri takip ederek yeni rotalardan haberdar olabilirsin.</p></div>
+          </div>
+          <div class="curriculum-grid" id="curriculum-grid"></div>
+        </section>
+
+        <!-- ============ KİTAP DETAYI / MÜZAKERE ============ -->
+        <section class="view" id="view-book" aria-labelledby="book-detail-title">
+          <button class="text-btn back-link" type="button" data-view="library">← Kütüphaneye dön</button>
+          <h1 id="book-detail-title" hidden>Kitap detayı</h1>
+          <div id="book-hero"></div>
+          <div class="detail-tabs" role="tablist" aria-label="Kitap detay sekmeleri">
+            <button class="detail-tab is-active" role="tab" aria-selected="true" data-detail-tab="overview" type="button">Genel Bakış</button>
+            <button class="detail-tab" role="tab" aria-selected="false" data-detail-tab="debate" type="button">Müzakere Masası</button>
+          </div>
+          <div id="book-overview"></div>
+          <div id="book-debate" hidden></div>
+        </section>
+
+        <!-- ============ BİZ KİMİZ? ============ -->
+        <section class="view" id="view-about" aria-labelledby="about-title">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow" data-i18n="BİZ KİMİZ?">BİZ KİMİZ?</p>
+              <h1 id="about-title" data-i18n="Neden buradayız?">Neden buradayız?</h1>
+            </div>
+          </div>
+
+          <article class="hadith-card">
+            <span class="hadith-mark">“</span>
+            <blockquote>Müminler birbirlerini sevmekte, birbirlerine acımakta ve birbirlerini korumakta bir vücuda benzerler; vücudun bir uzvu hasta olduğu zaman, diğer uzuvlar da bu sebeple uykusuzluğa ve ateşli hastalığa tutulurlar.</blockquote>
+            <p class="hadith-source">— Buhârî, Edeb 27; Müslim, Birr 66</p>
+          </article>
+
+          <article class="about-guide">
+            <h2>"İlim Halkası" — Dijital Dünyada Bir Vücut Gibi Olmak</h2>
+            <p>Âlemlere rahmet olarak gönderilen Efendimiz (s.a.v.)’in bu hadis-i şerifi, dijital çağda yalnızlaşan biz müminler için bir reçetedir, bir çağrıdır. İslam, sadece cami duvarları arasında yaşanan bir din değil; hayatın her alanında, ilim ve irfan yolculuğunda omuz omuza olduğumuz, birbirimizin derdiyle dertlendiğimiz bir topluluk (ümmet) medeniyetidir.</p>
+            <p>İlim Halkası; Mescid-i Nebevi’nin gölgesinde, Hz. Peygamber (s.a.v.)’in bizzat rahle-i mübarekesinde yetişen Ehl-i Suffa'nın o samimi ve fedakâr ruhundan ilham alır. Ashabın Mescid'in bir köşesinde halkalar kurarak Hz. Kur'an'ı, hikmeti ve sünneti birbirlerine fısıldadığı o kadim meclis geleneği; asırlar boyunca camilerde, medreselerde ilim ehlinin halka halka büyüttüğü irfan zinciri, bugün dijitalin hızıyla ama manevi derinliğinden bir an olsun ödün vermeden cebinize taşınıyor.</p>
+            <p>Biz bu uygulamayı, ilim öğrenmenin bireysel bir yarış değil, kolektif bir yükseliş ve nesilden nesile aktarılan mukaddes bir miras olduğu inancıyla tasarladık.</p>
+
+            <h3>&quot;Bir Vücut Gibi&quot; Olmak İçin:</h3>
+            <p>İster İstanbul’da olun, ister Medine’nin tozlu yollarında hissettiğiniz bir anınızda... "İlim Halkası"nda kurduğunuz gruplarla, dünyanın dört bir yanındaki kardeşlerinizle aynı tefsiri, aynı hadisi, aynı klasiği okuyabilir; Hz. Suffa talebelerinin o ihlaslı meclislerini dijitalde yeniden canlandırabilirsiniz.</p>
+
+            <h3>Birlikte Okumak, Birlikte Yükselmek İçin:</h3>
+            <p>Biriniz bir ayeti tefekkür ederken takıldığında, "Müzakere Masası"nda bir başka kardeşiniz size ışık tutacak. Biriniz okuma hedefini aksattığında, halkadaki diğerleri onun ateşini hissedecek ve ashabın birbirine omuz vermesi gibi o yükü birlikte sırtlayacak.</p>
+
+            <h3>Hakikat Yolunda Kaybolmamak İçin:</h3>
+            <p>Asırlardır süregelen ilim geleneklerinin ve rehberlerin onayladığı sıralı müfredatlarla, bilgi kirliliğinden uzak, hakiki ve derinlikli bir ilim yolculuğu sizi bekliyor.</p>
+
+            <p>Okuduğunuz her satırı, ezberlediğiniz her hadisi, aldığınız her hikmetli notu dijital bir kartpostala dönüştürün ve bu nuru çevrenizle paylaşın.</p>
+
+            <p class="about-guide-closing">Yalnız değilsiniz. Suffa'dan bugüne uzanan o kutlu zincirin bir halkası olarak; bir vücudun azaları gibi, ilim ve irfanla birbirine kenetlenmiş, yaşayan, nefes alan bir dijital meclisdesiniz.</p>
+            <p class="about-guide-sign">"İlim Halkası" — Feyizli Meclisler, Kadim Okumalar.</p>
+          </article>
+
+          <div class="page-head page-head--small">
+            <div><h2 data-i18n="Kurallarımız">Kurallarımız</h2><p>Bir vücut bilinci, ancak herkesin huzur içinde katılmasıyla mümkün.</p></div>
+          </div>
+          <div class="rules-card">
+            <p class="rules-notice">⚑ Nefret, kin, hakaret veya ayrıştırıcı söz yazanların içerikleri kaldırılır; tekrarlayanların hesabı yönetici tarafından engellenir.</p>
+            <ol class="rules-list">
+              <li><strong>Nefret ve ayrıştırıcılık yok.</strong> Irk, mezhep, cinsiyet, bölge, dil veya düşünce farkı üzerinden kimseyi küçük düşüren, ötekileştiren veya hedef gösteren yazı yazılamaz.</li>
+              <li><strong>Adab-ı münazara.</strong> Fikir ayrılığı saygıyı bozmaz. Hakaret, alay, taciz, tehdit ve dedikodu yoktur; tartışma delil ve nezaketle yürür.</li>
+              <li><strong>Doğru bilgi, güvenilir kaynak.</strong> Yanlış bilgi yayan içerik düzeltilir; ilmî iddialarda kaynak gösterilmesi esastır. Kasten yanıltan paylaşımlar kaldırılır.</li>
+              <li><strong>Emanet ve mahremiyet.</strong> Başkasının özel notunu, mesajını veya bilgisini izinsiz paylaşamazsın. Şikayet ve talepler yalnızca yöneticiye ulaşır, cevabı sadece sana gösterilir.</li>
+              <li><strong>Reklam ve spam yok.</strong> Ticari tanıtım, zincirleme mesaj ve alakasız paylaşımlar halka sohbetini bozar.</li>
+              <li><strong>Telif ve emek.</strong> Alıntılarda kaynak belirtilir; başkasının emeğini kendi yazmış gibi sunmak doğru değildir.</li>
+              <li><strong>Yönetim ve şikayet.</strong> Kurallara uymayan içerikleri <button type="button" data-view="support" class="inline-link">Şikayet & Talepler</button> bölümünden bildirebilirsin; her bildirim ayrı kayıt olarak incelenir.</li>
+            </ol>
+          </div>
+        </section>
+
+        <!-- ============ YAZARLAR ============ -->
+        <section class="view" id="view-authors" aria-labelledby="authors-title">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">KÜTÜPHANE YAZARLARI</p>
+              <h1 id="authors-title">Yazarlar</h1>
+              <p>Kütüphanesinde kitabı bulunan her yazar burada. İsme dokun, eserlerini keşfet.</p>
+            </div>
+          </div>
+          <div class="scholar-tools">
+            <label class="scholar-search"><i data-lucide="search" aria-hidden="true"></i><input id="author-search" type="search" placeholder="Yazar adı ara..." aria-label="Yazar ara" /><button class="scholar-search-btn" id="author-search-btn" type="button" aria-label="Yazar ara" title="Yazar ara"><i data-lucide="search" aria-hidden="true"></i></button></label>
+            <div class="chips" id="author-letters" role="group" aria-label="Harfe göre filtre"></div>
+          </div>
+          <div class="author-layout">
+            <div class="author-list" id="author-list"></div>
+            <div class="author-detail" id="author-detail"></div>
+          </div>
+        </section>
+
+        <!-- ============ DESTEK ============ -->
+        <section class="view" id="view-support" aria-labelledby="support-title">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">YÖNETİME ULAŞ</p>
+              <h1 id="support-title">Şikayetler ve talepler</h1>
+            </div>
+          </div>
+
+          <div class="support-grid">
+            <article class="settings-card">
+              <h3>Yöneticiye yaz</h3>
+              <p>Bir sorun ya da önerin varsa ekibimize ulaşabilirsin.</p>
+              <form id="support-form" class="stack-form">
+                <label class="field"><span>Tür</span>
+                  <select id="support-kind"><option value="sikayet">Şikayet</option><option value="talep">Talep / Öneri</option></select>
+                </label>
+                <label class="field"><span>Konu</span><input id="support-subject" type="text" placeholder="Kısa bir başlık" /></label>
+                <label class="field"><span>Mesajın</span><textarea id="support-body" rows="4" placeholder="Durumu anlat..."></textarea></label>
+                <button class="btn btn-gold btn-sm" type="submit">Gönder</button>
+              </form>
+            </article>
+
+            <article class="settings-card">
+              <h3>Bir kullanıcıyı şikayet et</h3>
+              <form id="report-form" class="stack-form">
+                <label class="field"><span>Kullanıcı adı</span>
+                  <input id="report-username" type="text" list="report-user-options" placeholder="Örn. @kullanici_adi" autocomplete="off" required />
+                  <datalist id="report-user-options"></datalist>
+                </label>
+                <label class="field"><span>Neden</span>
+                  <select id="report-reason">
+                    <option value="Saygısız davranış">Saygısız davranış</option>
+                    <option value="Spam / reklam">Spam / reklam</option>
+                    <option value="Yanlış bilgi">Yanlış bilgi</option>
+                    <option value="Taciz">Taciz</option>
+                    <option value="Diğer">Diğer</option>
+                  </select>
+                </label>
+                <label class="field"><span>Açıklama</span><textarea id="report-detail" rows="3" placeholder="Olayı kısaca anlat..."></textarea></label>
+                <button class="btn btn-outline btn-sm" type="submit">Şikayeti ilet</button>
+              </form>
+            </article>
+          </div>
+
+          <div class="page-head page-head--small">
+            <div><h2>Cevaplar</h2></div>
+          </div>
+          <div class="support-list" id="support-list"></div>
+          <div class="page-head page-head--small">
+            <div><h2>Kullanıcı şikayetlerimin durumu</h2></div>
+          </div>
+          <div class="support-list" id="report-list"></div>
+        </section>
+
+        <!-- ============ YÖNETİM ============ -->
+        <section class="view" id="view-admin" aria-labelledby="admin-title" hidden>
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">YÖNETİM PANELİ</p>
+              <h1 id="admin-title">İlim Halkası yönetimi</h1>
+              <p>Bu sayfa yalnızca yönetici hesabında görünür.</p>
+            </div>
+            <span class="title-badge">⚑ Yönetici</span>
+          </div>
+
+          <article class="admin-section">
+            <h2>Duyuru ve bildirim</h2>
+            <p>Bayram, meclis veya genel duyuruları ana sayfaya ve bildirimlere gönder.</p>
+            <form id="announcement-form" class="stack-form">
+              <label class="field"><span>Tür</span>
+                <select id="announcement-kind"><option value="duyuru">Duyuru</option><option value="bayram">Bayram / özel gün</option><option value="bilgi">Bilgi</option></select>
+              </label>
+              <label class="field"><span>Başlık</span><input id="announcement-title" type="text" placeholder="Örn. Bayram duyurusu" /></label>
+              <label class="field"><span>Metin</span><textarea id="announcement-body" rows="3" placeholder="Duyurunun metni"></textarea></label>
+              <button class="btn btn-gold btn-sm" type="submit">Duyuruyu yayınla</button>
+            </form>
+            <div class="admin-list" id="admin-announcements"></div>
+          </article>
+
+          <article class="admin-section">
+            <h2>Şikayet ve talepler</h2>
+            <p>Kullanıcıların sana özel gönderdiği mesajlar. Yanıt yalnızca gönderene görünür.</p>
+            <div class="admin-list" id="admin-tickets"></div>
+          </article>
+
+          <article class="admin-section">
+            <h2>Kullanıcı şikayetleri</h2>
+            <p>Bir kullanıcıyı şikayet edenlerin kayıtları; genel taleplerden ayrı tutulur.</p>
+            <div class="admin-list" id="admin-reports"></div>
+          </article>
+
+          <article class="admin-section">
+            <h2>Yorumlar</h2>
+            <p>Uygunsuz yorumları kaldırabilirsin.</p>
+            <div class="admin-list" id="admin-comments"></div>
+          </article>
+
+          <article class="admin-section">
+            <h2>Kullanıcılar</h2>
+            <p>Sorun çıkaran hesapları askıya alabilir, tekrar açabilirsin.</p>
+            <div class="admin-list" id="admin-users"></div>
+          </article>
+
+          <article class="admin-section">
+            <h2 data-i18n="Kitap kataloğu">Kitap kataloğu</h2>
+            <p>İstediğin kitabı arayıp katalogdan gizleyebilirsin. Gerekçe saklanır; gizlenen kitapları buradan geri getirebilirsin.</p>
+            <form id="admin-hide-book-form" class="admin-hide-book-form" autocomplete="off">
+              <label class="field">
+                <span>Gizlenecek kitabı ara</span>
+                <input id="admin-hide-book-input" type="search" placeholder="Kitap adı veya yazar yaz" />
+              </label>
+            </form>
+            <div id="admin-hide-book-results" class="admin-list"></div>
+            <h3 class="admin-subhead">Gizlenen kitaplar</h3>
+            <div class="admin-list" id="admin-books"></div>
+          </article>
+        </section>
+
+        <!-- ============ HATIRATIM ============ -->
+        <section class="view" id="view-journal" aria-labelledby="journal-title">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">HATIRATIM</p>
+              <h1 id="journal-title">Hatıratım</h1>
+              <p>İncelemelerin ve alıntıların; hepsi bir yerde.</p>
+            </div>
+            <button class="btn btn-gold btn-sm" type="button" id="journal-primary-btn">
+              <span aria-hidden="true">+</span> <span id="journal-primary-label" data-i18n="Yeni inceleme">Yeni inceleme</span>
+            </button>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Hatırat bölümleri">
+            <button class="tab is-active" role="tab" aria-selected="true" data-journal-tab="reviews" type="button">İncelemelerim</button>
+            <button class="tab" role="tab" aria-selected="false" data-journal-tab="quotes" type="button">Alıntılarım</button>
+          </div>
+
+          <div id="journal-reviews">
+            <div class="journal-list" id="review-list"></div>
+          </div>
+
+          <div id="journal-quotes" hidden>
+            <div class="postcard-grid" id="postcard-grid"></div>
+          </div>
+        </section>
+
+        <!-- ============ MESAJLAR ============ -->
+        <section class="view" id="view-messages" aria-labelledby="messages-title">
+          <div class="page-head">
+            <div>
+              <h1 id="messages-title">Mesajlar</h1>
+              <p>Kullanıcılarla sohbet et.</p>
+            </div>
+            <button class="btn btn-gold btn-sm" type="button" id="new-direct-btn">+ Yeni Mesaj</button>
+          </div>
+          <div class="messages-layout">
+            <aside class="conversation-list" id="conversation-list"></aside>
+            <div class="conversation-panel" id="conversation-panel">
+              <div class="conversation-empty" id="conversation-empty">
+                <span aria-hidden="true">✆</span>
+                <h2>Bir sohbet seç</h2>
+                <p>Soldan bir kişi veya grup seçerek mesajlarına başlayabilirsin.</p>
+              </div>
+              <div class="chat-panel" id="message-chat" hidden>
+                <div class="chat-head">
+                  <div><button class="chat-profile-link" id="message-chat-name" type="button">—</button><small id="message-chat-meta">—</small></div>
+                  <button class="icon-btn" type="button" id="message-chat-close" aria-label="Sohbeti kapat">×</button>
+                </div>
+                <div class="chat-messages" id="message-messages"></div>
+                <form class="chat-form" id="message-form">
+                  <input id="message-input" type="text" placeholder="Bir cümle yaz..." aria-label="Mesaj" autocomplete="off" />
+                  <button type="submit">Gönder</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ AYARLAR ============ -->
+        <section class="view" id="view-settings" aria-labelledby="settings-title">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">TERCİHLER</p>
+              <h1 id="settings-title">Ayarlar</h1>
+              <p>Bildirimler ve hesap tercihlerin.</p>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h3 data-i18n="Dil">Dil</h3>
+            <p data-i18n="Uygulama dilini seç.">Uygulama dilini seç.</p>
+            <label class="field"><span data-i18n="Dil">Dil</span>
+              <select data-setting="language">
+                <option value="tr" data-i18n="Türkçe">Türkçe</option>
+                <option value="en" data-i18n="English">English</option>
+              </select>
+              <small class="field-hint" data-i18n="Varsayılan dil Türkçedir. İngilizce arayüzü buradan seçebilirsin.">Varsayılan dil Türkçedir. İngilizce arayüzü buradan seçebilirsin.</small>
+            </label>
+          </div>
+
+          <div class="settings-card">
+            <h3 data-i18n="Temalar">Temalar</h3>
+            <p data-i18n="Tema seçebilirsin.">Tema seçebilirsin.</p>
+            <div class="theme-options" role="group" aria-label="Tema seçimi" data-i18n-aria="Tema seçimi">
+              <button class="theme-choice" type="button" data-theme-choice="medine">
+                <span class="theme-swatch theme-swatch--medine" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span><strong>Medine</strong></span>
+              </button>
+              <button class="theme-choice" type="button" data-theme-choice="kudus">
+                <span class="theme-swatch theme-swatch--kudus" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span><strong>Kudüs</strong></span>
+              </button>
+              <button class="theme-choice" type="button" data-theme-choice="mekke">
+                <span class="theme-swatch theme-swatch--mekke" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span><strong>Mekke</strong></span>
+              </button>
+            </div>
+            <label class="field theme-select-field"><span>Seçili Tema</span>
+              <select data-setting="theme">
+                <option value="medine">Medine</option>
+                <option value="kudus">Kudüs</option>
+                <option value="mekke">Mekke</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="settings-card">
+            <h3>Bildirimler</h3>
+            <p>Halka mesajları, meclis hatırlatmaları ve yorumlar.</p>
+            <label class="switch-row"><span>Takip ettiğim kişiler yeni alıntı paylaştığında haber ver</span><input type="checkbox" data-setting="followPosts" checked /></label>
+            <label class="switch-row"><span>Halka sohbetlerinde etiketlendiğimde bildir</span><input type="checkbox" data-setting="circleMentions" /></label>
+          </div>
+
+          <div class="settings-card">
+            <h3>Okuma tercihleri</h3>
+            <p>Yıllık kitap hedefini, yazı boyutunu ve kitap kartlarını ayarla.</p>
+            <label class="field"><span>Yıllık kitap hedefi</span>
+              <input type="number" data-setting="yearlyGoal" min="1" max="100000" step="1" value="24" inputmode="numeric" />
+              <small class="field-hint">Hedef ve istatistikler her yıl başında sıfırlanır.</small>
+            </label>
+            <label class="field"><span>Yazı boyutu</span>
+              <select data-setting="textSize">
+                <option value="normal">Normal</option>
+                <option value="large">Büyük</option>
+              </select>
+            </label>
+            <label class="switch-row"><span>Kitap kartlarında puanı göster</span><input type="checkbox" data-setting="showRating" checked /></label>
+          </div>
+
+          <div class="settings-card">
+            <h3>Gizlilik</h3>
+            <p>Profilinde hangi bilgilerin görünmesini istediğini seç.</p>
+            <label class="switch-row"><span>Profilimde katılım yılını göster</span><input type="checkbox" data-setting="showJoinYear" checked /></label>
+          </div>
+
+          <div class="settings-card settings-card--danger" id="delete-account-card">
+            <h3>Hesabı sil</h3>
+            <p>Hesabınla birlikte paylaşımların, rafların, takiplerin ve özel sohbetlerin kalıcı olarak kaldırılır. Bu işlem geri alınamaz.</p>
+            <button class="btn btn-danger btn-sm" type="button" id="delete-account-btn">Hesabımı sil...</button>
+          </div>
+
+          <div class="settings-actions">
+            <button class="btn btn-gold btn-sm" type="button" id="settings-save">Tercihleri kaydet</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="settings-reset">Varsayılanlara dön</button>
+          </div>
+        </section>
+
+        <!-- ============ PROFİL ============ -->
+        <section class="view" id="view-profile" aria-labelledby="profile-title">
+          <div class="profile-hero">
+            <span class="avatar-frame"><span class="avatar avatar--xl avatar--olive" id="profile-avatar">M</span><span class="frame-star">✦</span></span>
+            <div class="profile-identity">
+              <div class="identity-title">
+                <h1 id="profile-title">—</h1>
+                <span class="title-badge" id="profile-title-badge">❖ Mülâzım</span>
+              </div>
+              <p id="profile-handle-line">@—</p>
+              <p class="profile-bio" id="profile-bio" hidden></p>
+              <div class="follow-counts" id="follow-counts"></div>
+            </div>
+            <button class="btn btn-outline btn-sm" type="button" id="edit-profile-btn">Profili Düzenle</button>
+          </div>
+
+          <div class="karne-card">
+            <div class="karne-head"><span>OKUMA SERÜVENİ</span><span>İLK ADIMLAR</span></div>
+            <div class="goal-line" id="goal-line"><strong data-i18n="0 / 24 kitap">0 / 24 kitap</strong><span data-i18n="%0 tamamlandı">%0 tamamlandı</span></div>
+            <div class="progress progress--gold"><span id="goal-progress" style="width:0%"></span></div>
+            <div class="profile-stats" id="profile-stats"></div>
+            <div class="streak-row"><span class="streak-flame" aria-hidden="true"><i data-lucide="flame"></i></span><div><strong id="streak-title">İlim serisi başlıyor</strong><p id="streak-desc">Bugün bir satır ekleyerek serini başlatabilirsin.</p></div></div>
+          </div>
+
+          <div class="page-head page-head--small">
+            <div><h2>İlim Yolculuğum</h2><p>Mescid-i Nebevî'deki Suffa geleneğine ve Medine medreselerindeki aşamalara doğrudan atıf yapan en özgün seri budur.</p></div>
+          </div>
+          <div class="level-ladder" id="title-ladder"></div>
+
+          <div class="page-head page-head--small">
+            <div><h2>Aktif Halkalarım</h2><p>Ortak okuma ilerlemesi ve sohbete tek tıkla geçiş.</p></div>
+          </div>
+          <div class="profile-circles" id="profile-circles"></div>
+
+          <div class="page-head page-head--small">
+            <div><h2>Kitaplığım</h2><p>Halihazırda okudukların ve ileride okumak istediklerin.</p></div>
+          </div>
+          <div class="profile-tabs" role="tablist" aria-label="Kitap rafları">
+            <button class="profile-tab is-active" role="tab" aria-selected="true" data-profile-tab="reading" type="button">Şu An Okuduklarım</button>
+            <button class="profile-tab" role="tab" aria-selected="false" data-profile-tab="finished" type="button">Okuduklarım</button>
+            <button class="profile-tab" role="tab" aria-selected="false" data-profile-tab="wishlist" type="button">Okuma Listem</button>
+            <button class="profile-tab" role="tab" aria-selected="false" data-profile-tab="abandoned" type="button">Yarım Bıraktıklarım</button>
+            <button class="profile-tab" role="tab" aria-selected="false" data-profile-tab="lists" type="button">Listelerim</button>
+          </div>
+          <div id="shelf-panel"></div>
+
+          <div class="page-head page-head--small">
+            <div><h2>Kütüphanem</h2><p>Altını çizdiklerin ve kaleme aldıkların.</p></div>
+          </div>
+          <div class="profile-tabs" role="tablist" aria-label="Kütüphanem">
+            <button class="profile-tab is-active" role="tab" aria-selected="true" data-library-tab="quotes" type="button">Alıntılar</button>
+            <button class="profile-tab" role="tab" aria-selected="false" data-library-tab="reviews" type="button">İncelemeler</button>
+          </div>
+          <div id="library-panel"></div>
+
+          <button class="hatirat-shortcut" type="button" data-view="journal">
+            <span>✎</span>
+            <span><strong>Hatıratım</strong><small>İncelemelerin ve alıntıların</small></span>
+            <span aria-hidden="true">→</span>
+          </button>
+
+          <div class="page-head page-head--small">
+            <div><h2>Rozetlerim</h2></div>
+          </div>
+          <div class="badge-grid" id="badge-grid"></div>
+        </section>
+
+        <section class="view" id="view-stats" aria-labelledby="stats-title">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">KARNE</p>
+              <h1 id="stats-title">İstatistiklerim</h1>
+              <p>Okuma serüvenin, topluluk hareketliliğin ve halkaların tek yerde.</p>
+            </div>
+            <button class="btn btn-outline btn-sm" type="button" data-view="profile">Profile dön →</button>
+          </div>
+          <div class="profile-tabs" role="tablist" aria-label="İstatistikler">
+            <button class="profile-tab is-active" role="tab" aria-selected="true" data-stats-tab="reading" type="button">Okuma</button>
+            <button class="profile-tab" role="tab" aria-selected="false" data-stats-tab="circles" type="button">Halkalar</button>
+          </div>
+          <div id="stats-panel"></div>
+        </section>
+
+      </main>
+
+      <footer class="site-footer">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <span class="footer-emblem" data-emblem aria-hidden="true"></span>
+            <span><strong>İLİM HALKASI</strong><small>birlikte ilim · birlikte hikmet</small></span>
+          </div>
+          <p class="footer-hadith">“Müminler birbirlerini sevmekte, birbirlerine acımakta ve birbirlerini korumakta bir vücuda benzerler.”<small>— Buhârî, Edeb 27; Müslim, Birr 66</small></p>
+          <nav class="footer-links" aria-label="Alt menü">
+            <div class="footer-menu-group">
+              <p class="footer-menu-label">ANA AKIŞ</p>
+              <button type="button" data-view="home">Ana Sayfa</button>
+              <button type="button" data-view="library">Kütüphane</button>
+              <button type="button" data-view="discover">Keşfet</button>
+              <button type="button" data-view="users">Kullanıcılar</button>
+              <button type="button" data-view="authors">Yazarlar</button>
+              <button type="button" data-view="lists">Listeler / Seçkiler</button>
+            </div>
+            <div class="footer-menu-group">
+              <p class="footer-menu-label">SOSYAL VE KİŞİSEL ALAN</p>
+              <button type="button" data-view="circles">İlim Halkaları</button>
+              <button type="button" data-view="journal">Hatıratım</button>
+              <button type="button" data-view="messages">Mesajlar</button>
+              <button class="footer-action" type="button" id="footer-new-circle-btn">+ Yeni Halka Kur</button>
+            </div>
+            <div class="footer-menu-group">
+              <p class="footer-menu-label">HESABIM VE YÖNETİM</p>
+              <button type="button" data-view="profile">Profilim</button>
+              <button type="button" data-view="stats">İstatistiklerim</button>
+              <button type="button" data-view="settings">Ayarlar</button>
+              <button type="button" data-view="about">Biz Kimiz?</button>
+              <button type="button" data-view="support">Şikayet & Talepler</button>
+              <button type="button" data-view="admin" data-admin-only hidden>Yönetim Paneli</button>
+              <button class="footer-logout" type="button" id="footer-logout-btn">Çıkış Yap</button>
+            </div>
+          </nav>
+        </div>
+        <div class="footer-bottom">
+          <span>© 2026 İlim Halkası · Tüm hakları saklıdır.</span>
+        </div>
+      </footer>
+    </div>
+
+    <!-- SAĞ SÜTUN -->
+    <aside class="right-rail" aria-label="Günlük özet">
+      <div class="rail-card rail-card--task" id="rail-current-card" hidden>
+        <div class="rail-card-head"><span>OKUMAYA DEVAM ET</span><span class="rail-icon">❖</span></div>
+        <h3 id="rail-current-title"></h3>
+        <p class="rail-muted" id="rail-current-detail"></p>
+        <div class="progress"><span id="rail-current-bar"></span></div>
+        <button class="text-btn" type="button" id="rail-current-open">Kitabı aç →</button>
+      </div>
+
+      <div class="rail-card">
+        <div class="rail-card-head"><span>YILLIK OKUMA HEDEFİ</span><span class="rail-icon">◎</span></div>
+        <div class="goal-wrap">
+          <div class="goal-ring" id="rail-goal-ring" style="--pct:0%"><div><strong id="rail-goal-count">0</strong><small id="rail-goal-target">/ 24 kitap</small></div></div>
+          <div class="goal-copy"><strong id="rail-goal-pct">0%</strong><p id="rail-goal-copy">Kitapları bitirdikçe hedefin dolacak.</p></div>
+        </div>
+      </div>
+
+      <div class="rail-card" id="rail-weekly-card" hidden>
+        <div class="rail-card-head"><span>HAFTALIK OKUMA</span><span class="rail-icon">◷</span></div>
+        <div class="mini-bars" id="rail-weekly-bars" aria-hidden="true"></div>
+        <div class="mini-labels" id="rail-weekly-labels"></div>
+        <p class="rail-muted rail-center" id="rail-weekly-copy"></p>
+      </div>
+
+      <div class="rail-card" id="rail-badges-card" hidden>
+        <div class="rail-card-head"><span>ROZETLERİM</span><span class="rail-icon">✦</span></div>
+        <div class="rail-badges" id="rail-badges"></div>
+      </div>
+
+      <div class="rail-card rail-card--circles">
+        <div class="rail-card-head"><span>HALKALARIM</span><span class="rail-icon">◈</span></div>
+        <ul class="rail-circle-list" id="rail-circles"></ul>
+        <button class="text-btn" type="button" data-view="circles">Tüm halkalar →</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- PROFİL DÜZENLEME MODALI -->
+  <div class="modal-backdrop" id="profile-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+      <button class="modal-close" type="button" data-close-profile-modal aria-label="Kapat">×</button>
+      <p class="eyebrow">PROFİLİM</p>
+      <h2 id="profile-modal-title">Profili düzenle</h2>
+      <p class="modal-desc">Adın, kullanıcı adın, avatarın ve biyografin burada güncellenir.</p>
+      <form id="profile-form" class="stack-form">
+        <label class="field"><span>Görünen ad</span><input id="edit-display-name" type="text" maxlength="60" required /></label>
+        <label class="field"><span>Kullanıcı adı</span><input id="edit-username" type="text" maxlength="24" pattern="[a-z0-9_]{3,24}" required /></label>
+        <div class="field"><span>Profil fotoğrafı</span>
+          <div class="photo-upload">
+            <span class="photo-preview" id="photo-preview"><span class="avatar avatar--xl avatar--olive" id="photo-preview-avatar">A</span></span>
+            <div class="photo-upload-actions">
+              <p class="photo-hint">İstediğin fotoğrafı yükle; daire içine alıp ortalarız.</p>
+              <input id="photo-input" type="file" accept="image/*" hidden />
+              <button class="btn btn-outline btn-sm" type="button" id="photo-upload-btn">Fotoğraf yükle</button>
+              <button class="text-btn" type="button" id="photo-remove-btn">Fotoğrafı kaldır</button>
+            </div>
+          </div>
+          <div class="avatar-choices" id="avatar-choices" role="radiogroup" aria-label="Avatar rengi">
+            <button type="button" class="avatar-choice" data-avatar="olive" role="radio" aria-checked="false"><span class="avatar avatar--olive">A</span><small>Zeytin</small></button>
+            <button type="button" class="avatar-choice" data-avatar="sand" role="radio" aria-checked="false"><span class="avatar avatar--sand">A</span><small>Kum</small></button>
+            <button type="button" class="avatar-choice" data-avatar="copper" role="radio" aria-checked="false"><span class="avatar avatar--copper">A</span><small>Bakır</small></button>
+            <button type="button" class="avatar-choice" data-avatar="rose" role="radio" aria-checked="false"><span class="avatar avatar--rose">A</span><small>Gül</small></button>
+            <button type="button" class="avatar-choice" data-avatar="ink" role="radio" aria-checked="false"><span class="avatar avatar--ink">A</span><small>Mürekkep</small></button>
+            <button type="button" class="avatar-choice" data-avatar="gold" role="radio" aria-checked="false"><span class="avatar avatar--gold">A</span><small>Altın</small></button>
+          </div>
+        </div>
+        <label class="field"><span>Biyografi <small>(isteğe bağlı)</small></span><textarea id="edit-bio" rows="3" maxlength="500" placeholder="Kendini kısaca anlat..."></textarea></label>
+        <p class="modal-error" id="profile-error" role="alert"></p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" data-close-profile-modal>Vazgeç</button>
+          <button class="btn btn-gold" type="submit">Değişiklikleri Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- HESAP SİLME MODALI -->
+  <div class="modal-backdrop" id="delete-account-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="delete-account-title">
+      <button class="modal-close" type="button" data-close-delete-account aria-label="Kapat">×</button>
+      <p class="eyebrow">HESAP</p>
+      <h2 id="delete-account-title">Hesabını kalıcı olarak sil</h2>
+      <p class="modal-desc">Bu işlem geri alınamaz. Paylaşımların, hatıraların, rafların, takiplerin ve özel sohbetlerin kaldırılır. Onay için şifreni ve kullanıcı adını gir.</p>
+      <form id="delete-account-form" class="stack-form">
+        <label class="field"><span>Şifren</span>
+          <span class="password-field">
+            <input id="delete-password" type="password" autocomplete="current-password" required />
+            <button class="password-toggle" type="button" data-password-toggle="delete-password" aria-label="Şifreyi göster" aria-pressed="false" title="Şifreyi göster"><i data-lucide="eye" aria-hidden="true"></i></button>
+          </span>
+        </label>
+        <label class="field"><span>Onay için kullanıcı adın <small>(<b id="delete-username-hint">—</b>)</small></span><input id="delete-confirm" type="text" autocomplete="off" required /></label>
+        <p class="modal-error" id="delete-account-error" role="alert"></p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" data-close-delete-account>Vazgeç</button>
+          <button class="btn btn-danger" type="submit">Evet, hesabımı sil</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- PAYLAŞIM MODALI: ALINTI / İNCELEME -->
+  <div class="modal-backdrop" id="quote-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button class="modal-close" type="button" data-close-modal data-i18n-aria="Kapat" aria-label="Kapat">×</button>
+      <p class="eyebrow" data-i18n="KÜTÜPHANEM · PAYLAŞIM">KÜTÜPHANEM · PAYLAŞIM</p>
+      <h2 id="modal-title" data-i18n="Bir paylaşım yap">Bir paylaşım yap</h2>
+      <p class="modal-desc" data-i18n="Okuduklarından bir satır veya bir kitap hakkındaki düşünceni paylaş.">Okuduklarından bir satır veya bir kitap hakkındaki düşünceni paylaş.</p>
+      <p class="share-group-hint" id="share-group-hint" hidden><span data-i18n="Bu paylaşım şu halkada yayınlanacak:">Bu paylaşım şu halkada yayınlanacak:</span> <b id="share-group-name"></b></p>
+
+      <div class="share-type" role="group" data-i18n-aria="Paylaşım türü" aria-label="Paylaşım türü">
+        <button class="share-type-btn is-active" type="button" data-share-type="quote" aria-pressed="true">
+          <i data-lucide="quote" aria-hidden="true"></i> <span data-i18n="Alıntı paylaş">Alıntı paylaş</span>
+        </button>
+        <button class="share-type-btn" type="button" data-share-type="review" aria-pressed="false">
+          <i data-lucide="star" aria-hidden="true"></i> <span data-i18n="İnceleme paylaş">İnceleme paylaş</span>
+        </button>
+      </div>
+
+      <label class="field"><span data-i18n="Kitap">Kitap</span><input id="quote-book" type="text" data-i18n-placeholder="Örn. İhyau Ulumi'd-Din" placeholder="Örn. İhyau Ulumi'd-Din" /></label>
+      <label class="field"><span data-i18n="Yazar">Yazar</span><input id="quote-author" type="text" data-i18n-placeholder="Örn. İmam Gazali" placeholder="Örn. İmam Gazali" /></label>
+      <label class="field" id="quote-text-field">
+        <span id="quote-text-label" data-i18n="Alıntı">Alıntı</span>
+        <textarea id="quote-text" rows="4" data-i18n-placeholder="Altını çizdiğin cümleyi buraya yaz..." placeholder="Altını çizdiğin cümleyi buraya yaz..."></textarea>
+      </label>
+      <label class="field" id="quote-rating-field" hidden>
+        <span data-i18n="Puan">Puan</span>
+        <select id="quote-rating">
+          <option value="5">★★★★★</option><option value="4">★★★★</option>
+          <option value="3">★★★</option><option value="2">★★</option><option value="1">★</option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" data-close-modal><span data-i18n="Vazgeç">Vazgeç</span></button>
+        <button class="btn btn-gold" type="button" id="publish-quote"><span data-i18n="Paylaşımı Yayınla">Paylaşımı Yayınla</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- İNCELEME / ALINTI DÜZENLEME MODALI -->
+  <div class="modal-backdrop" id="edit-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+      <button class="modal-close" type="button" data-close-edit-modal aria-label="Kapat">×</button>
+      <p class="eyebrow">HATIRATIM</p>
+      <h2 id="edit-modal-title">Düzenle</h2>
+      <p class="modal-desc">Sonradan yazdığını gözden geçirebilir, güncelleyebilir veya silebilirsin.</p>
+      <form id="edit-form" class="stack-form">
+        <label class="field"><span>Kitap</span><input id="edit-book" type="text" maxlength="200" required /></label>
+        <label class="field" id="edit-writer-field"><span>Yazar</span><input id="edit-writer" type="text" maxlength="200" /></label>
+        <label class="field" id="edit-rating-field" hidden><span>Puan</span>
+          <select id="edit-rating">
+            <option value="5">★★★★★</option><option value="4">★★★★</option>
+            <option value="3">★★★</option><option value="2">★★</option><option value="1">★</option>
+          </select>
+        </label>
+        <label class="field"><span>Metin</span><textarea id="edit-text" rows="5" maxlength="5000" required></textarea></label>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" data-close-edit-modal>Vazgeç</button>
+          <button class="btn btn-gold" type="submit">Değişiklikleri kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- HALKA OLUŞTURMA MODALI -->
+  <div class="modal-backdrop" id="halka-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="halka-modal-title">
+      <button class="modal-close" type="button" data-close-halka-modal aria-label="Kapat">×</button>
+      <p class="eyebrow">İLİM HALKASI</p>
+      <h2 id="halka-modal-title">Yeni halka kur</h2>
+      <p class="modal-desc">Ortak okuma ve yazılı müzakere için bir halka kur.</p>
+      <form id="halka-form" class="stack-form">
+        <label class="field"><span>Halka adı</span><input id="halka-name" type="text" maxlength="60" required placeholder="Örn. Sahih Buhari Okumaları" /></label>
+        <label class="field"><span>Açıklama</span><textarea id="halka-description" rows="3" maxlength="300" placeholder="Bu halkada ne okuyorsunuz?"></textarea></label>
+        <div class="field"><span>Halka fotoğrafı <small>(isteğe bağlı)</small></span>
+          <div class="photo-upload">
+            <span class="photo-preview" id="halka-photo-preview"><span class="avatar avatar--xl avatar--olive">◈</span></span>
+            <div class="photo-upload-actions">
+              <input id="halka-photo-input" type="file" accept="image/*" hidden />
+              <button class="btn btn-outline btn-sm" type="button" id="halka-photo-btn">Fotoğraf yükle</button>
+              <button class="text-btn" type="button" id="halka-photo-remove">Kaldır</button>
+            </div>
+          </div>
+        </div>
+        <p class="modal-error" id="halka-error" role="alert"></p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" data-close-halka-modal>Vazgeç</button>
+          <button class="btn btn-gold" type="submit">Halkayı kur</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MECLİS OLUŞTURMA MODALI -->
+  <div class="modal-backdrop" id="meclis-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="meclis-modal-title">
+      <button class="modal-close" type="button" data-close-meclis-modal aria-label="Kapat">×</button>
+      <p class="eyebrow">İLİM MECLİSİ</p>
+      <h2 id="meclis-modal-title">Yeni meclis kur</h2>
+      <p class="modal-desc">Birlikte ders çalışmak ve müzakere etmek için bir meclis kur.</p>
+      <form id="meclis-form" class="stack-form">
+        <label class="field"><span>Meclis adı</span><input id="meclis-name" type="text" maxlength="60" required data-i18n-placeholder="Örn. İhyau Ulumi'd-Din Meclisi" placeholder="Örn. İhyau Ulumi'd-Din Meclisi" /></label>
+        <label class="field"><span>Açıklama</span><textarea id="meclis-description" rows="2" maxlength="300" placeholder="Meclisin konusu ve amacı"></textarea></label>
+        <div class="field"><span>Meclis fotoğrafı <small>(isteğe bağlı)</small></span>
+          <div class="photo-upload">
+            <span class="photo-preview" id="meclis-photo-preview"><span class="avatar avatar--xl avatar--gold">❖</span></span>
+            <div class="photo-upload-actions">
+              <input id="meclis-photo-input" type="file" accept="image/*" hidden />
+              <button class="btn btn-outline btn-sm" type="button" id="meclis-photo-btn">Fotoğraf yükle</button>
+              <button class="text-btn" type="button" id="meclis-photo-remove">Kaldır</button>
+            </div>
+          </div>
+        </div>
+        <label class="field"><span>Üyeler <small>(kendin dâhil en az 3 kişi)</small></span>
+          <input id="meclis-member-search" type="search" placeholder="Kullanıcı ara..." autocomplete="off" />
+          <div class="member-picker" id="meclis-members"></div>
+        </label>
+        <p class="modal-error" id="meclis-error" role="alert"></p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" data-close-meclis-modal>Vazgeç</button>
+          <button class="btn btn-gold" type="submit">Meclisi kur</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ÖZEL MESAJ MODALI -->
+  <div class="modal-backdrop" id="direct-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="direct-modal-title">
+      <button class="modal-close" type="button" data-close-direct-modal aria-label="Kapat">×</button>
+      <p class="eyebrow">ÖZEL MESAJ</p>
+      <h2 id="direct-modal-title">Yeni mesaj</h2>
+      <p class="modal-desc">Kullanıcı adını yaz; daha önce mesajlaştıysan o sohbet açılır.</p>
+      <form id="direct-form" class="stack-form">
+        <label class="field"><span>Kullanıcı adı</span>
+          <input id="direct-username" type="text" list="direct-user-options" placeholder="Örn. @kullanici_adi" autocomplete="off" required />
+          <datalist id="direct-user-options"></datalist>
+        </label>
+        <p class="modal-error" id="direct-error" role="alert"></p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" data-close-direct-modal>Vazgeç</button>
+          <button class="btn btn-gold" type="submit">Sohbeti aç</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ GİRİŞ / KAYIT EKRANI ============ -->
+  <div class="auth-screen" id="auth-screen" hidden>
+    <div class="auth-card">
+      <div class="auth-brand-block">
+        <span class="auth-emblem" data-emblem aria-hidden="true"></span>
+        <span class="auth-brand">İlim Halkası</span>
+      </div>
+      <p class="auth-tagline">Birlikte ilim, birlikte hikmet.</p>
+      <div class="auth-tabs" role="tablist" aria-label="Giriş veya kayıt">
+        <button class="auth-tab is-active" type="button" data-auth-tab="login" role="tab" aria-selected="true">Giriş Yap</button>
+        <button class="auth-tab" type="button" data-auth-tab="register" role="tab" aria-selected="false">Kayıt Ol</button>
+      </div>
+      <form id="login-form" class="auth-form">
+        <label class="field"><span>E-posta</span><input id="login-email" type="email" autocomplete="email" placeholder="ornek@eposta.com" /></label>
+        <label class="field"><span>Şifre</span>
+          <span class="password-field">
+            <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" />
+            <button class="password-toggle" type="button" data-password-toggle="login-password" aria-label="Şifreyi göster" aria-pressed="false" title="Şifreyi göster"><i data-lucide="eye" aria-hidden="true"></i></button>
+          </span>
+        </label>
+        <button class="auth-forgot" type="button" id="forgot-password-link">Şifremi unuttum</button>
+        <p class="auth-error" id="auth-error" hidden></p>
+        <button class="btn btn-gold btn-block" type="submit">Giriş Yap</button>
+      </form>
+      <form id="register-form" class="auth-form" hidden>
+        <label class="field"><span>Adın</span><input id="register-name" type="text" autocomplete="name" placeholder="Adın Soyadın" /></label>
+        <label class="field"><span>Kullanıcı adı</span><input id="register-username" type="text" autocomplete="username" placeholder="kucuk_harfler" /></label>
+        <label class="field"><span>E-posta</span><input id="register-email" type="email" autocomplete="email" placeholder="ornek@eposta.com" /></label>
+        <label class="field"><span>Şifre</span>
+          <span class="password-field">
+            <input id="register-password" type="password" autocomplete="new-password" placeholder="En az 8 karakter" />
+            <button class="password-toggle" type="button" data-password-toggle="register-password" aria-label="Şifreyi göster" aria-pressed="false" title="Şifreyi göster"><i data-lucide="eye" aria-hidden="true"></i></button>
+          </span>
+        </label>
+        <p class="auth-error" id="register-error" hidden></p>
+        <button class="btn btn-gold btn-block" type="submit">Halkaya Katıl</button>
+      </form>
+      <p class="auth-foot">İlim Halkası · Birlikte ilim</p>
+    </div>
+  </div>
+
+  <!-- ŞİFRE SIFIRLAMA MODALI -->
+  <div class="modal-backdrop" id="password-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="password-modal-title">
+      <button class="modal-close" type="button" data-close-password-modal aria-label="Kapat">×</button>
+      <p class="eyebrow" data-i18n="HESABIM">HESABIM</p>
+      <h2 id="password-modal-title">Şifremi unuttum</h2>
+      <p class="modal-desc" id="password-modal-desc">E-posta adresine şifre sıfırlama bağlantısı göndereceğiz.</p>
+      <div id="forgot-stage">
+        <label class="field"><span>E-posta</span><input id="forgot-email" type="email" placeholder="ornek@eposta.com" autocomplete="email" /></label>
+        <p class="auth-error" id="forgot-error" hidden></p>
+        <p class="reset-hint" id="forgot-dev-hint" hidden></p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" data-close-password-modal>Vazgeç</button>
+          <button class="btn btn-gold" type="button" id="forgot-submit">Bağlantı gönder</button>
+        </div>
+      </div>
+      <div id="reset-stage" hidden>
+        <label class="field"><span>Yeni şifre</span>
+          <span class="password-field">
+            <input id="reset-password" type="password" placeholder="En az 8 karakter" autocomplete="new-password" />
+            <button class="password-toggle" type="button" data-password-toggle="reset-password" aria-label="Şifreyi göster" aria-pressed="false" title="Şifreyi göster"><i data-lucide="eye" aria-hidden="true"></i></button>
+          </span>
+        </label>
+        <label class="field"><span>Yeni şifre (tekrar)</span>
+          <span class="password-field">
+            <input id="reset-confirm" type="password" placeholder="Şifreyi tekrar yaz" autocomplete="new-password" />
+            <button class="password-toggle" type="button" data-password-toggle="reset-confirm" aria-label="Şifreyi göster" aria-pressed="false" title="Şifreyi göster"><i data-lucide="eye" aria-hidden="true"></i></button>
+          </span>
+        </label>
+        <p class="auth-error" id="reset-error" hidden></p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" data-close-password-modal>Vazgeç</button>
+          <button class="btn btn-gold" type="button" id="reset-submit">Şifreyi güncelle</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAVET MODALI -->
+  <div class="modal-backdrop" id="invite-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="invite-modal-title">
+      <button class="modal-close" type="button" data-close-invite-modal aria-label="Kapat">×</button>
+      <p class="eyebrow">İLİM HALKASI</p>
+      <h2 id="invite-modal-title">Arkadaşlarını davet et</h2>
+      <p class="modal-desc">Bağlantıyı kopyalayıp arkadaşına gönder. Kullanıcılar sayfasından kullanıcı adıyla da arayabilirsin.</p>
+      <label class="field"><span>Davet bağlantısı</span><input id="invite-link" type="text" readonly /></label>
+      <p class="modal-error" id="invite-error" role="alert"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" data-close-invite-modal>Kapat</button>
+        <button class="btn btn-gold" type="button" id="invite-copy">Bağlantıyı kopyala</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KULLANICI BİLDİR MODALI -->
+  <div class="modal-backdrop" id="report-user-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="report-user-title">
+      <button class="modal-close" type="button" data-close-report-user-modal aria-label="Kapat">×</button>
+      <p class="eyebrow">BİLDİR</p>
+      <h2 id="report-user-title">Bu profili bildir</h2>
+      <p class="modal-desc" id="report-user-desc">—</p>
+      <label class="field"><span>Neden</span>
+        <select id="report-user-reason">
+          <option value="Uygunsuz içerik">Uygunsuz içerik</option>
+          <option value="Nefret veya ayrıştırıcı dil">Nefret veya ayrıştırıcı dil</option>
+          <option value="Sahte hesap">Sahte hesap</option>
+          <option value="Taciz veya spam">Taciz veya spam</option>
+          <option value="Diğer">Diğer</option>
+        </select>
+      </label>
+      <label class="field"><span>Açıklama <small>(isteğe bağlı)</small></span><textarea id="report-user-detail" rows="3" maxlength="1000" placeholder="Kısaca açıkla..."></textarea></label>
+      <p class="modal-error" id="report-user-error" role="alert"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" data-close-report-user-modal>Vazgeç</button>
+        <button class="btn btn-gold" type="button" id="report-user-submit">Bildirimi gönder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KİTAP GİZLEME GEREKÇESİ -->
+  <div class="modal-backdrop" id="hide-book-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="hide-book-modal-title">
+      <button class="modal-close" type="button" data-close-hide-book-modal aria-label="Kapat">×</button>
+      <p class="eyebrow">YÖNETİM PANELİ</p>
+      <h2 id="hide-book-modal-title">Kitabı gizle</h2>
+      <p class="modal-desc" id="hide-book-modal-desc">Bu kitap tüm kullanıcıların kataloğundan kaldırılacak. Şeffaf bir gerekçe yaz.</p>
+      <label class="field"><span>Gizleme gerekçesi</span>
+        <textarea id="hide-book-reason" rows="3" maxlength="300" placeholder="Örn. Yinelenen kayıt, Türkçe baskı mevcut"></textarea>
+      </label>
+      <p class="modal-error" id="hide-book-error" role="alert"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" data-close-hide-book-modal>Vazgeç</button>
+        <button class="btn btn-gold" type="button" id="hide-book-confirm">Kataloğu gizle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAKİPÇİ / TAKİP EDİLEN LİSTESİ -->
+  <div class="modal-backdrop" id="follow-list-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="follow-list-title">
+      <button class="modal-close" type="button" data-close-follow-list-modal aria-label="Kapat">×</button>
+      <p class="eyebrow" id="follow-list-eyebrow">PROFİL</p>
+      <h2 id="follow-list-title">Liste</h2>
+      <p class="follow-list-sub" id="follow-list-sub"></p>
+      <div id="follow-list-body" class="follow-list-body"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" id="follow-list-own" hidden>Kendi listemi aç</button>
+        <button class="btn btn-ghost" type="button" data-close-follow-list-modal>Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEK ÇATI · DİNAMİK AMBLEM: dış hilal + kemer + kitap sabit, merkez silüet temaya göre değişir -->
+  <template id="emblem-template">
+    <svg class="ilim-emblem" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <clipPath id="archClip">
+          <path d="M120 28 C110 42, 92 48, 86 64 C81 76, 86 86, 86 86 C65 92, 54 108, 54 128 L54 186 L186 186 L186 128 C186 108, 175 92, 154 86 C154 86, 159 76, 154 64 C148 48, 130 42, 120 28 Z" />
+        </clipPath>
+      </defs>
+
+      <!-- 1 · Tam simetrik altın hilal -->
+      <path d="M36 122 A 84 88 0 1 0 204 122 A 76 74 0 1 1 36 122 Z" fill="#C69C3A" />
+
+      <!-- 2 · Dış kemer altın çerçeve (yumuşatılmış omuz geçişleri) -->
+      <path d="M120 20 C108 36, 87 43, 80 61 C74 75, 79 84, 79 84 C57 90, 46 107, 46 128 L46 186 L194 186 L194 128 C194 107, 183 90, 161 84 C161 84, 166 75, 160 61 C153 43, 132 36, 120 20 Z" fill="#FAF7F0" stroke="#C69C3A" stroke-width="2.5" stroke-linejoin="round" />
+
+      <!-- 3 · Kemer içi tema zeminİ -->
+      <path class="em-bg" d="M120 28 C110 42, 92 48, 86 64 C81 76, 86 86, 86 86 C65 92, 54 108, 54 128 L54 186 L186 186 L186 128 C186 108, 175 92, 154 86 C154 86, 159 76, 154 64 C148 48, 130 42, 120 28 Z" />
+
+      <!-- 4 · Temaya göre değişen mübarek mekân silüeti -->
+      <g clip-path="url(#archClip)">
+        <g class="emblem-scene emblem-scene--medine">
+          <path class="em-dome" d="M86 124 A 24 24 0 0 1 134 124 Z" />
+          <line x1="110" y1="91" x2="110" y2="100" stroke="#D4AF37" stroke-width="1.6" stroke-linecap="round" />
+          <circle cx="110" cy="95" r="1.6" fill="#D4AF37" />
+          <rect x="84" y="124" width="52" height="24" fill="#1E523A" />
+          <rect x="90" y="128" width="3" height="6" rx="1.5" fill="#D4AF37" />
+          <rect x="98" y="128" width="3" height="6" rx="1.5" fill="#D4AF37" />
+          <rect x="106" y="128" width="3" height="6" rx="1.5" fill="#D4AF37" />
+          <rect x="114" y="128" width="3" height="6" rx="1.5" fill="#D4AF37" />
+          <rect x="122" y="128" width="3" height="6" rx="1.5" fill="#D4AF37" />
+          <rect x="142" y="88" width="8" height="60" fill="#EAE2D0" />
+          <rect x="140" y="96" width="12" height="2.5" rx="1" fill="#C69C3A" />
+          <rect x="140" y="114" width="12" height="2.5" rx="1" fill="#C69C3A" />
+          <polygon points="142,88 146,74 150,88" fill="#EAE2D0" />
+          <line x1="146" y1="68" x2="146" y2="74" stroke="#D4AF37" stroke-width="1.4" stroke-linecap="round" />
+        </g>
+
+        <g class="emblem-scene emblem-scene--kudus">
+          <path d="M98 92 A 22 22 0 0 1 142 92 Z" fill="#D4AF37" />
+          <line x1="120" y1="60" x2="120" y2="70" stroke="#D4AF37" stroke-width="1.6" stroke-linecap="round" />
+          <circle cx="120" cy="64" r="1.8" fill="none" stroke="#D4AF37" stroke-width="1.2" />
+          <rect x="98" y="92" width="44" height="14" fill="#EFE8D8" />
+          <rect x="104" y="95" width="2.5" height="7" rx="1.25" fill="#9E8B6C" />
+          <rect x="112" y="95" width="2.5" height="7" rx="1.25" fill="#9E8B6C" />
+          <rect x="120" y="95" width="2.5" height="7" rx="1.25" fill="#9E8B6C" />
+          <rect x="128" y="95" width="2.5" height="7" rx="1.25" fill="#9E8B6C" />
+          <rect x="134" y="95" width="2.5" height="7" rx="1.25" fill="#9E8B6C" />
+          <polygon points="78,112 100,106 140,106 162,112 162,148 78,148" fill="#E6DEC8" />
+          <rect x="100" y="106" width="40" height="42" fill="#EFE8D8" />
+          <rect x="106" y="116" width="3.5" height="12" rx="1.75" fill="#B59B6D" />
+          <rect x="114" y="116" width="3.5" height="12" rx="1.75" fill="#B59B6D" />
+          <rect x="122" y="116" width="3.5" height="12" rx="1.75" fill="#B59B6D" />
+          <rect x="130" y="116" width="3.5" height="12" rx="1.75" fill="#B59B6D" />
+        </g>
+
+        <g class="emblem-scene emblem-scene--mekke">
+          <rect x="86" y="74" width="6" height="44" fill="#EAE2D0" />
+          <polygon points="86,74 89,63 92,74" fill="#EAE2D0" />
+          <rect x="85" y="81" width="8" height="2" rx="1" fill="#C69C3A" />
+          <rect x="148" y="74" width="6" height="44" fill="#EAE2D0" />
+          <polygon points="148,74 151,63 154,74" fill="#EAE2D0" />
+          <rect x="147" y="81" width="8" height="2" rx="1" fill="#C69C3A" />
+          <rect x="94" y="94" width="52" height="54" rx="1.5" fill="#0A0A0A" stroke="#2C2C2C" stroke-width="1" />
+          <rect x="94" y="104" width="52" height="5" fill="#D4AF37" />
+          <line x1="94" y1="112" x2="146" y2="112" stroke="#D4AF37" stroke-width="1" stroke-dasharray="3 3" />
+          <rect x="126" y="118" width="9" height="18" rx="1" fill="#D4AF37" />
+        </g>
+      </g>
+
+      <!-- 5 · Ön plan: açık kitap ve ayraç (tüm temalarda sabit) -->
+      <g>
+        <path class="em-cover" d="M36 184 L108 184 C114 184, 118 187, 120 190 C122 187, 126 184, 132 184 L204 184 L198 189 L126 189 C123 189, 121 191, 120 193 C119 191, 117 189, 114 189 L42 189 Z" />
+        <path d="M40 184 L54 140 C78 140, 106 146, 120 162 C134 146, 162 140, 186 140 L200 184 Z" fill="#DFD6C3" />
+        <path d="M44 182 L58 136 C82 136, 108 143, 120 160 C132 143, 158 136, 182 136 L196 182 Z" fill="#EAE2D0" />
+        <path d="M48 180 L64 130 C86 132, 108 140, 120 158 L120 184 C106 174, 76 174, 48 180 Z" fill="#FAF7F0" stroke="#C8BFA8" stroke-width="1" stroke-linejoin="round" />
+        <path d="M192 180 L176 130 C154 132, 132 140, 120 158 L120 184 C134 174, 164 174, 192 180 Z" fill="#FAF7F0" stroke="#C8BFA8" stroke-width="1" stroke-linejoin="round" />
+        <path d="M56 172 L69 137 C86 139, 104 145, 114 159 L114 176 C100 169, 78 169, 56 172 Z" fill="none" stroke="#C69C3A" stroke-width="0.9" opacity="0.8" />
+        <path d="M184 172 L171 137 C154 139, 136 145, 126 159 L126 176 C140 169, 162 169, 184 172 Z" fill="none" stroke="#C69C3A" stroke-width="0.9" opacity="0.8" />
+        <polygon points="68,184 76,184 74,195 66,195" fill="#B5892E" />
+        <path d="M120 156 C116 168, 125 178, 117 192 L121 196 L124 191 C129 178, 121 168, 120 156 Z" fill="#C69C3A" />
+      </g>
+    </svg>
+  </template>
+
+  <!-- KARŞILAMA KARTI · tema duyarlı minimalist line-art filigranı -->
+  <template id="watermark-template">
+    <svg class="welcome-watermark" viewBox="0 0 240 210" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <clipPath id="watermarkArchClip">
+          <path d="M120 18 C108 36, 87 43, 80 61 C74 75, 79 84, 79 84 C57 90, 46 107, 46 128 L46 190 L194 190 L194 128 C194 107, 183 90, 161 84 C161 84, 166 75, 160 61 C153 43, 132 36, 120 20 Z" />
+        </clipPath>
+      </defs>
+
+      <!-- İnce çift kemer çerçevesi (yumuşatılmış uçlar) -->
+      <path d="M120 12 C106 31, 83 39, 75 59 C69 74, 74 84, 74 84 C50 91, 38 109, 38 132 L38 196" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+      <path d="M120 12 C134 31, 157 39, 165 59 C171 74, 166 84, 166 84 C190 91, 202 109, 202 132 L202 196" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+      <path d="M120 20 C108 36, 87 43, 80 61 C74 75, 79 84, 79 84 C57 90, 46 107, 46 128 L46 196" stroke="currentColor" stroke-width="0.75" stroke-dasharray="3 3" stroke-linecap="round" />
+      <path d="M120 20 C132 36, 153 43, 160 61 C166 75, 161 84, 161 84 C183 90, 194 107, 194 128 L194 196" stroke="currentColor" stroke-width="0.75" stroke-dasharray="3 3" stroke-linecap="round" />
+
+      <g clip-path="url(#watermarkArchClip)">
+        <g class="wm-scene wm-scene--medine" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M84 126 A 26 26 0 0 1 136 126" />
+          <line x1="110" y1="90" x2="110" y2="100" />
+          <circle cx="110" cy="94" r="2" />
+          <line x1="80" y1="126" x2="140" y2="126" />
+          <path d="M88 148 L88 134 A 4 4 0 0 1 96 134 L96 148" />
+          <path d="M106 148 L106 134 A 4 4 0 0 1 114 134 L114 148" />
+          <path d="M124 148 L124 134 A 4 4 0 0 1 132 134 L132 148" />
+          <rect x="144" y="84" width="9" height="66" />
+          <line x1="141" y1="94" x2="156" y2="94" />
+          <line x1="141" y1="114" x2="156" y2="114" />
+          <polygon points="144,84 148.5,68 153,84" />
+          <line x1="148.5" y1="61" x2="148.5" y2="68" />
+        </g>
+
+        <g class="wm-scene wm-scene--kudus" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M96 92 A 24 24 0 0 1 144 92" />
+          <line x1="120" y1="57" x2="120" y2="68" />
+          <circle cx="120" cy="61" r="2.2" />
+          <rect x="96" y="92" width="48" height="14" />
+          <line x1="104" y1="95" x2="104" y2="103" />
+          <line x1="112" y1="95" x2="112" y2="103" />
+          <line x1="120" y1="95" x2="120" y2="103" />
+          <line x1="128" y1="95" x2="128" y2="103" />
+          <line x1="136" y1="95" x2="136" y2="103" />
+          <polyline points="74,114 98,106 142,106 166,114" />
+          <line x1="98" y1="106" x2="98" y2="150" />
+          <line x1="142" y1="106" x2="142" y2="150" />
+          <path d="M105 142 L105 120 A 3.5 3.5 0 0 1 112 120 L112 142" />
+          <path d="M116.5 142 L116.5 120 A 3.5 3.5 0 0 1 123.5 120 L123.5 142" />
+          <path d="M128 142 L128 120 A 3.5 3.5 0 0 1 135 120 L135 142" />
+        </g>
+
+        <g class="wm-scene wm-scene--mekke" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="82" y="70" width="7" height="50" />
+          <polygon points="82,70 85.5,58 89,70" />
+          <line x1="80" y1="78" x2="91" y2="78" />
+          <line x1="85.5" y1="53" x2="85.5" y2="58" />
+          <rect x="151" y="70" width="7" height="50" />
+          <polygon points="151,70 154.5,58 158,70" />
+          <line x1="149" y1="78" x2="160" y2="78" />
+          <line x1="154.5" y1="53" x2="154.5" y2="58" />
+          <rect x="92" y="92" width="56" height="58" rx="1" />
+          <line x1="92" y1="103" x2="148" y2="103" />
+          <line x1="92" y1="109" x2="148" y2="109" />
+          <line x1="92" y1="106" x2="148" y2="106" stroke-dasharray="4 3" stroke-width="0.8" />
+          <rect x="126" y="117" width="11" height="22" rx="1" />
+          <line x1="131.5" y1="117" x2="131.5" y2="139" stroke-width="0.8" />
+        </g>
+      </g>
+
+      <!-- Ön plan: minimalist açık kitap -->
+      <g stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M44 186 L60 134 C84 136, 108 144, 120 162" />
+        <path d="M196 186 L180 134 C156 136, 132 144, 120 162" />
+        <path d="M44 186 C74 178, 104 178, 120 190" />
+        <path d="M196 186 C166 178, 136 178, 120 190" />
+        <line x1="120" y1="162" x2="120" y2="196" />
+        <path d="M120 162 C117 174, 124 184, 118 198" stroke-width="1" />
+        <path d="M36 190 L108 190 C114 190, 118 193, 120 196 C122 193, 126 190, 132 190 L204 190" stroke-width="1.4" />
+      </g>
+    </svg>
+  </template>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
