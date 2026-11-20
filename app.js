@@ -2997,6 +2997,13 @@ $('#top-brand')?.addEventListener('click', (e) => {
   $('.sidebar').classList.add('is-open');
 });
 
+/* Görünür Menü butonu: mobilde sol menü çekmecesini açar/kapatır. */
+$('#menu-btn')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  $('.sidebar').classList.toggle('is-open');
+});
+
 /* Menü: masaüstünde daraltılabilir, tablette açılır şerit */
 function syncSidebarMode() {
   const shell = $('.app-shell');

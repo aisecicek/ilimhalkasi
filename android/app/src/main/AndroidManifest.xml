@@ -11,6 +11,7 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme"
         android:networkSecurityConfig="@xml/network_security_config"
+        android:forceDarkAllowed="false"
         android:supportsRtl="false">
 
         <provider

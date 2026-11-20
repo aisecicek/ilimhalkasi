@@ -29,6 +29,7 @@ window.ILIM_I18N = {
     'ANA AKIŞ': 'MAIN FEED',
     'SOSYAL VE KİŞİSEL ALAN': 'SOCIAL & PERSONAL',
     'HESABIM VE YÖNETİM': 'ACCOUNT & ADMIN',
+    'Menü': 'Menu',
     'Menüyü daralt veya genişlet': 'Collapse or expand menu',
     'Menüyü aç / kapat': 'Open / close menu',
     'Profilimi aç': 'Open my profile',

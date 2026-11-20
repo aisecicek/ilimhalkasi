@@ -2,6 +2,7 @@ package com.ilimhalkasi.app;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -50,7 +51,12 @@ public class MainActivity extends AppCompatActivity {
 
         webView = findViewById(R.id.webview);
         WebSettings settings = webView.getSettings();
+        webView.setBackgroundColor(Color.parseColor("#F7F4EC"));
         settings.setJavaScriptEnabled(true);
+        // Telefon karanlık modda olsa bile siteyi tasarlandığı renklerle göster.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            settings.setForceDark(WebSettings.FORCE_DARK_OFF);
+        }
         settings.setDomStorageEnabled(true); // dil/tercihler localStorage'da tutuluyor
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(false);
