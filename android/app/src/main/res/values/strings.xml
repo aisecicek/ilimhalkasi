@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">İlim Halkası</string>
-    <!-- GitHub Actions, APP_URL değişkeniyle bu değeri gerçek HTTPS domain ile değiştirir. -->
-    <string name="app_host">https://ilimhalkasi.example.com</string>
+    <!-- Varsayılan: ev Wi-Fi'si. Domain olunca GitHub APP_URL değişkeni bunu değiştirir. -->
+    <string name="app_host">http://192.168.0.104:8765</string>
     <string name="choose_image">Görsel seç</string>
     <string name="exit_hint">Çıkmak için tekrar bas</string>
     <string name="link_error">Bağlantı açılamadı</string>

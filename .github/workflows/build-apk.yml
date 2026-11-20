@@ -33,7 +33,9 @@ jobs:
         run: |
           python3 - <<'PY'
           import html, os, pathlib, re
-          url = (os.environ.get("APP_URL") or "https://ilimhalkasi.example.com").strip()
+          # Domain yoksa ilk APK ev Wi-Fi'sindeki sunucuya bağlanır.
+          # Domain alınınca APP_URL değişkenine https://... adresini yazman yeterli.
+          url = (os.environ.get("APP_URL") or "http://192.168.0.104:8765").strip()
           target = pathlib.Path("android/app/src/main/res/values/strings.xml")
           text = target.read_text(encoding="utf-8")
           pattern = r'(<string name="app_host">)[^<]*(</string>)'

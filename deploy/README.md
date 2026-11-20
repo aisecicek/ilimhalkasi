@@ -5,7 +5,21 @@ Android APK yalnızca bu siteyi açan bir WebView kabuğudur. Bu yüzden **aray�
 değişiklikleri için yeni APK gerekmez**: dosyayı değiştirip sunucuyu güncellediğinde
 kullanıcılar uygulamayı açtığında yeni sürümü görür.
 
-## 1. HTTPS sunucu
+## 0. Domain yoksa önce böyle yap (şu anki durumun)
+
+Domain almadan da telefonunda çalışan bir APK yapabiliriz. Tek şart: **telefon ve bilgisayar aynı Wi-Fi'de olsun.**
+
+1. Bilgisayarda uygulamayı başlat: proje klasöründe `python server.py`
+2. Telefonu aynı Wi-Fi'ye bağla.
+3. GitHub'a kod yükle (aşağıdaki "2. APK derleme" bölümündeki 1. adım).
+4. GitHub'da `APP_URL` değişkenini şu değerle ekle: `http://192.168.0.104:8765`
+   *(Değişkeni eklemezsen APK zaten bu adrese bağlanır, sorun değil.)*
+5. **Actions → Build Android APK → Run workflow** → bitince `ilimhalkasi-apk` → `app-debug.apk` indir ve kur.
+
+> Bilgisayarın IP'si değişirse `Get-NetIPAddress` komutuyla yeni IP'yi bulup `APP_URL`'i güncelle.
+> Bu adres sadece ev Wi-Fi'sinde çalışır; dışarıdan/Play Store için HTTPS domain gerekir (aşağıdaki bölüm).
+
+## 1. HTTPS sunucu (domain aldığında)
 
 Sunucu kendi başına HTTP çalışır (port 8765). Herkese açık erişim için önüne Caddy
 (veya Nginx) koyup TLS'i orada sonlandırın:

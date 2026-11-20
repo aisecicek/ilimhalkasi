@@ -21,9 +21,13 @@ merkezi, admin paneli, TR/EN dil ve temalar) bu kabuğun içinde aynen çalış�
 Geri tuşu, klavye, fotoğraf/kamera seçimi ve dış bağlantılar mobil davranışa
 uyarlanmıştır.
 
-APK kendi içinde arayüz dosyaları taşımaz; HTTPS sunucudan yükler. Bu yüzden
+APK kendi içinde arayüz dosyaları taşımaz; sunucudan yükler. Bu yüzden
 **arayüzde yaptığın bir değişiklik için yeni APK gerekmez** — sunucuya geçtiğinde
 telefondaki uygulama yeni sürümü açtığında görür.
+
+Domain henüz yoksa ilk APK ev Wi-Fi'sindeki `http://192.168.0.104:8765` adresine
+bağlanır (telefon ve bilgisayar aynı ağda olmalı). Domain alınınca `APP_URL`
+değişkenine HTTPS adresini yazman yeterli.
 
 - APK derlemesi GitHub Actions ile yapılır: `APP_URL` repository variable'ına gerçek
   HTTPS domain'i girip **Actions → Build Android APK** işini çalıştır; çıkan artifact
