@@ -17,6 +17,7 @@ import json
 import os
 import re
 import secrets
+import socket
 import smtplib
 import sqlite3
 import ssl
@@ -4064,8 +4065,21 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> None:
     init_db()
     start_figure_scheduler()
-    server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    # Telefon/apk aynı Wi-Fi'den bağlanabildiği için tüm arayüzlere aç.
+    host = os.environ.get("HOST", "0.0.0.0")
+    server = ThreadingHTTPServer((host, PORT), Handler)
+
+    probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        probe.connect(("8.8.8.8", 80))
+        lan_ip = probe.getsockname()[0]
+    except OSError:
+        lan_ip = host
+    finally:
+        probe.close()
+
     print(f"Ilim Halkasi ready -> http://localhost:{PORT}")
+    print(f"LAN erisim -> http://{lan_ip}:{PORT}")
     print("Press Ctrl+C to stop")
     try:
         server.serve_forever()
