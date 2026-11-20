@@ -1,0 +1,19 @@
+# İlim Halkası — HTTPS ters proxy örneği
+# Kullanım: caddy run --config deploy/Caddyfile
+# APP_BASE_URL=https://ilimhalkasi.example.com COOKIE_SECURE=1 python server.py
+
+ilimhalkasi.example.com {
+    encode zstd gzip
+
+    header {
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # APK ve web aynı origin'i kullandığından oturum çerezi aynı kalır.
+    reverse_proxy 127.0.0.1:8765 {
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-Host {host}
+    }
+}

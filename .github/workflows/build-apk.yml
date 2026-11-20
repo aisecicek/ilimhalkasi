@@ -1,0 +1,60 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Inject server URL
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          python3 - <<'PY'
+          import html, os, pathlib, re
+          url = (os.environ.get("APP_URL") or "https://ilimhalkasi.example.com").strip()
+          target = pathlib.Path("android/app/src/main/res/values/strings.xml")
+          text = target.read_text(encoding="utf-8")
+          pattern = r'(<string name="app_host">)[^<]*(</string>)'
+          if not re.search(pattern, text):
+              raise SystemExit("app_host string not found")
+          text = re.sub(pattern, lambda m: m.group(1) + html.escape(url, quote=False) + m.group(2), text)
+          target.write_text(text, encoding="utf-8")
+          print("APK will connect to:", url)
+          PY
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ilimhalkasi-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30

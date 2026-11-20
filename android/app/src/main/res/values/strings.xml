@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">İlim Halkası</string>
+    <!-- GitHub Actions, APP_URL değişkeniyle bu değeri gerçek HTTPS domain ile değiştirir. -->
+    <string name="app_host">https://ilimhalkasi.example.com</string>
+    <string name="choose_image">Görsel seç</string>
+    <string name="exit_hint">Çıkmak için tekrar bas</string>
+    <string name="link_error">Bağlantı açılamadı</string>
+    <string name="load_error_title">Bağlantı kurulamadı</string>
+    <string name="load_error_body">Sunucuya ulaşılamadı. İnternet bağlantını ve sunucu adresini kontrol et.</string>
+    <string name="retry">Tekrar dene</string>
+</resources>

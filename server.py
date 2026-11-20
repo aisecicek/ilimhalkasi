@@ -51,6 +51,8 @@ SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "1").strip() not in ("0", "false",
 RESET_OUTBOX = BASE / "password_reset_outbox.txt"
 # Yalnızca yerel geliştirmede, e-posta olmadan sıfırlama bağlantısını yanıtta döndürür.
 DEV_RESET_LINK = os.environ.get("ILIMHALKASI_DEV_RESET_LINK", "0").strip() == "1"
+# Ters proxy (Caddy/Nginx) HTTPS sonlandırdığında oturum çerezini Secure yap.
+COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "0").strip().lower() in ("1", "true", "yes")
 
 STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
@@ -60,6 +62,7 @@ STATIC_FILES = {
     "/i18n.js": ("i18n.js", "text/javascript; charset=utf-8"),
     "/favicon.svg": ("favicon.svg", "image/svg+xml"),
     "/logo.svg": ("logo.svg", "image/svg+xml"),
+    "/manifest.webmanifest": ("manifest.webmanifest", "application/manifest+json"),
 }
 
 # ---------------------------------------------------------------------------
@@ -2221,6 +2224,10 @@ class Handler(BaseHTTPRequestHandler):
 
     # ---- yanıt yardımcıları ----
 
+    def secure_cookie_suffix(self) -> str:
+        forwarded = self.headers.get("X-Forwarded-Proto", "").split(",")[0].strip().lower()
+        return "; Secure" if (COOKIE_SECURE or forwarded == "https") else ""
+
     def send_json(self, data: dict, status: int = 200, cookie: str | None = None, clear_cookie: bool = False) -> None:
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -2230,10 +2237,14 @@ class Handler(BaseHTTPRequestHandler):
         if cookie:
             self.send_header(
                 "Set-Cookie",
-                f"ih_session={cookie}; Path=/; HttpOnly; SameSite=Lax; Max-Age={SESSION_DAYS * 86400}",
+                f"ih_session={cookie}; Path=/; HttpOnly; SameSite=Lax; Max-Age={SESSION_DAYS * 86400}"
+                f"{self.secure_cookie_suffix()}",
             )
         if clear_cookie:
-            self.send_header("Set-Cookie", "ih_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0")
+            self.send_header(
+                "Set-Cookie",
+                "ih_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0" + self.secure_cookie_suffix(),
+            )
         self.end_headers()
         self.wfile.write(body)
 

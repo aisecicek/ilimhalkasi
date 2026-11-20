@@ -2613,6 +2613,23 @@ function switchView(name) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// Android WebView geri tuşu için: açık panel/modalı kapatır, değilse ana sayfaya döner.
+// true döndürürse uygulama olayı yuttu demektir, false ise Activity çıkışı yönetir.
+function appBack() {
+  const panel = $('#notifications-panel');
+  if (panel && !panel.hidden) { toggleNotifications(false); return true; }
+  const openModal = document.querySelector('.modal-backdrop:not([hidden])');
+  if (openModal) { openModal.hidden = true; return true; }
+  const sidebar = document.querySelector('.sidebar.is-open');
+  if (sidebar) { sidebar.classList.remove('is-open'); return true; }
+  if (state.currentView && state.currentView !== 'home') {
+    switchView('home');
+    return true;
+  }
+  return false;
+}
+window.appBack = appBack;
+
 function selectCommunityTab(name) {
   state.communityTab = name;
   $$('[data-community-tab]').forEach((t) => {

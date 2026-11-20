@@ -1,0 +1,20 @@
+{
+  "name": "İlim Halkası",
+  "short_name": "İlim Halkası",
+  "description": "İlim halkaları, kitaplar ve hatıratlar için sakin bir okuma dünyası.",
+  "lang": "tr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F7F4EC",
+  "theme_color": "#1F4E3D",
+  "icons": [
+    {
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

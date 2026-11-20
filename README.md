@@ -13,6 +13,24 @@ python server.py
 
 `ilimhalkasi.db` ilk açılışta oluşturulur, şema göçleri otomatik uygulanır. Oturum 30 gün süren `HttpOnly` çerezle tutulur. `python -m http.server` ile açılan statik sürüm çalışmaz; API için `server.py` gerekir.
 
+## Mobil uygulama (Android APK)
+
+`android/` klasörü, sitenin tamamını açan bir WebView kabuğudur. **Tüm özellikler**
+(akış, kütüphane, halkalar, meclisler, hatırat, mesajlar, istatistikler, bildirim
+merkezi, admin paneli, TR/EN dil ve temalar) bu kabuğun içinde aynen çalışır.
+Geri tuşu, klavye, fotoğraf/kamera seçimi ve dış bağlantılar mobil davranışa
+uyarlanmıştır.
+
+APK kendi içinde arayüz dosyaları taşımaz; HTTPS sunucudan yükler. Bu yüzden
+**arayüzde yaptığın bir değişiklik için yeni APK gerekmez** — sunucuya geçtiğinde
+telefondaki uygulama yeni sürümü açtığında görür.
+
+- APK derlemesi GitHub Actions ile yapılır: `APP_URL` repository variable'ına gerçek
+  HTTPS domain'i girip **Actions → Build Android APK** işini çalıştır; çıkan artifact
+  kurulabilir `app-debug.apk` dosyasıdır.
+- Sunucuyu HTTPS arkasında çalıştırma (Caddy örneği, `COOKIE_SECURE`, ters proxy
+  ayarları) ve Play Store kontrol listesi için [`deploy/README.md`](deploy/README.md) dosyasına bak.
+
 ## Yönetici girişi
 
 ```
