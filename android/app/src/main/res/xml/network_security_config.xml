@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <base-config cleartextTrafficPermitted="false" />
-    <!-- Yerel geliştirme için LAN IP istisnası; gerçek dağıtımda HTTPS kullanılır. -->
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">192.168.0.104</domain>
-        <domain includeSubdomains="false">10.0.2.2</domain>
-    </domain-config>
+    <!--
+      Yerel/LAN geliştirme aşamasında kullanıcı sunucu adresini uygulama içinden
+      değiştirebiliyor. Bu yüzden HTTP'ye tüm host'lar için izin veriyoruz.
+      Herkese açık HTTPS yayına geçildiğinde base-config tekrar false yapılır.
+    -->
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>
