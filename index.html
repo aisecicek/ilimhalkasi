@@ -113,6 +113,8 @@
           <div class="global-search-results" id="global-search-results" hidden></div>
         </div>
         <div class="top-actions">
+          <button class="icon-btn mobile-only" type="button" id="search-open-btn" data-i18n-aria="Ara" data-i18n-title="Ara" aria-label="Ara" title="Ara"><i data-lucide="search" aria-hidden="true"></i></button>
+          <button class="icon-btn mobile-only" type="button" data-view="messages" data-i18n-aria="Mesajlar" data-i18n-title="Mesajlar" aria-label="Mesajlar" title="Mesajlar"><i data-lucide="mail" aria-hidden="true"></i></button>
           <button class="icon-btn" type="button" id="notifications-btn" data-i18n-aria="Duyurular" aria-label="Duyurular" aria-expanded="false" aria-controls="notifications-panel">
             <i data-lucide="bell" aria-hidden="true"></i><i class="badge-dot"></i>
           </button>
@@ -138,6 +140,37 @@
 
       <main class="content">
 
+        <!-- MOBİL: Keşfet çatısı altındaki yatay sekmeler -->
+        <div class="mobile-discover-tabs" id="mobile-discover-tabs" hidden
+             role="tablist" aria-label="Keşfet kategorileri">
+          <button class="md-tab" type="button" data-view="discover" data-i18n="Keşfet">Keşfet</button>
+          <button class="md-tab" type="button" data-view="authors" data-i18n="Yazarlar">Yazarlar</button>
+          <button class="md-tab" type="button" data-view="users" data-i18n="Kullanıcılar">Kullanıcılar</button>
+          <button class="md-tab" type="button" data-view="lists" data-i18n="Listeler">Listeler</button>
+        </div>
+
+        <!-- MOBİL: filtreli arama ekranı -->
+        <section class="view" id="view-search" aria-labelledby="mobile-search-title">
+          <div class="mobile-search-head">
+            <div><p class="eyebrow" data-i18n="ARA">ARA</p><h1 id="mobile-search-title" data-i18n="Ara">Ara</h1></div>
+            <button class="icon-btn" type="button" id="search-close-btn" data-i18n-aria="Kapat" data-i18n-title="Kapat" aria-label="Kapat" title="Kapat"><i data-lucide="x" aria-hidden="true"></i></button>
+          </div>
+          <form class="mobile-search-form" id="mobile-search-form" autocomplete="off">
+            <i data-lucide="search" aria-hidden="true"></i>
+            <input id="mobile-search-input" type="search" data-i18n-placeholder="Kitap, kullanıcı, yazar veya halka ara..." placeholder="Kitap, kullanıcı, yazar veya halka ara..." aria-label="Ara" />
+          </form>
+          <div class="mobile-search-filters" id="mobile-search-filters" role="group" aria-label="Arama filtresi">
+            <button class="chip is-active" type="button" data-search-filter="all" data-i18n="Tümü">Tümü</button>
+            <button class="chip" type="button" data-search-filter="books" data-i18n="Kitaplar">Kitaplar</button>
+            <button class="chip" type="button" data-search-filter="authors" data-i18n="Yazarlar">Yazarlar</button>
+            <button class="chip" type="button" data-search-filter="users" data-i18n="Kullanıcılar">Kullanıcılar</button>
+            <button class="chip" type="button" data-search-filter="circles" data-i18n="Halkalar">Halkalar</button>
+          </div>
+          <div class="mobile-search-results" id="mobile-search-results">
+            <p class="rail-muted" data-i18n="En az iki harf yazmaya başla.">En az iki harf yazmaya başla.</p>
+          </div>
+        </section>
+
         <!-- ============ ANA SAYFA ============ -->
         <section class="view is-active" id="view-home" aria-labelledby="greeting-title">
           <div class="greeting">
@@ -157,6 +190,9 @@
           </div>
 
           <div class="announcement-strip" id="home-announcements" aria-live="polite"></div>
+
+          <!-- MOBİL: Okumaya devam et kartı (sağ kolon mobilde gizli olduğu için burada) -->
+          <div class="mobile-continue" id="home-continue-card" hidden></div>
 
           <section class="home-books" aria-labelledby="home-books-title">
             <div class="page-head page-head--small">
@@ -978,6 +1014,42 @@
         <button class="text-btn" type="button" data-view="circles">Tüm halkalar →</button>
       </div>
     </aside>
+
+    <!-- MOBİL: 5 sekmeli alt menü -->
+    <nav class="bottom-nav" id="bottom-nav" aria-label="Mobil menü">
+      <button class="nav-item" type="button" data-view="home" data-i18n-aria="Ana Sayfa" aria-label="Ana Sayfa">
+        <i data-lucide="house" aria-hidden="true"></i><span data-i18n="Ana Sayfa">Ana Sayfa</span>
+      </button>
+      <button class="nav-item" type="button" data-view="discover" data-i18n-aria="Keşfet" aria-label="Keşfet">
+        <i data-lucide="compass" aria-hidden="true"></i><span data-i18n="Keşfet">Keşfet</span>
+      </button>
+      <button class="nav-item nav-add" type="button" id="quick-add-btn" data-i18n-aria="Hızlı ekle" data-i18n-title="Hızlı ekle" aria-label="Hızlı ekle" title="Hızlı ekle">
+        <span class="nav-add-circle"><i data-lucide="plus" aria-hidden="true"></i></span>
+      </button>
+      <button class="nav-item" type="button" data-view="circles" data-i18n-aria="Halkalar" aria-label="Halkalar">
+        <i data-lucide="users-round" aria-hidden="true"></i><span data-i18n="Halkalar">Halkalar</span>
+      </button>
+      <button class="nav-item" type="button" data-view="profile" data-i18n-aria="Kütüphanem" aria-label="Kütüphanem">
+        <i data-lucide="library" aria-hidden="true"></i><span data-i18n="Kütüphanem">Kütüphanem</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- MOBİL: hızlı ekleme penceresi -->
+  <div class="modal-backdrop sheet-backdrop" id="quick-sheet" hidden>
+    <div class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="quick-sheet-title">
+      <button class="sheet-handle" id="quick-sheet-close" type="button" data-i18n-aria="Kapat" aria-label="Kapat"></button>
+      <p class="eyebrow" data-i18n="HIZLI EKLE">HIZLI EKLE</p>
+      <h2 id="quick-sheet-title" data-i18n="Ne paylaşmak istersin?">Ne paylaşmak istersin?</h2>
+      <button class="sheet-action" type="button" id="quick-add-quote">
+        <span class="sheet-action-icon"><i data-lucide="quote" aria-hidden="true"></i></span>
+        <span><strong data-i18n="Satır / Alıntı Ekle">Satır / Alıntı Ekle</strong><small data-i18n="Kitabından bir alıntı veya inceleme paylaş">Kitabından bir alıntı veya inceleme paylaş</small></span>
+      </button>
+      <button class="sheet-action" type="button" id="quick-add-circle">
+        <span class="sheet-action-icon"><i data-lucide="users-round" aria-hidden="true"></i></span>
+        <span><strong data-i18n="Yeni Halka Kur">Yeni Halka Kur</strong><small data-i18n="Birlikte okumak için yeni bir halka oluştur">Birlikte okumak için yeni bir halka oluştur</small></span>
+      </button>
+    </div>
   </div>
 
   <!-- PROFİL DÜZENLEME MODALI -->

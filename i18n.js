@@ -951,6 +951,23 @@ window.ILIM_I18N = {
     'Kurallarımız': 'Our Rules',
     'Kitap kataloğu': 'Book Catalogue',
     'HESABIM': 'MY ACCOUNT',
+    /* Mobil uygulama kabuğu */
+    'ARA': 'SEARCH',
+    'Kitaplar': 'Books',
+    'YAZARLAR': 'AUTHORS',
+    'Listeler': 'Lists',
+    'Keşfet kategorileri': 'Discover categories',
+    'Arama filtresi': 'Search filter',
+    'Mobil menü': 'Mobile menu',
+    'En az iki harf yazmaya başla.': 'Start typing at least two letters.',
+    'Hızlı ekle': 'Quick add',
+    'HIZLI EKLE': 'QUICK ADD',
+    'Ne paylaşmak istersin?': 'What would you like to share?',
+    'Satır / Alıntı Ekle': 'Add a Line / Quote',
+    'Kitabından bir alıntı veya inceleme paylaş': 'Share a quote or review from your book',
+    'Yeni Halka Kur': 'Create a New Circle',
+    'Birlikte okumak için yeni bir halka oluştur': 'Create a new circle to read together',
+    'Okumaya devam et': 'Continue reading',
 
   }
 };

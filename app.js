@@ -130,6 +130,9 @@ const state = {
   shareGroupId: null,
   meclisMembers: new Set(),
   globalSearchTimer: null,
+  mobileSearchFilter: 'all',
+  mobileSearchTimer: null,
+  searchReturnView: 'home',
   publicProfile: null,
   publicReturnView: 'discover',
   statsTab: 'reading',
@@ -472,6 +475,128 @@ function avatarHTML(user, size = '') {
 function hideGlobalSearch() {
   const box = $('#global-search-results');
   if (box) { box.hidden = true; box.innerHTML = ''; }
+}
+
+/* ---------------- Mobil arama ekranı ---------------- */
+
+let mobileAuthorsPromise = null;
+
+function mobileSearchHTML(groups) {
+  const html = groups.filter((group) => group.rows).map((group) => `
+    <div class="global-result-group">
+      <p data-i18n="${esc(group.title)}">${t(group.title)}</p>
+      ${group.rows}
+    </div>`).join('');
+  return html || `<p class="rail-muted" data-i18n="Sonuç bulunamadı.">${t('Sonuç bulunamadı.')}</p>`;
+}
+
+async function runMobileSearch() {
+  const input = $('#mobile-search-input');
+  const host = $('#mobile-search-results');
+  if (!input || !host) return;
+  const query = String(input.value || '').trim();
+  if (query.length < 2) {
+    host.innerHTML = `<p class="rail-muted" data-i18n="En az iki harf yazmaya başla.">${t('En az iki harf yazmaya başla.')}</p>`;
+    applyStaticI18n(host);
+    return;
+  }
+  const filter = state.mobileSearchFilter;
+  const needle = query.toLocaleLowerCase('tr-TR');
+  host.innerHTML = `<p class="rail-muted">${t('Aranıyor…')}</p>`;
+
+  try {
+    const tasks = [];
+    if (filter === 'all' || filter === 'books') {
+      tasks.push(api(`/api/books?q=${encodeURIComponent(query)}&limit=8`).then((result) => ({ kind: 'books', result })));
+    }
+    if (filter === 'all' || filter === 'users') {
+      tasks.push(api(`/api/users/search?q=${encodeURIComponent(query)}`).then((result) => ({ kind: 'users', result })));
+    }
+    if (filter === 'all' || filter === 'authors') {
+      if (!mobileAuthorsPromise) {
+        mobileAuthorsPromise = api('/api/catalog-authors')
+          .then((result) => result.authors || [])
+          .finally(() => { mobileAuthorsPromise = null; });
+      }
+      tasks.push(mobileAuthorsPromise.then((authors) => ({ kind: 'authors', authors })));
+    }
+
+    const results = await Promise.all(tasks);
+    if ($('#mobile-search-input')?.value.trim() !== query) return;
+
+    const groups = [];
+    results.forEach((item) => {
+      if (item.kind === 'books') {
+        const books = item.result.books || [];
+        books.forEach(rememberBook);
+        const rows = books.map((book) => `
+          <button class="global-result" type="button" data-global-book="${esc(book.id)}">
+            ${bookCoverHTML(book, 'book-cover--mini')}
+            <span><strong>${esc(book.title)}</strong><small>${esc(book.author || t('Yazar bilinmiyor'))}</small></span>
+          </button>`).join('');
+        if (rows) groups.push({ title: 'KİTAPLAR', rows });
+      }
+      if (item.kind === 'users') {
+        const users = item.result.users || [];
+        const rows = users.map((user) => `
+          <button class="global-result" type="button" data-global-user="${esc(user.id)}">
+            ${avatarHTML(user)}
+            <span><strong>${esc(user.display_name)}</strong><small>@${esc(user.username)}</small></span>
+          </button>`).join('');
+        if (rows) groups.push({ title: 'KULLANICILAR', rows });
+      }
+      if (item.kind === 'authors') {
+        const authors = (item.authors || [])
+          .filter((author) => String(author.name || '').toLocaleLowerCase('tr-TR').includes(needle))
+          .slice(0, 8);
+        const rows = authors.map((author) => `
+          <button class="global-result" type="button" data-mobile-author="${esc(author.name)}">
+            <span class="avatar avatar--small avatar--olive">${esc(String(author.name || '?').charAt(0).toLocaleUpperCase('tr-TR'))}</span>
+            <span><strong>${esc(author.name)}</strong><small>${esc(author.count)} ${t('kitap')}</small></span>
+          </button>`).join('');
+        if (rows) groups.push({ title: 'YAZARLAR', rows });
+      }
+    });
+
+    if (filter === 'all' || filter === 'circles') {
+      const allCircles = [];
+      const circleIds = new Set();
+      [...(state.data?.groups || []), ...(state.data?.discover_circles || [])].forEach((group) => {
+        if (group.kind === 'halka' && !circleIds.has(group.id)) {
+          circleIds.add(group.id);
+          allCircles.push(group);
+        }
+      });
+      const circles = allCircles
+        .filter((group) => [group.name, group.description].some(
+          (value) => String(value || '').toLocaleLowerCase('tr-TR').includes(needle)
+        ))
+        .slice(0, 8);
+      const rows = circles.map((circle) => `
+        <button class="global-result" type="button" data-global-circle="${esc(circle.id)}">
+          <span class="global-result-icon" aria-hidden="true">◈</span>
+          <span><strong>${esc(circle.name)}</strong><small>${esc(circle.member_count)}${t(' üye')} · ${t('Halka')}</small></span>
+        </button>`).join('');
+      if (rows) groups.push({ title: 'HALKALAR', rows });
+    }
+
+    host.innerHTML = mobileSearchHTML(groups);
+    applyStaticI18n(host);
+    renderIcons();
+  } catch (error) {
+    host.innerHTML = `<p class="rail-muted">${esc(error.message)}</p>`;
+  }
+}
+
+function openMobileSearch() {
+  if (state.currentView !== 'search') state.searchReturnView = state.currentView;
+  switchView('search');
+  $('#mobile-search-input')?.focus();
+}
+
+function closeMobileSearch() {
+  const target = state.searchReturnView || 'home';
+  switchView(target === 'search' ? 'home' : target);
 }
 
 function globalSearchHTML(books, users, circles) {
@@ -1024,6 +1149,28 @@ function renderRightRail() {
       $('#rail-current-bar').style.width = `${progress.pct}%`;
       const openBtn = $('#rail-current-open');
       openBtn.dataset.globalBook = book.book_id;
+    }
+  }
+
+  const mobileContinue = $('#home-continue-card');
+  if (mobileContinue) {
+    const book = reading[0];
+    mobileContinue.hidden = !book;
+    if (book) {
+      const progress = shelfProgress(book);
+      const progressText = pageProgressText(progress) || `${progress.page} ${t('sayfa')}`;
+      mobileContinue.innerHTML = `
+        <button class="mobile-continue-card" type="button" data-global-book="${esc(book.book_id)}">
+          <span class="mobile-continue-cover">${bookCoverHTML(book)}</span>
+          <span class="mobile-continue-copy">
+            <p data-i18n="Okumaya devam et">${t('Okumaya devam et')}</p>
+            <strong>${esc(book.title || '')}</strong>
+            <small>${esc(progressText)}</small>
+            <span class="progress"><span style="width:${progress.pct}%"></span></span>
+          </span>
+        </button>`;
+      applyStaticI18n(mobileContinue);
+      renderIcons();
     }
   }
 
@@ -2604,6 +2751,28 @@ function switchView(name) {
   $$('.view').forEach((v) => v.classList.toggle('is-active', v.id === 'view-' + name));
   $$('.nav-item[data-view]').forEach((n) => n.classList.toggle('is-active', n.dataset.view === navKey));
   $$('.footer-links [data-view]').forEach((n) => n.classList.toggle('is-active', n.dataset.view === navKey));
+  const mobileTabMap = {
+    'circle-feed': 'circles',
+    'book': 'profile',
+    'library': 'profile',
+    'public-profile': 'discover',
+    'curricula': 'discover',
+    'journal': 'profile',
+    'settings': 'profile',
+    'stats': 'profile',
+    'search': '',
+    'messages': '',
+    'support': '',
+    'about': '',
+    'admin': ''
+  };
+  const directMobileTabs = ['home', 'discover', 'authors', 'users', 'lists', 'circles', 'profile'];
+  const mobileTab = directMobileTabs.includes(name) ? name : (mobileTabMap[name] ?? '');
+  $$('#bottom-nav .nav-item[data-view]').forEach((n) => n.classList.toggle('is-active', n.dataset.view === mobileTab));
+  const discoverTabViews = ['discover', 'authors', 'users', 'lists'];
+  const mobileTabs = $('#mobile-discover-tabs');
+  if (mobileTabs) mobileTabs.hidden = !discoverTabViews.includes(name);
+  $$('#mobile-discover-tabs .md-tab').forEach((n) => n.classList.toggle('is-active', n.dataset.view === name));
   if (name === 'users') loadRecommendedUsers();
   if (name === 'discover') renderDiscoverSections();
   if (name === 'lists') renderListsView();
@@ -2622,6 +2791,7 @@ function appBack() {
   if (openModal) { openModal.hidden = true; return true; }
   const sidebar = document.querySelector('.sidebar.is-open');
   if (sidebar) { sidebar.classList.remove('is-open'); return true; }
+  if (state.currentView === 'search') { closeMobileSearch(); return true; }
   if (state.currentView && state.currentView !== 'home') {
     switchView('home');
     return true;
@@ -2748,6 +2918,13 @@ document.addEventListener('click', async (e) => {
     e.preventDefault();
     hideGlobalSearch();
     openPublicProfile(Number(globalUser.dataset.globalUser));
+    return;
+  }
+  const mobileAuthor = e.target.closest('[data-mobile-author]');
+  if (mobileAuthor) {
+    e.preventDefault();
+    switchView('authors');
+    openCatalogAuthor(mobileAuthor.dataset.mobileAuthor);
     return;
   }
   const globalCircle = e.target.closest('[data-global-circle]');
@@ -3166,6 +3343,15 @@ $('#refresh-feed').addEventListener('click', async () => { await refresh(); toas
 
 /* Alıntı / kartpostal modalı */
 $('#share-quote-btn')?.addEventListener('click', () => openModal('quote'));
+
+const quickSheet = $('#quick-sheet');
+function openQuickSheet() { if (quickSheet) quickSheet.hidden = false; }
+function closeQuickSheet() { if (quickSheet) quickSheet.hidden = true; }
+$('#quick-add-btn')?.addEventListener('click', openQuickSheet);
+$('#quick-sheet-close')?.addEventListener('click', closeQuickSheet);
+quickSheet?.addEventListener('click', (e) => { if (e.target === quickSheet) closeQuickSheet(); });
+$('#quick-add-quote')?.addEventListener('click', () => { closeQuickSheet(); openModal('quote'); });
+$('#quick-add-circle')?.addEventListener('click', () => { closeQuickSheet(); switchView('circles'); openHalkaModal(); });
 $('#journal-primary-btn')?.addEventListener('click', () => openModal(state.journalTab === 'quotes' ? 'quote' : 'review'));
 $$('[data-share-type]').forEach((btn) => btn.addEventListener('click', () => setShareType(btn.dataset.shareType)));
 $$('[data-close-modal]').forEach((el) => el.addEventListener('click', closeModal));
@@ -4414,6 +4600,32 @@ globalSearchInput?.addEventListener('keydown', (e) => {
     clearTimeout(state.globalSearchTimer);
     runGlobalSearch(e.target.value);
   }
+});
+
+$('#search-open-btn')?.addEventListener('click', openMobileSearch);
+$('#search-close-btn')?.addEventListener('click', closeMobileSearch);
+$('#mobile-search-form')?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  clearTimeout(state.mobileSearchTimer);
+  runMobileSearch();
+});
+const mobileSearchInput = $('#mobile-search-input');
+mobileSearchInput?.addEventListener('input', (e) => {
+  clearTimeout(state.mobileSearchTimer);
+  state.mobileSearchTimer = setTimeout(runMobileSearch, 220);
+});
+mobileSearchInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { e.preventDefault(); closeMobileSearch(); }
+});
+$$('#mobile-search-filters [data-search-filter]').forEach((chip) => {
+  chip.addEventListener('click', () => {
+    state.mobileSearchFilter = chip.dataset.searchFilter;
+    $$('#mobile-search-filters [data-search-filter]').forEach((button) => {
+      button.classList.toggle('is-active', button === chip);
+    });
+    clearTimeout(state.mobileSearchTimer);
+    runMobileSearch();
+  });
 });
 
 $('#user-search-form')?.addEventListener('submit', async (e) => {
