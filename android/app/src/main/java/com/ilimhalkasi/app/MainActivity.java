@@ -2,14 +2,17 @@ package com.ilimhalkasi.app;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
+import android.text.TextUtils;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -36,7 +39,9 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "IlimHalkasi";
     private static final int REQUEST_FILE_CHOOSER = 1001;
+    private static final String PREF_HOST = "host_url";
 
+    private SharedPreferences prefs;
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
     private Uri cameraImageUri;
@@ -46,7 +51,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        hostUrl = getString(R.string.app_host);
+        prefs = getSharedPreferences("ilimhalkasi", MODE_PRIVATE);
+        // Kullanıcının kaydettiği adres varsa onu kullan; IP değişince APK yeniden derlenmez.
+        hostUrl = prefs.getString(PREF_HOST, getString(R.string.app_host));
         setContentView(R.layout.activity_main);
 
         webView = findViewById(R.id.webview);
@@ -141,7 +148,33 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Hata ekranından sunucu adresini değiştirebilmek için köprü.
+        webView.addJavascriptInterface(new HostBridge(), "IlimNative");
+
         webView.loadUrl(hostUrl);
+    }
+
+    /** WebView hata ekranından çağrılan, sunucu adresini kalıcı kaydeden köprü. */
+    public class HostBridge {
+        @JavascriptInterface
+        public void setHost(String value) {
+            String normalized = normalizeHost(value);
+            if (normalized == null) return;
+            prefs.edit().putString(PREF_HOST, normalized).apply();
+            hostUrl = normalized;
+            runOnUiThread(() -> webView.loadUrl(hostUrl));
+        }
+    }
+
+    private String normalizeHost(String raw) {
+        if (raw == null) return null;
+        String value = raw.trim();
+        if (value.isEmpty()) return null;
+        if (!value.startsWith("http://") && !value.startsWith("https://")) {
+            value = "http://" + value;
+        }
+        while (value.endsWith("/")) value = value.substring(0, value.length() - 1);
+        return value;
     }
 
     private boolean handleUrl(Uri uri) {
@@ -210,16 +243,27 @@ public class MainActivity extends AppCompatActivity {
     private void showErrorPage(WebView view) {
         String title = getString(R.string.load_error_title);
         String body = getString(R.string.load_error_body);
+        String serverLabel = getString(R.string.server_address);
+        String saveRetry = getString(R.string.save_and_retry);
         String retry = getString(R.string.retry);
         String html = "<!doctype html><html><head>"
                 + "<meta name='viewport' content='width=device-width,initial-scale=1'>"
                 + "<style>body{font-family:sans-serif;background:#F7F4EC;color:#1F4E3D;display:flex;"
                 + "align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"
-                + "padding:24px;box-sizing:border-box}div{max-width:340px}h1{font-size:20px}"
-                + "p{font-size:14px;line-height:1.6;color:#5c6b62}a{display:inline-block;margin-top:12px;"
+                + "padding:24px;box-sizing:border-box}div{max-width:340px;width:100%}h1{font-size:20px}"
+                + "p{font-size:14px;line-height:1.6;color:#5c6b62}label{display:block;text-align:left;"
+                + "font-size:12px;font-weight:600;margin:18px 0 6px}input{width:100%;box-sizing:border-box;"
+                + "padding:11px 12px;border:1px solid #c9bba0;border-radius:9px;background:#fff;"
+                + "color:#1F4E3D;font-size:14px}a{display:inline-block;margin-top:12px;"
                 + "background:#1F4E3D;color:#fff;text-decoration:none;border-radius:10px;padding:12px 20px;"
-                + "font-size:14px}</style></head><body><div><h1>" + title + "</h1><p>" + body
-                + "</p><a href='" + hostUrl + "'>" + retry + "</a></div></body></html>";
+                + "font-size:14px}a.secondary{background:transparent;color:#1F4E3D;border:1px solid #1F4E3D;"
+                + "margin-left:6px}</style></head><body><div><h1>" + title + "</h1><p>" + body
+                + "</p><label for='u'>" + serverLabel + "</label>"
+                + "<input id='u' type='text' autocapitalize='off' autocorrect='off' spellcheck='false' "
+                + "value='" + TextUtils.htmlEncode(hostUrl) + "' />"
+                + "<a href='#' onclick='IlimNative.setHost(document.getElementById(\"u\").value);return false;'>"
+                + saveRetry + "</a><a class='secondary' href='" + hostUrl + "'>" + retry
+                + "</a></div></body></html>";
         view.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
     }
 }

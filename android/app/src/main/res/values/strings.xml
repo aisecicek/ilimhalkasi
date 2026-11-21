@@ -2,11 +2,13 @@
 <resources>
     <string name="app_name">İlim Halkası</string>
     <!-- Varsayılan: ev Wi-Fi'si. Domain olunca GitHub APP_URL değişkeni bunu değiştirir. -->
-    <string name="app_host">http://192.168.0.104:8765</string>
+    <string name="app_host">http://192.168.0.106:8765</string>
     <string name="choose_image">Görsel seç</string>
     <string name="exit_hint">Çıkmak için tekrar bas</string>
     <string name="link_error">Bağlantı açılamadı</string>
     <string name="load_error_title">Bağlantı kurulamadı</string>
-    <string name="load_error_body">Sunucuya ulaşılamadı. İnternet bağlantını ve sunucu adresini kontrol et.</string>
+    <string name="load_error_body">Sunucuya ulaşılamadı. Bilgisayarın Wi-Fi adresi değişmiş olabilir. Aşağıdaki adresi yeni IP ile güncelle.</string>
+    <string name="server_address">Sunucu adresi</string>
+    <string name="save_and_retry">Kaydet ve yeniden dene</string>
     <string name="retry">Tekrar dene</string>
 </resources>
