@@ -12,7 +12,7 @@ Domain almadan da telefonunda çalışan bir APK yapabiliriz. Tek şart: **telef
 1. Bilgisayarda uygulamayı başlat: proje klasöründe `python server.py`
 2. Telefonu aynı Wi-Fi'ye bağla.
 3. GitHub'a kod yükle (aşağıdaki "2. APK derleme" bölümündeki 1. adım).
-4. GitHub'da `APP_URL` değişkenini şu değerle ekle: `http://192.168.0.106:8765`
+4. GitHub'da `APP_URL` değişkenini şu değerle ekle: `http://192.168.0.102:8765`
    *(Değişkeni eklemezsen APK zaten bu adrese bağlanır, sorun değil.)*
 5. **Actions → Build Android APK → Run workflow** → bitince `ilimhalkasi-apk` → `app-debug.apk` indir ve kur.
 

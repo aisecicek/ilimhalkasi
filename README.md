@@ -25,7 +25,7 @@ APK kendi içinde arayüz dosyaları taşımaz; sunucudan yükler. Bu yüzden
 **arayüzde yaptığın bir değişiklik için yeni APK gerekmez** — sunucuya geçtiğinde
 telefondaki uygulama yeni sürümü açtığında görür.
 
-Domain henüz yoksa ilk APK ev Wi-Fi'sindeki `http://192.168.0.106:8765` adresine
+Domain henüz yoksa ilk APK ev Wi-Fi'sindeki `http://192.168.0.102:8765` adresine
 bağlanır (telefon ve bilgisayar aynı ağda olmalı). Uygulama içinden sunucu adresi
 değiştirilebilir; LAN aşamasında HTTP'ye izin verilir. Domain alınınca `APP_URL`
 değişkenine HTTPS adresini yazman yeterli.
