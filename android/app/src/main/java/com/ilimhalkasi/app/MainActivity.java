@@ -87,7 +87,9 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowContentAccess(true);
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        // Sunucudaki CSS/JS değişiklikleri telefonda hemen görünsün.
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        webView.clearCache(true);
         settings.setMediaPlaybackRequiresUserGesture(true);
 
         CookieManager cookies = CookieManager.getInstance();

@@ -959,6 +959,29 @@ class SmokeAPITests(unittest.TestCase):
         self.assertIn("'Duyurular':", (PROJECT_ROOT / "i18n.js").read_text(encoding="utf-8"))
         self.assertIn("'Ara':", app_js + (PROJECT_ROOT / "i18n.js").read_text(encoding="utf-8"))
 
+        # Ana sayfadaki etiketler okunabilir boyutta olmalı; sadece simge kalmasın.
+        uniform = css.split("/* ---------- Tek düzen: aynı tür kontrol her yerde aynı ölçüde ---------- */", 1)[1]
+        uniform = uniform.split("/* ---------- ", 1)[0]
+        for marker in (
+            "font-size: 13px;",  # btn / tab
+            "font-size: 12px;",  # chip / action / follow / text-btn
+            ".follow-btn { font-size: 12px; min-height: 30px; }",
+            ".action { font-size: 12px; }",
+            ".nav-quick-label { font-size: 10px;",
+        ):
+            self.assertIn(marker, uniform, "missing readable label rule: " + marker)
+        self.assertNotIn(".nav-quick-label { font-size: 8.5px;", css)
+        self.assertNotIn(".icon-btn > span:not(.badge-count) { font-size: 9px;", css)
+        nav_block = css.split(".app-shell .bottom-nav .nav-item,\n  .app-shell .bottom-nav .nav-item:hover {", 1)[1].split("}", 1)[0]
+        self.assertIn("font-size: 10px;", nav_block, "bottom nav labels are still too small")
+
+        server_py = (PROJECT_ROOT / "server.py").read_text(encoding="utf-8")
+        self.assertIn('self.send_header("Cache-Control", "no-store")', server_py)
+        activity = (PROJECT_ROOT / "android" / "app" / "src" / "main" / "java"
+                    / "com" / "ilimhalkasi" / "app" / "MainActivity.java").read_text(encoding="utf-8")
+        self.assertIn("settings.setCacheMode(WebSettings.LOAD_NO_CACHE);", activity)
+        self.assertIn("webView.clearCache(true);", activity)
+
 
 if __name__ == "__main__":
     unittest.main()
