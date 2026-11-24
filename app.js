@@ -353,7 +353,14 @@ async function api(path, options = {}) {
   }
   let payload = {};
   try { payload = await response.json(); } catch { /* boş yanıt */ }
-  if (!response.ok) throw new Error(payload.error || t('Bir sorun oluştu'));
+  if (!response.ok) {
+    const isAuthCall = /^\/api\/(login|register|forgot-password|reset-password|logout)/.test(path);
+    if (response.status === 401 && !state.user && !isAuthCall) {
+      requestAccount();
+      throw new Error(t('Bu işlem için hesap gerekli.'));
+    }
+    throw new Error(payload.error || t('Bir sorun oluştu'));
+  }
   return payload;
 }
 
@@ -796,7 +803,8 @@ function photoUploader({ input, button, remove, preview, onChange, crop = cropAv
 }
 
 function myPosts() {
-  return state.data.posts.filter((p) => p.author.id === state.user.id);
+  const uid = state.user?.id ?? 0;
+  return state.data.posts.filter((p) => p.author.id === uid);
 }
 function myReviews() { return myPosts().filter((p) => p.type === 'review'); }
 function myQuotes() { return myPosts().filter((p) => p.type === 'quote'); }
@@ -961,6 +969,56 @@ function showAuthError(mode, message) {
   el.hidden = false;
 }
 
+/* Misafirler önce gezebilir; üye işlemi denediklerinde hesap daveti çıkar. */
+const GUEST_FIRST_KEY = 'ilimhalkasi.guest.firstVisit';
+const GUEST_REMINDER_KEY = 'ilimhalkasi.guest.reminderShown';
+const GUEST_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+function rememberGuestVisit() {
+  if (!localStorage.getItem(GUEST_FIRST_KEY)) {
+    localStorage.setItem(GUEST_FIRST_KEY, String(Date.now()));
+  }
+}
+
+function clearGuestReminder() {
+  localStorage.removeItem(GUEST_FIRST_KEY);
+  localStorage.removeItem(GUEST_REMINDER_KEY);
+}
+
+function maybeRemindGuest() {
+  if (state.user) return;
+  const first = Number(localStorage.getItem(GUEST_FIRST_KEY));
+  if (!first || Date.now() - first < GUEST_WEEK_MS) return;
+  if (localStorage.getItem(GUEST_REMINDER_KEY)) return;
+  localStorage.setItem(GUEST_REMINDER_KEY, '1');
+  toast(t('Bir haftadır keşfediyorsun. Hesap açarsan takip edebilir ve paylaşabilirsin.'));
+}
+
+function requestAccount(action = '') {
+  if (state.user) return true;
+  rememberGuestVisit();
+  const sheet = $('#account-sheet');
+  const text = $('#account-sheet-text');
+  if (text) {
+    text.textContent = action
+      ? t('{action} için hesap gerekli.', { action })
+      : t('Bu işlem için hesap gerekli.');
+  }
+  if (sheet) sheet.hidden = false;
+  return false;
+}
+
+function closeAccountSheet() {
+  const sheet = $('#account-sheet');
+  if (sheet) sheet.hidden = true;
+}
+
+function openRegisterScreen() {
+  closeAccountSheet();
+  showAuth(true);
+  authTab('register');
+}
+
 async function initAppSession() {
   showAuth(false);
   state.lastPostPollTs = 0;
@@ -981,16 +1039,13 @@ async function boot() {
   loadSettings();
   try {
     const result = await api('/api/me');
-    if (!result.user) {
-      showAuth(true);
-      authTab('login');
-    } else {
-      await initAppSession();
-    }
+    if (!result.user) rememberGuestVisit();
+    // Misafir de uygulamaya girer; hesap yalnızca üye işlemi istenince sorulur.
+    await initAppSession();
+    maybeRemindGuest();
   } catch (error) {
-    showAuth(true);
-    authTab('login');
-    showAuthError('login', error.message);
+    showAuth(false);
+    toast(error.message);
   }
   const resetToken = new URLSearchParams(location.search).get('reset');
   if (resetToken) openResetStage(resetToken);
@@ -1058,7 +1113,7 @@ function postHTML(post) {
         <button class="post-author-name" type="button" data-profile-user="${esc(post.author.id)}">${esc(post.author.display_name)}</button>
         <small><button class="post-author-handle" type="button" data-profile-user="${esc(post.author.id)}">@${esc(post.author.username)}</button> · ${esc(timeAgo(post.created_at))}</small>
       </div>
-      ${(post.followed || post.author.id === state.user.id) ? '' : `<button class="follow-btn" type="button" data-act="follow" data-user="${post.author.id}">${t('Takip et')}</button>`}
+      ${(post.followed || post.author.id === (state.user?.id ?? 0)) ? '' : `<button class="follow-btn" type="button" data-act="follow" data-user="${post.author.id}">${t('Takip et')}</button>`}
     </div>
     <div class="post-body">${body}</div>
     <div class="post-actions">
@@ -1072,7 +1127,7 @@ function postHTML(post) {
         <span class="ico">❍</span><span data-count="comments">${commentCount}</span> ${t('Yorum')}
       </button>
       <button class="action action-share" type="button" data-act="share"><span class="ico">↗</span> ${t('Paylaş')}</button>
-      ${post.author.id === state.user.id ? `
+      ${post.author.id === (state.user?.id ?? 0) ? `
         <button class="action" type="button" data-own-action="edit" data-own-kind="post" data-id="${post.id}"><span class="ico">✎</span> ${t('Düzenle')}</button>
         <button class="action" type="button" data-own-action="delete" data-own-kind="post" data-id="${post.id}"><span class="ico">×</span> ${t('Sil')}</button>` : ''}
     </div>
@@ -1113,7 +1168,7 @@ function renderFeedTabs() {
 
 function visiblePosts() {
   let list = state.data.posts.filter((p) => {
-    if (state.tab === 'following') return p.followed || p.author.id === state.user.id;
+    if (state.tab === 'following') return p.followed || p.author.id === (state.user?.id ?? 0);
     if (state.tab.startsWith('circle:')) return Number(p.group_id) === Number(state.tab.slice(7));
     return true;
   });
@@ -1162,7 +1217,16 @@ function renderActiveCircles() {
 }
 
 function renderIdentity() {
-  const user = state.user;
+  const isGuest = !state.user;
+  const user = state.user || {
+    id: 0,
+    display_name: t('Misafir'),
+    username: 'misafir',
+    avatar: 'olive',
+    avatar_image: '',
+    bio: '',
+    created_at: 0
+  };
   const data = state.data;
   const short = user.display_name.split(' ')[0];
 
@@ -1179,7 +1243,9 @@ function renderIdentity() {
   $('#greeting-date').textContent = new Date()
     .toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long' })
     .toLocaleUpperCase(locale);
-  $('#greeting-title').textContent = t('Selamün Aleyküm {name}', { name: short });
+  $('#greeting-title').textContent = isGuest
+    ? t('Selamün Aleyküm, hoş geldin')
+    : t('Selamün Aleyküm {name}', { name: short });
 
   const reading = data.shelf.filter((s) => s.status === 'reading');
   const topBook = reading[0];
@@ -1197,9 +1263,11 @@ function renderIdentity() {
   const joinYear = Number.isFinite(created) && created > 0
     ? new Date(created).getFullYear()
     : new Date().getFullYear();
-  $('#profile-handle-line').textContent = (state.settings?.showJoinYear ?? true)
-    ? `@${user.username} · ${t('{n} yılından beri İlim Halkası’nda', { n: joinYear })}`
-    : `@${user.username}`;
+  $('#profile-handle-line').textContent = isGuest
+    ? t('Misafir olarak geziyorsun · Hesap açarak paylaşımlara katılabilirsin')
+    : (state.settings?.showJoinYear ?? true)
+      ? `@${user.username} · ${t('{n} yılından beri İlim Halkası’nda', { n: joinYear })}`
+      : `@${user.username}`;
   const bioEl = $('#profile-bio');
   bioEl.textContent = user.bio || '';
   bioEl.hidden = !user.bio;
@@ -1242,6 +1310,9 @@ function renderIdentity() {
   $('#rail-goal-copy').textContent = railPct >= 100
     ? t('{n} hedefi tamamlandı, mâşallah!', { n: year })
     : t('{n} boyunca kitapları bitirdikçe hedefin dolacak.', { n: year });
+
+  $$('[data-guest-auth-btn]').forEach((b) => { b.hidden = !isGuest; });
+  $$('[data-member-only]').forEach((b) => { b.hidden = isGuest; });
 }
 
 function renderRightRail() {
@@ -2876,6 +2947,7 @@ function curriculumCardHTML(c) {
 
 function renderLibraryPanel() {
   const panel = $('#library-panel');
+  const uid = state.user?.id ?? 0;
   if (state.libraryTab === 'quotes') {
     const quotes = myPosts().filter((p) => p.type === 'quote');
     panel.innerHTML = quotes.length ? `<div class="postcard-grid">${quotes.map((p) => `
@@ -2886,11 +2958,11 @@ function renderLibraryPanel() {
     const debates = [];
     Object.entries(state.data.debates).forEach(([book, questions]) => {
       questions.forEach((q) => {
-        if (q.author.id === state.user.id) {
+        if (q.author.id === uid) {
           debates.push(`<div class="writing-item"><strong>❖ ${t('Müzakere Masası')} · ${esc(book)}</strong><p>${esc(q.text)}</p></div>`);
         }
         q.answers.forEach((a) => {
-          if (a.author.id === state.user.id) {
+          if (a.author.id === uid) {
             debates.push(`<div class="writing-item"><strong>✧ ${t('Yanıt')} · ${esc(book)}</strong><p>${esc(a.text)}</p></div>`);
           }
         });
@@ -3150,6 +3222,12 @@ function switchView(name, skipHistory = false) {
     toast(t('Yönetim paneli yalnızca yöneticiye açık'));
     return;
   }
+  const memberViews = new Set(['profile', 'journal', 'stats', 'notifications', 'messages', 'settings', 'support']);
+  if (!state.user && memberViews.has(name)) {
+    requestAccount();
+    switchView('home', true);
+    return;
+  }
   if (!skipHistory && name !== state.currentView && state.currentView) {
     state.viewHistory.push(state.currentView);
     if (state.viewHistory.length > 20) state.viewHistory.shift();
@@ -3316,6 +3394,7 @@ function setShareType(type) {
 }
 
 function openModal(type = 'quote', groupId = null) {
+  if (!requestAccount(t('Paylaşım yapmak'))) return;
   state.shareGroupId = groupId ? Number(groupId) : null;
   const hint = $('#share-group-hint');
   const group = state.shareGroupId
@@ -3494,6 +3573,7 @@ $('#login-form').addEventListener('submit', async (e) => {
       method: 'POST',
       body: { email: $('#login-email').value.trim(), password: $('#login-password').value }
     });
+    clearGuestReminder();
     await initAppSession();
     toast(t('Tekrar hoş geldin ✧'));
   } catch (error) { showAuthError('login', error.message); }
@@ -3511,6 +3591,7 @@ $('#register-form').addEventListener('submit', async (e) => {
         password: $('#register-password').value
       }
     });
+    clearGuestReminder();
     await initAppSession();
     toast(t('Halkaya hoş geldin ✧'));
   } catch (error) { showAuthError('register', error.message); }
@@ -3528,8 +3609,9 @@ async function logout() {
   phoneNotifiedIds = null;
   state.viewHistory = [];
   state.currentView = 'home';
-  showAuth(true);
-  authTab('login');
+  rememberGuestVisit();
+  await initAppSession();
+  toast(t('Çıkış yaptın. Keşfetmeye devam edebilirsin.'));
 }
 $('#logout-btn').addEventListener('click', logout);
 $('#top-logout-btn').addEventListener('click', logout);
@@ -3753,6 +3835,13 @@ $('#refresh-feed').addEventListener('click', async () => { await refresh(); toas
   const post = findPost(postEl.dataset.id);
   if (!post) return;
   const act = btn.dataset.act;
+  if (!state.user && ['like', 'favorite', 'follow', 'comment-like'].includes(act)) {
+    const label = act === 'follow' ? t('Takip etmek')
+      : act === 'like' ? t('Beğenmek')
+        : act === 'favorite' ? t('Favorilere eklemek') : t('Yorumu beğenmek');
+    requestAccount(label);
+    return;
+  }
 
   if (act === 'like' || act === 'favorite') {
     const result = await api(`/api/posts/${post.id}/${act}`, { method: 'POST', body: {} });
@@ -3817,6 +3906,7 @@ $('#refresh-feed').addEventListener('click', async () => { await refresh(); toas
   const form = e.target.closest('.comment-form, .reply-form');
   if (!form) return;
   e.preventDefault();
+  if (!requestAccount(t('Yorum yazmak'))) return;
   const input = $('input', form);
   const text = input.value.trim();
   if (!text) return;
@@ -3835,7 +3925,10 @@ $('#refresh-feed').addEventListener('click', async () => { await refresh(); toas
 $('#share-quote-btn')?.addEventListener('click', () => openModal('quote'));
 
 const quickSheet = $('#quick-sheet');
-function openQuickSheet() { if (quickSheet) quickSheet.hidden = false; }
+function openQuickSheet() {
+  if (!requestAccount(t('Paylaşım yapmak'))) return;
+  if (quickSheet) quickSheet.hidden = false;
+}
 function closeQuickSheet() { if (quickSheet) quickSheet.hidden = true; }
 $('#quick-add-btn')?.addEventListener('click', openQuickSheet);
 $('#quick-sheet-close')?.addEventListener('click', closeQuickSheet);
@@ -4437,6 +4530,7 @@ function selectAvatar(avatar) {
 }
 
 function openProfileModal() {
+  if (!requestAccount(t('Profilini düzenlemek'))) return;
   $('#edit-display-name').value = state.user.display_name || '';
   $('#edit-username').value = state.user.username || '';
   $('#edit-bio').value = state.user.bio || '';
@@ -4560,6 +4654,7 @@ const meclisPhoto = photoUploader({
 });
 
 function openHalkaModal() {
+  if (!requestAccount(t('Halka kurmak'))) return;
   $('#halka-name').value = '';
   $('#halka-description').value = '';
   $('#halka-error').textContent = '';
@@ -4604,6 +4699,7 @@ function renderMeclisMembers(query = '') {
 }
 
 function openMeclisModal() {
+  if (!requestAccount(t('Meclis kurmak'))) return;
   $('#meclis-name').value = '';
   $('#meclis-description').value = '';
   $('#meclis-member-search').value = '';
@@ -4654,6 +4750,7 @@ $('#meclis-form').addEventListener('submit', async (e) => {
 });
 
 function openDirectModal() {
+  if (!requestAccount(t('Mesaj göndermek'))) return;
   $('#direct-username').value = '';
   $('#direct-error').textContent = '';
   directModal.hidden = false;
@@ -5168,6 +5265,7 @@ function applyFollowUI(id, following, followers) {
 async function toggleFollowUser(userId) {
   const id = Number(userId);
   if (!id) return;
+  if (!requestAccount(t('Takip etmek'))) return;
   try {
     const result = await api('/api/follow', { method: 'POST', body: { user_id: id } });
     applyFollowUI(id, result.following, result.followers);
@@ -5177,6 +5275,7 @@ async function toggleFollowUser(userId) {
 }
 
 function openInviteModal() {
+  if (!requestAccount(t('Davet etmek'))) return;
   const link = `${location.origin}/?invite=${encodeURIComponent(state.user?.username || '')}`;
   $('#invite-link').value = link;
   $('#invite-error').textContent = '';
@@ -5485,12 +5584,11 @@ $('#delete-account-form')?.addEventListener('submit', async (e) => {
       }
     });
     closeDeleteAccountModal();
-    state.data = null;
     state.user = null;
     state.activeGroupId = null;
-    showAuth(true);
-    authTab('login');
-    showAuthError('login', t('Hesabın kalıcı olarak silindi. Yeniden kayıt olabilirsin.'));
+    rememberGuestVisit();
+    await initAppSession();
+    toast(t('Hesabın kalıcı olarak silindi. İstersen yeniden kayıt olabilirsin.'));
   } catch (error) {
     $('#delete-account-error').textContent = error.message;
   } finally {
@@ -5506,6 +5604,20 @@ $$('[data-theme-choice]').forEach((btn) => btn.addEventListener('click', () => {
 /* Alt menü */
 $('#footer-logout-btn')?.addEventListener('click', logout);
 $('#footer-new-circle-btn')?.addEventListener('click', () => { switchView('circles'); openHalkaModal(); });
+
+/* Hesap daveti: üye işlemi isteyen misafir önce burayı görür. */
+$('#account-create-btn')?.addEventListener('click', openRegisterScreen);
+$('#account-login-btn')?.addEventListener('click', () => {
+  closeAccountSheet();
+  showAuth(true);
+  authTab('login');
+});
+$('#account-later-btn')?.addEventListener('click', closeAccountSheet);
+$('#account-sheet-close')?.addEventListener('click', closeAccountSheet);
+$('#account-sheet')?.addEventListener('click', (e) => {
+  if (e.target === $('#account-sheet')) closeAccountSheet();
+});
+$$('[data-guest-auth-btn]').forEach((btn) => btn.addEventListener('click', openRegisterScreen));
 
 initEmblems();
 initWatermarks();

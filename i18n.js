@@ -1066,6 +1066,33 @@ window.ILIM_I18N = {
     'Yorum eklendi ✧': 'Comment added ✧',
     'devamını oku': 'read more',
 
+    /* Misafir akışı ve hesap daveti */
+    'Hesap': 'Account',
+    'Hesap Oluştur': 'Create account',
+    'Şimdi oluştur': 'Create now',
+    'Sonra': 'Later',
+    'Önce kitapları, halkaları ve akışı keşfedebilirsin.': 'You can explore books, circles and the feed first.',
+    'Bu işlem için hesap gerekli.': 'You need an account for this.',
+    '{action} için hesap gerekli.': 'You need an account to {action}.',
+    'Bir haftadır keşfediyorsun. Hesap açarsan takip edebilir ve paylaşabilirsin.': 'You have been exploring for a week. With an account you can follow people and share.',
+    'Selamün Aleyküm, hoş geldin': 'Peace be upon you, welcome',
+    'Misafir': 'Guest',
+    'Misafir olarak geziyorsun · Hesap açarak paylaşımlara katılabilirsin': 'You are browsing as a guest · Create an account to join in',
+    'Çıkış yaptın. Keşfetmeye devam edebilirsin.': 'You have signed out. You can keep exploring.',
+    'Hesabın kalıcı olarak silindi. İstersen yeniden kayıt olabilirsin.': 'Your account was permanently deleted. You can register again if you like.',
+    'Davet et': 'Invite',
+    'Takip etmek': 'to follow',
+    'Beğenmek': 'to like',
+    'Favorilere eklemek': 'to add to favourites',
+    'Yorumu beğenmek': 'to like a comment',
+    'Yorum yazmak': 'to write a comment',
+    'Paylaşım yapmak': 'to share',
+    'Profilini düzenlemek': 'to edit your profile',
+    'Halka kurmak': 'to create a circle',
+    'Meclis kurmak': 'to create a meclis',
+    'Mesaj göndermek': 'to send a message',
+    'Davet etmek': 'to invite',
+
   }
 };
 

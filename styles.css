@@ -1139,8 +1139,6 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
   .nav-item { justify-content: center; padding: 11px 0; font-size: 0; }
   .nav-icon { font-size: 17px; }
   .side-user { padding: 12px 0 0; }
-  .btn-gold { font-size: 0; }
-  .btn-gold::after { content: "✧"; font-size: 15px; }
   .content { padding: 8px 22px 60px; }
   .topbar { padding: 0 22px; gap: 10px; }
   .top-brand { display: flex; }
@@ -1935,8 +1933,8 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
 .app-shell.nav-mini .nav-item { justify-content: center; padding: 11px 0; font-size: 0; }
 .app-shell.nav-mini .nav-icon { font-size: 17px; }
 .app-shell.nav-mini .side-user { padding: 12px 0 0; }
-.app-shell.nav-mini .btn-gold { font-size: 0; }
-.app-shell.nav-mini .btn-gold::after { content: "+"; font-size: 17px; }
+.app-shell.nav-mini .sidebar .btn-gold { font-size: 0; }
+.app-shell.nav-mini .sidebar .btn-gold::after { content: "+"; font-size: 17px; }
 .app-shell.nav-mini .sidebar-toggle { transform: rotate(180deg); }
 
 @media (max-width: 900px) {
@@ -1977,8 +1975,8 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
   .app-shell.nav-mini .online-dot { display: flex; }
   .app-shell.nav-mini .nav-item { justify-content: flex-start; padding: 10px 12px; font-size: 13px; }
   .app-shell.nav-mini .nav-icon { font-size: 15px; }
-  .app-shell.nav-mini .btn-gold { font-size: 12px; }
-  .app-shell.nav-mini .btn-gold::after { content: none; }
+  .app-shell.nav-mini .sidebar .btn-gold { font-size: 12px; }
+  .app-shell.nav-mini .sidebar .btn-gold::after { content: none; }
   .app-shell.nav-mini .sidebar-toggle { transform: none; }
 }
 
@@ -3438,4 +3436,70 @@ body::before {
   html { scroll-behavior: auto; }
   .view, .bottom-sheet { animation: none !important; }
   .nav-item, .nav-group-toggle svg, .action, .sheet-action { transition: none !important; }
+}
+
+/* ---------- Tek düzen: aynı tür kontrol her yerde aynı ölçüde ---------- */
+.btn, .btn-sm, .page-head--tight .btn, .greeting-actions .btn, .sheet-actions .btn {
+  min-height: 36px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: .01em;
+}
+.chip, .stat-chip, .chart-chip, .rsvp, .circle-shortcut, .auth-tab {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.tabs, .detail-tabs, .profile-tabs, .mobile-discover-tabs { gap: 20px; }
+.tabs .tab, .detail-tabs .tab, .profile-tabs .profile-tab, .mobile-discover-tabs .md-tab {
+  padding: 0 2px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* Butonlar artık metinlerini korur; sadece renk/kenarlık değişir. */
+.btn:hover, .btn:active, .menu-btn:active, .theme-choice:hover { transform: none; }
+
+/* Simge + yazı birlikte görünsün. */
+.top-actions .icon-btn,
+.notifications-head .icon-btn--tiny {
+  width: auto;
+  min-width: 44px;
+  height: 40px;
+  padding: 2px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-size: 9px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.top-actions .icon-btn svg { width: 16px; height: 16px; }
+.icon-btn > span:not(.badge-count) { font-size: 9px; font-weight: 600; }
+.notifications-head .icon-btn--tiny > span[aria-hidden="true"] { font-size: 12px; }
+
+.nav-quick-label { font-size: 8.5px; line-height: 1.1; }
+.nav-add-circle {
+  width: 40px; height: 40px;
+  transform: translateY(-7px);
+  border-width: 2px;
+  font-size: 17px;
+}
+
+.sheet-note { margin: 7px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.sheet-note--soft { color: var(--ink-faint); }
+.sheet-actions { display: grid; gap: 8px; margin-top: 16px; }
+
+@media (max-width: 640px) {
+  .topbar { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .topbar #menu-btn { flex-direction: column; gap: 1px; height: 44px; font-size: 9px; }
+  .topbar #menu-btn span { display: inline; }
+  .top-actions { gap: 3px; }
 }

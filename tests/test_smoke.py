@@ -307,11 +307,26 @@ class SmokeAPITests(unittest.TestCase):
 
     def test_unauthenticated_bootstrap_has_no_user(self) -> None:
         status, body = self.get("/api/bootstrap", opener=self.anon_opener)
-        # The server may expose bootstrap publicly (200) or require auth (401);
-        # in neither case may an anonymous caller receive user/admin data.
-        self.assertIn(status, (200, 401), "unexpected bootstrap status: {}".format(body))
+        self.assertEqual(status, 200, "guest bootstrap failed: {}".format(body))
         self.assertIsNone(body.get("user"))
+        for key in ("books", "posts", "groups", "shelf", "lists", "stats"):
+            self.assertIn(key, body, "guest bootstrap is missing public key: " + key)
         self.assertNotIn("admin", body)
+        for key in ("tickets", "reports", "follows", "blocked"):
+            self.assertEqual(body.get(key), [], "guest bootstrap leaked private " + key)
+        self.assertEqual(body["stats"], {"followers": 0, "following": 0, "circles": 0})
+
+    def test_guest_member_actions_are_still_server_gated(self) -> None:
+        status, body = self.post("/api/posts", {"text": "guest post"}, opener=self.anon_opener)
+        self.assertEqual(status, 401, "anonymous post should be rejected: {}".format(body))
+        self.assertEqual(body.get("error"), "Giriş yapmalısın")
+
+        status, _ = self.get("/api/notifications", opener=self.anon_opener)
+        self.assertEqual(status, 401, "anonymous notifications should be rejected")
+
+        for path in ("/api/books", "/api/books/filters", "/api/catalog-authors"):
+            status, _ = self.get(path, opener=self.anon_opener)
+            self.assertEqual(status, 200, "public catalog endpoint failed: " + path)
 
     def test_shelf_accepts_valid_book(self) -> None:
         book_id = self.book_id()
@@ -882,6 +897,67 @@ class SmokeAPITests(unittest.TestCase):
         self.assertIsNotNone(message_note, "group message notification missing: {}".format(notes))
         self.assertEqual((message_note.get("group") or {}).get("id"), group_id)
         self.assertIn(marker, message_note.get("text", ""))
+
+    def test_guest_first_browsing_and_account_sheet_are_wired(self) -> None:
+        index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+        app_js = (PROJECT_ROOT / "app.js").read_text(encoding="utf-8")
+        i18n_js = (PROJECT_ROOT / "i18n.js").read_text(encoding="utf-8")
+        css = (PROJECT_ROOT / "styles.css").read_text(encoding="utf-8")
+
+        for marker in (
+            'id="account-sheet"', 'id="account-sheet-text"', 'id="account-create-btn"',
+            'id="account-login-btn"', 'id="account-later-btn"',
+            'data-i18n="Şimdi oluştur"', 'data-i18n="Sonra"',
+            'data-guest-auth-btn', 'data-member-only', 'data-i18n="Ekle"',
+        ):
+            self.assertIn(marker, index_html, "missing guest UI marker: " + marker)
+
+        for marker in (
+            "function requestAccount(", "function closeAccountSheet(",
+            "function maybeRemindGuest(", "const GUEST_FIRST_KEY = 'ilimhalkasi.guest.firstVisit'",
+            "const GUEST_WEEK_MS = 7 * 24 * 60 * 60 * 1000",
+            "response.status === 401 && !state.user", "requestAccount();",
+            "await initAppSession();", "clearGuestReminder();",
+        ):
+            self.assertIn(marker, app_js, "missing guest flow code: " + marker)
+
+        boot_block = app_js.split("async function boot()", 1)[1].split("\n}", 1)[0]
+        self.assertNotIn("showAuth(true)", boot_block, "boot must not force guests to register")
+        self.assertNotIn("showAuth(true);\n    authTab('login');", boot_block)
+
+        for key in (
+            "Hesap Oluştur", "Şimdi oluştur", "Sonra", "Misafir", "Davet et",
+            "Bu işlem için hesap gerekli.", "{action} için hesap gerekli.",
+            "Bir haftadır keşfediyorsun. Hesap açarsan takip edebilir ve paylaşabilirsin.",
+            "Selamün Aleyküm, hoş geldin",
+            "Misafir olarak geziyorsun · Hesap açarak paylaşımlara katılabilirsin",
+            "Çıkış yaptın. Keşfetmeye devam edebilirsin.",
+            "Hesabın kalıcı olarak silindi. İstersen yeniden kayıt olabilirsin.",
+        ):
+            self.assertIn("'{}':".format(key), i18n_js, "missing i18n key: " + key)
+
+    def test_button_labels_and_uniform_controls_are_wired(self) -> None:
+        app_js = (PROJECT_ROOT / "app.js").read_text(encoding="utf-8")
+        index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+        css = (PROJECT_ROOT / "styles.css").read_text(encoding="utf-8")
+
+        # The old mobile rule hid every gold button's text and replaced it with ✧.
+        self.assertNotIn("\n  .btn-gold { font-size: 0; }", css)
+        self.assertNotIn(".btn-gold::after { content: \"✧\";", css)
+        self.assertIn(".app-shell.nav-mini .sidebar .btn-gold { font-size: 0; }", css)
+        self.assertIn("/* Butonlar artık metinlerini korur; sadece renk/kenarlık değişir. */", css)
+        self.assertIn(".btn:hover, .btn:active, .menu-btn:active, .theme-choice:hover { transform: none; }", css)
+        self.assertIn(".btn, .btn-sm, .page-head--tight .btn, .greeting-actions .btn, .sheet-actions .btn {", css)
+        self.assertIn("/* Simge + yazı birlikte görünsün. */", css)
+        self.assertIn(".top-actions .icon-btn,", css)
+        self.assertIn(".nav-quick-label {", css)
+
+        self.assertIn('<span data-i18n="Duyurular">Duyurular</span>', index_html)
+        self.assertIn('<span data-i18n="Ara">Ara</span>', index_html)
+        self.assertIn('<span data-i18n="Okundu">Okundu</span>', index_html)
+        self.assertIn('<span data-i18n="Şikayet ve talepler">Şikayet ve talepler</span>', index_html)
+        self.assertIn("'Duyurular':", (PROJECT_ROOT / "i18n.js").read_text(encoding="utf-8"))
+        self.assertIn("'Ara':", app_js + (PROJECT_ROOT / "i18n.js").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

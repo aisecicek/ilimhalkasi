@@ -2225,7 +2225,9 @@ def notifications_for(conn: sqlite3.Connection, user_id: int) -> list[dict]:
     return [serialize_notification(conn, r) for r in rows]
 
 
-def build_bootstrap(conn: sqlite3.Connection, user_id: int) -> dict:
+def build_bootstrap(conn: sqlite3.Connection, user_id: int | None) -> dict:
+    # Misafirler de herkese açık akışı/kataloğu görebilir; kişisel alanlar boş kalır.
+    user_id = user_id or 0
     user = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
     posts = conn.execute("SELECT * FROM posts ORDER BY created_at DESC").fetchall()
     shelf = conn.execute(
@@ -2319,7 +2321,7 @@ def build_bootstrap(conn: sqlite3.Connection, user_id: int) -> dict:
     ]
 
     result = {
-        "user": user_me(user),
+        "user": user_me(user) if user else None,
         "serverTime": now(),
         "notifications": notifications_for(conn, user_id),
         # Katalog büyüdükçe bootstrap'ı hafif tut; kütüphane /api/books ile sayfalanır.
@@ -2356,7 +2358,7 @@ def build_bootstrap(conn: sqlite3.Connection, user_id: int) -> dict:
         },
     }
 
-    if user["is_admin"]:
+    if user and user["is_admin"]:
         recent_comments = []
         for c in conn.execute("SELECT * FROM comments ORDER BY created_at DESC LIMIT 20"):
             recent_comments.append({"kind": "post", "id": c["id"], "author": author_of(conn, c["user_id"]),
@@ -2529,12 +2531,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"user": user_me(user) if user else None})
 
         if path == "/api/bootstrap":
-            user = self.require_user()
-            if not user:
-                return
+            # Giriş yapmasa da herkese açık içerik yüklenir; state.user null olur.
+            user = self.current_user()
             conn = connect()
             try:
-                return self.send_json(build_bootstrap(conn, user["id"]))
+                return self.send_json(build_bootstrap(conn, user["id"] if user else None))
             finally:
                 conn.close()
 
@@ -2601,9 +2602,7 @@ class Handler(BaseHTTPRequestHandler):
                 conn.close()
 
         if path in ("/api/users/search", "/api/users/recommended"):
-            viewer = self.require_user()
-            if not viewer:
-                return
+            viewer = self.current_user() or {"id": 0}
             conn = connect()
             try:
                 if path == "/api/users/search":
@@ -2666,9 +2665,7 @@ class Handler(BaseHTTPRequestHandler):
 
         match = re.fullmatch(r"/api/users/(\d+)/(followers|following)", path)
         if match:
-            viewer = self.require_user()
-            if not viewer:
-                return
+            viewer = self.current_user() or {"id": 0}
             target_id = int(match.group(1))
             mode = match.group(2)
             conn = connect()
@@ -2706,9 +2703,7 @@ class Handler(BaseHTTPRequestHandler):
 
         match = re.fullmatch(r"/api/users/(\d+)", path)
         if match:
-            viewer = self.require_user()
-            if not viewer:
-                return
+            viewer = self.current_user() or {"id": 0}
             target_id = int(match.group(1))
             conn = connect()
             try:
