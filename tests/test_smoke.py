@@ -499,6 +499,44 @@ class SmokeAPITests(unittest.TestCase):
         self.assertIn("createNotificationChannel", activity)
         self.assertIn("android.permission.POST_NOTIFICATIONS", manifest)
 
+    def test_profile_order_and_mobile_shell_polish_are_wired(self) -> None:
+        index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+        app_js = (PROJECT_ROOT / "app.js").read_text(encoding="utf-8")
+        css = (PROJECT_ROOT / "styles.css").read_text(encoding="utf-8")
+
+        profile = index_html.split('<section class="view" id="view-profile"', 1)[1]
+        profile = profile.split("</section>", 1)[0]
+        self.assertLess(
+            profile.index('data-i18n="Halkalarım"'),
+            profile.index('data-i18n="İlim Yolculuğum"'),
+            "Halkalarım should stay above İlim Yolculuğum",
+        )
+        self.assertLess(
+            profile.index('data-i18n="İlim Yolculuğum"'),
+            profile.index(">Etkileşimlerim<"),
+            "Etkileşimlerim should be the last profile section",
+        )
+
+        self.assertIn("grid-template-columns: 34px minmax(0, 1fr) auto", css)
+        self.assertIn("grid-template-columns: repeat(5, minmax(0, 1fr))", css)
+        self.assertIn("justify-self: center;", css)
+        self.assertIn("transform: translateY(-10px)", css)
+        self.assertIn("bottomNavEl?.addEventListener('click'", app_js)
+        self.assertIn("data-i18n-aria=\"Ne paylaşmak istersin?\"", index_html)
+        self.assertIn(">Halkalar ve Meclisler<", index_html)
+        self.assertIn("grid-template-columns: 86px minmax(0, 1fr)", css)
+        self.assertIn(".page-head--tight .head-actions {", css)
+
+        self.assertIn('id="notifications-btn"', index_html)
+        self.assertIn('id="all-notifications-panel"', index_html)
+        self.assertIn('id="sidebar-notifications-btn"', index_html)
+        self.assertIn(".sidebar .notifications-panel--all {", css)
+        self.assertIn("function toggleAllNotifications(", app_js)
+        self.assertIn("markNotificationsSeen('announcement')", app_js)
+        self.assertIn("markNotificationsSeen('all')", app_js)
+        self.assertNotIn("bottom-notifications-btn", index_html)
+        self.assertNotIn("bottom-notifications-btn", app_js)
+
     def test_posts_recent_like_and_comment(self) -> None:
         marker = _marker("post")
         status, body = self.post(

@@ -1894,17 +1894,26 @@ function renderHomeBooks() {
 
 /* ---------------- Bildirimler ---------------- */
 
-function notificationsSeenKey() {
-  return `ilimhalkasi.notifications.${state.user?.id || 'guest'}`;
+function notificationsSeenKey(scope = 'activity') {
+  return `ilimhalkasi.notifications.${state.user?.id || 'guest'}.${scope}`;
 }
 
-function notificationsSeenAt() {
-  const raw = Number(localStorage.getItem(notificationsSeenKey()));
+function notificationsSeenAt(scope = 'activity') {
+  let raw = Number(localStorage.getItem(notificationsSeenKey(scope)));
+  if (!raw && scope === 'activity') {
+    raw = Number(localStorage.getItem(`ilimhalkasi.notifications.${state.user?.id || 'guest'}`));
+  }
   return Number.isFinite(raw) && raw > 0 ? raw : 0;
 }
 
-function markNotificationsSeen() {
-  localStorage.setItem(notificationsSeenKey(), String(Date.now() / 1000));
+function markNotificationsSeen(scope = 'activity') {
+  const now = String(Date.now() / 1000);
+  if (scope === 'all') {
+    localStorage.setItem(notificationsSeenKey('activity'), now);
+    localStorage.setItem(notificationsSeenKey('announcement'), now);
+  } else {
+    localStorage.setItem(notificationsSeenKey(scope), now);
+  }
   renderNotifications();
 }
 
@@ -2073,34 +2082,50 @@ function collectNotifications() {
     .slice(0, 30);
 }
 
+function notificationItemHTML(n, unread) {
+  return `
+    <button class="notification-item${unread ? ' is-unread' : ''}" type="button"
+      data-notification-id="${esc(n.id)}" data-notification-kind="${esc(n.kind || '')}"
+      data-notification-view="${esc(n.view)}" data-notification-actor="${esc(n.actorId || '')}"
+      data-notification-target="${esc(n.target || '')}">
+      <span class="notification-icon" aria-hidden="true">${n.icon}</span>
+      <span class="notification-body">
+        <strong>${esc(n.title)}</strong>
+        <p>${esc(n.body)}</p>
+        <small>${esc(timeAgo(n.ts))}</small>
+      </span>
+    </button>`;
+}
+
 function renderNotifications() {
-  const panel = $('#notifications-panel');
-  const listEl = $('#notifications-list');
-  const dots = $$('#notifications-btn .badge-dot, #bottom-notifications-btn .badge-dot');
-  if (!listEl) return;
+  const announcementList = $('#notifications-list');
+  const allList = $('#all-notifications-list');
+  if (!announcementList && !allList) return;
 
   const items = collectNotifications();
-  const seen = notificationsSeenAt();
-  const unread = items.filter((n) => n.ts > seen).length;
-  dots.forEach((dot) => { dot.hidden = unread === 0; });
-  $$('#notifications-btn, #bottom-notifications-btn').forEach((btn) =>
-    btn?.setAttribute('aria-label', `${t('Bildirimler')}${unread ? ` (${unread})` : ''}`));
+  const announcementSeen = notificationsSeenAt('announcement');
+  const activitySeen = notificationsSeenAt('activity');
+  const isUnread = (n) => n.ts > (n.kind === 'announcement' ? announcementSeen : activitySeen);
+  const unread = items.filter(isUnread).length;
 
-  listEl.innerHTML = items.length
-    ? items.map((n) => `
-        <button class="notification-item${n.ts > seen ? ' is-unread' : ''}" type="button"
-          data-notification-id="${esc(n.id)}" data-notification-kind="${esc(n.kind || '')}"
-          data-notification-view="${esc(n.view)}" data-notification-actor="${esc(n.actorId || '')}"
-          data-notification-target="${esc(n.target || '')}">
-          <span class="notification-icon" aria-hidden="true">${n.icon}</span>
-          <span class="notification-body">
-            <strong>${esc(n.title)}</strong>
-            <p>${esc(n.body)}</p>
-            <small>${esc(timeAgo(n.ts))}</small>
-          </span>
-        </button>`).join('')
-    : `<p class="notifications-empty">${t('Bildirimlerin burada görünecek')}</p>`;
-  if (panel && !panel.hidden) applyStaticI18n(panel);
+  $$('#notifications-btn .badge-count, #sidebar-notifications-btn .badge-count').forEach((badge) => {
+    badge.textContent = unread > 99 ? '99+' : String(unread);
+    badge.hidden = unread === 0;
+  });
+  $('#notifications-btn')?.setAttribute('aria-label', `${t('Duyurular')}${unread ? ` (${unread})` : ''}`);
+  $('#sidebar-notifications-btn')?.setAttribute('aria-label', `${t('Bildirimlerim')}${unread ? ` (${unread})` : ''}`);
+
+  const paint = (el, rows, emptyKey) => {
+    if (!el) return;
+    el.innerHTML = rows.length
+      ? rows.map((n) => notificationItemHTML(n, isUnread(n))).join('')
+      : `<p class="notifications-empty">${t(emptyKey)}</p>`;
+  };
+  paint(announcementList, items.filter((n) => n.kind === 'announcement'), 'Henüz duyuru yok.');
+  paint(allList, items, 'Henüz bildirim yok.');
+  [$('#notifications-panel'), $('#all-notifications-panel')].forEach((panel) => {
+    if (panel && !panel.hidden) applyStaticI18n(panel);
+  });
 }
 
 function toggleNotifications(force) {
@@ -2108,11 +2133,24 @@ function toggleNotifications(force) {
   if (!panel) return;
   const open = typeof force === 'boolean' ? force : panel.hidden;
   panel.hidden = !open;
-  $$('#notifications-btn, #bottom-notifications-btn').forEach((btn) =>
-    btn?.setAttribute('aria-expanded', String(open)));
+  $('#notifications-btn')?.setAttribute('aria-expanded', String(open));
   if (open) {
+    toggleAllNotifications(false);
     renderNotifications();
-    markNotificationsSeen();
+    markNotificationsSeen('announcement');
+  }
+}
+
+function toggleAllNotifications(force) {
+  const panel = $('#all-notifications-panel');
+  if (!panel) return;
+  const open = typeof force === 'boolean' ? force : panel.hidden;
+  panel.hidden = !open;
+  $('#sidebar-notifications-btn')?.setAttribute('aria-expanded', String(open));
+  if (open) {
+    toggleNotifications(false);
+    renderNotifications();
+    markNotificationsSeen('all');
   }
 }
 
@@ -3264,6 +3302,16 @@ function closeModal() {
 
 /* ---------------- Olaylar ---------------- */
 
+// Alt menüde dokunma/odak nedeniyle oluşan kaymayı engelle.
+const bottomNavEl = $('#bottom-nav');
+bottomNavEl?.addEventListener('mousedown', (e) => {
+  if (e.target.closest('button')) e.preventDefault();
+});
+bottomNavEl?.addEventListener('click', (e) => {
+  const navBtn = e.target.closest('button');
+  if (navBtn) navBtn.blur();
+}, true);
+
 document.addEventListener('click', async (e) => {
   const expandBtn = e.target.closest('[data-expand-text]');
   if (expandBtn) {
@@ -3623,18 +3671,11 @@ $$('.feed-controls .tab[data-tab]').forEach((tab) => tab.addEventListener('click
 $$('[data-community-tab]').forEach((tab) => tab.addEventListener('click', () => selectCommunityTab(tab.dataset.communityTab)));
 $$('[data-journal-tab]').forEach((tab) => tab.addEventListener('click', () => selectJournalTab(tab.dataset.journalTab)));
 
-$$('#notifications-btn, #bottom-notifications-btn').forEach((btn) => btn?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  e.preventDefault();
-  btn.blur();
-  toggleNotifications();
-}));
-$('#notifications-close')?.addEventListener('click', () => toggleNotifications(false));
-$('#notifications-mark-read')?.addEventListener('click', () => markNotificationsSeen());
-$('#notifications-list')?.addEventListener('click', (e) => {
+function handleNotificationClick(e) {
   const item = e.target.closest('[data-notification-view]');
   if (!item) return;
   toggleNotifications(false);
+  toggleAllNotifications(false);
   const actorId = Number(item.dataset.notificationActor || 0);
   if (item.dataset.notificationKind === 'follow' && actorId) {
     openPublicProfile(actorId);
@@ -3646,13 +3687,34 @@ $('#notifications-list')?.addEventListener('click', (e) => {
     const el = document.getElementById(target);
     if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
   }
+}
+
+$('#notifications-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+  e.currentTarget.blur();
+  toggleNotifications();
 });
+$('#sidebar-notifications-btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+  e.currentTarget.blur();
+  toggleAllNotifications();
+});
+$('#notifications-close')?.addEventListener('click', () => toggleNotifications(false));
+$('#all-notifications-close')?.addEventListener('click', () => toggleAllNotifications(false));
+$('#notifications-mark-read')?.addEventListener('click', () => markNotificationsSeen('announcement'));
+$('#all-notifications-mark-read')?.addEventListener('click', () => markNotificationsSeen('all'));
+$('#notifications-list')?.addEventListener('click', handleNotificationClick);
+$('#all-notifications-list')?.addEventListener('click', handleNotificationClick);
 
 document.addEventListener('click', (e) => {
   if (!e.target.closest('#notifications-panel')
     && !e.target.closest('#notifications-btn')
-    && !e.target.closest('#bottom-notifications-btn')) {
+    && !e.target.closest('#all-notifications-panel')
+    && !e.target.closest('#sidebar-notifications-btn')) {
     toggleNotifications(false);
+    toggleAllNotifications(false);
   }
 });
 

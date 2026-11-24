@@ -67,6 +67,20 @@
         <button class="nav-item" data-view="journal" type="button">
           <span class="nav-icon" aria-hidden="true"><i data-lucide="pen-line"></i></span> Hatıratım
         </button>
+        <button class="nav-item" type="button" id="sidebar-notifications-btn" data-i18n-aria="Bildirimlerim" aria-label="Bildirimlerim" aria-expanded="false" aria-controls="all-notifications-panel">
+          <span class="nav-icon" aria-hidden="true"><i data-lucide="bell"></i></span> Bildirimlerim
+          <span class="badge-count" hidden>0</span>
+        </button>
+        <div class="notifications-panel notifications-panel--all" id="all-notifications-panel" hidden>
+          <div class="notifications-head">
+            <strong data-i18n="Bildirimlerim">Bildirimlerim</strong>
+            <button class="icon-btn icon-btn--tiny" type="button" id="all-notifications-mark-read" data-i18n-title="Tümünü okundu işaretle" title="Tümünü okundu işaretle" aria-label="Tümünü okundu işaretle">✓</button>
+          </div>
+          <div class="notifications-list" id="all-notifications-list"></div>
+          <div class="notifications-foot">
+            <button class="text-btn" type="button" id="all-notifications-close" data-i18n="Kapat">Kapat</button>
+          </div>
+        </div>
         <button class="nav-item" data-view="messages" type="button">
           <span class="nav-icon" aria-hidden="true"><i data-lucide="message-circle"></i></span> Mesajlar
         </button>
@@ -123,6 +137,9 @@
           <div class="global-search-results" id="global-search-results" hidden></div>
         </div>
         <div class="top-actions">
+          <button class="icon-btn" type="button" id="notifications-btn" data-i18n-aria="Duyurular" data-i18n-title="Duyurular" aria-label="Duyurular" title="Duyurular" aria-expanded="false" aria-controls="notifications-panel">
+            <i data-lucide="bell" aria-hidden="true"></i><span class="badge-count" hidden>0</span>
+          </button>
           <button class="icon-btn mobile-only" type="button" id="search-open-btn" data-i18n-aria="Ara" data-i18n-title="Ara" aria-label="Ara" title="Ara"><i data-lucide="search" aria-hidden="true"></i></button>
           <button class="icon-btn" type="button" data-view="support" data-i18n-aria="Şikayet ve talepler" aria-label="Şikayet ve talepler"><i data-lucide="mail" aria-hidden="true"></i></button>
           <button class="icon-btn top-logout" id="top-logout-btn" type="button" data-i18n-aria="Çıkış Yap" data-i18n-title="Çıkış Yap" aria-label="Çıkış Yap" title="Çıkış Yap"><i data-lucide="log-out" aria-hidden="true"></i></button>
@@ -130,14 +147,15 @@
 
         <div class="notifications-panel" id="notifications-panel" hidden>
           <div class="notifications-head">
-            <strong data-i18n="Bildirimler">Bildirimler</strong>
-            <button class="icon-btn icon-btn--tiny" type="button" id="notifications-mark-read" data-i18n-title="Tümünü okundu işaretle" title="Tümünü okundu işaretle" aria-label="Tümünü okundu işaretle">✓</button>
+            <strong data-i18n="Duyurular">Duyurular</strong>
+            <button class="icon-btn icon-btn--tiny" type="button" id="notifications-mark-read" data-i18n-title="Duyuruları okundu işaretle" title="Duyuruları okundu işaretle" aria-label="Duyuruları okundu işaretle">✓</button>
           </div>
           <div class="notifications-list" id="notifications-list"></div>
           <div class="notifications-foot">
             <button class="text-btn" type="button" id="notifications-close" data-i18n="Kapat">Kapat</button>
           </div>
         </div>
+
       </header>
 
       <main class="content">
@@ -407,7 +425,7 @@
         <section class="view" id="view-circles" aria-labelledby="circles-title">
           <div class="page-head page-head--tight">
             <div>
-              <h1 id="circles-title">Halkalar ve meclisler</h1>
+              <h1 id="circles-title">Halkalar ve Meclisler</h1>
             </div>
             <div class="head-actions">
               <button class="btn btn-outline btn-sm" type="button" data-open-halka id="create-halka-btn">Halka Kur</button>
@@ -864,16 +882,6 @@
           <div id="library-panel"></div>
 
           <div class="page-head page-head--small">
-            <div><h2>Etkileşimlerim</h2></div>
-          </div>
-          <div class="profile-tabs" role="tablist" aria-label="Etkileşimlerim">
-            <button class="profile-tab is-active" role="tab" aria-selected="true" data-interaction-tab="liked" type="button">Beğendiklerim</button>
-            <button class="profile-tab" role="tab" aria-selected="false" data-interaction-tab="favorited" type="button">Favorilerim</button>
-            <button class="profile-tab" role="tab" aria-selected="false" data-interaction-tab="commented" type="button">Yorumladıklarım</button>
-          </div>
-          <div id="interaction-panel"></div>
-
-          <div class="page-head page-head--small">
             <div><h2 data-i18n="Halkalarım">Halkalarım</h2></div>
           </div>
           <div class="profile-circles" id="profile-circles"></div>
@@ -890,6 +898,16 @@
             </div>
           </div>
           <div class="level-ladder" id="title-ladder"></div>
+
+          <div class="page-head page-head--small">
+            <div><h2>Etkileşimlerim</h2></div>
+          </div>
+          <div class="profile-tabs" role="tablist" aria-label="Etkileşimlerim">
+            <button class="profile-tab is-active" role="tab" aria-selected="true" data-interaction-tab="liked" type="button">Beğendiklerim</button>
+            <button class="profile-tab" role="tab" aria-selected="false" data-interaction-tab="favorited" type="button">Favorilerim</button>
+            <button class="profile-tab" role="tab" aria-selected="false" data-interaction-tab="commented" type="button">Yorumladıklarım</button>
+          </div>
+          <div id="interaction-panel"></div>
         </section>
 
         <section class="view" id="view-stats" aria-labelledby="stats-title">
@@ -992,20 +1010,14 @@
       <button class="nav-item" type="button" data-view="home" data-i18n-aria="Ana Sayfa" aria-label="Ana Sayfa">
         <i data-lucide="house" aria-hidden="true"></i><span data-i18n="Ana Sayfa">Ana Sayfa</span>
       </button>
-      <button class="nav-item" type="button" data-view="discover" data-i18n-aria="Keşfet" aria-label="Keşfet">
-        <i data-lucide="compass" aria-hidden="true"></i><span data-i18n="Keşfet">Keşfet</span>
-      </button>
       <button class="nav-item" type="button" data-view="library" data-i18n-aria="Kütüphane" aria-label="Kütüphane">
         <i data-lucide="library" aria-hidden="true"></i><span data-i18n="Kütüphane">Kütüphane</span>
       </button>
-      <button class="nav-item nav-add" type="button" id="quick-add-btn" data-i18n-aria="İlim Halkası" data-i18n-title="İlim Halkası" aria-label="İlim Halkası" title="İlim Halkası">
-        <span class="nav-add-circle nav-brand-mark"><span>İlim<br />Halkası</span></span>
+      <button class="nav-item nav-add" type="button" id="quick-add-btn" data-i18n-aria="Ne paylaşmak istersin?" data-i18n-title="Ne paylaşmak istersin?" aria-label="Ne paylaşmak istersin?" title="Ne paylaşmak istersin?">
+        <span class="nav-add-circle" aria-hidden="true">✧</span>
       </button>
       <button class="nav-item" type="button" data-view="circles" data-i18n-aria="Halkalar" aria-label="Halkalar">
         <i data-lucide="users-round" aria-hidden="true"></i><span data-i18n="Halkalar">Halkalar</span>
-      </button>
-      <button class="nav-item" type="button" id="bottom-notifications-btn" data-i18n-aria="Bildirimler" aria-label="Bildirimler" aria-expanded="false" aria-controls="notifications-panel">
-        <i data-lucide="bell" aria-hidden="true"></i><span data-i18n="Bildirimler">Bildirimler</span><i class="badge-dot"></i>
       </button>
       <button class="nav-item" type="button" data-view="profile" data-i18n-aria="Profilim" aria-label="Profilim">
         <i data-lucide="user-round" aria-hidden="true"></i><span data-i18n="Profilim">Profilim</span>
