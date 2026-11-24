@@ -528,14 +528,23 @@ class SmokeAPITests(unittest.TestCase):
         self.assertIn(".page-head--tight .head-actions {", css)
 
         self.assertIn('id="notifications-btn"', index_html)
-        self.assertIn('id="all-notifications-panel"', index_html)
-        self.assertIn('id="sidebar-notifications-btn"', index_html)
-        self.assertIn(".sidebar .notifications-panel--all {", css)
-        self.assertIn("function toggleAllNotifications(", app_js)
+        self.assertIn('id="view-notifications"', index_html)
+        self.assertIn('id="notifications-view-list"', index_html)
+        self.assertIn('data-view="notifications"', index_html)
+        self.assertIn("notifications-panel--page", css)
+        self.assertNotIn('id="all-notifications-panel"', index_html)
+        self.assertNotIn("function toggleAllNotifications(", app_js)
         self.assertIn("markNotificationsSeen('announcement')", app_js)
         self.assertIn("markNotificationsSeen('all')", app_js)
         self.assertNotIn("bottom-notifications-btn", index_html)
         self.assertNotIn("bottom-notifications-btn", app_js)
+
+        self.assertIn('class="page-head page-head--library"', index_html)
+        self.assertIn(".page-head--library {", css)
+        self.assertIn("function renderFeedTabs(", app_js)
+        self.assertIn("function circleTabKey(", app_js)
+        self.assertNotIn('data-tab="circles"', index_html)
+        self.assertIn('data-status="approved">${t(\'Takip ediliyor\')}', app_js)
 
     def test_posts_recent_like_and_comment(self) -> None:
         marker = _marker("post")

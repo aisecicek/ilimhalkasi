@@ -67,20 +67,10 @@
         <button class="nav-item" data-view="journal" type="button">
           <span class="nav-icon" aria-hidden="true"><i data-lucide="pen-line"></i></span> Hatıratım
         </button>
-        <button class="nav-item" type="button" id="sidebar-notifications-btn" data-i18n-aria="Bildirimlerim" aria-label="Bildirimlerim" aria-expanded="false" aria-controls="all-notifications-panel">
+        <button class="nav-item" type="button" data-view="notifications" id="sidebar-notifications-btn" data-i18n-aria="Bildirimlerim" aria-label="Bildirimlerim">
           <span class="nav-icon" aria-hidden="true"><i data-lucide="bell"></i></span> Bildirimlerim
           <span class="badge-count" hidden>0</span>
         </button>
-        <div class="notifications-panel notifications-panel--all" id="all-notifications-panel" hidden>
-          <div class="notifications-head">
-            <strong data-i18n="Bildirimlerim">Bildirimlerim</strong>
-            <button class="icon-btn icon-btn--tiny" type="button" id="all-notifications-mark-read" data-i18n-title="Tümünü okundu işaretle" title="Tümünü okundu işaretle" aria-label="Tümünü okundu işaretle">✓</button>
-          </div>
-          <div class="notifications-list" id="all-notifications-list"></div>
-          <div class="notifications-foot">
-            <button class="text-btn" type="button" id="all-notifications-close" data-i18n="Kapat">Kapat</button>
-          </div>
-        </div>
         <button class="nav-item" data-view="messages" type="button">
           <span class="nav-icon" aria-hidden="true"><i data-lucide="message-circle"></i></span> Mesajlar
         </button>
@@ -240,7 +230,6 @@
             <div class="tabs" role="tablist" aria-label="Akış türü">
               <button class="tab is-active" role="tab" aria-selected="true" data-tab="discover" type="button">Keşfet</button>
               <button class="tab" role="tab" aria-selected="false" data-tab="following" type="button">Takip Edilenler</button>
-              <button class="tab" role="tab" aria-selected="false" data-tab="circles" type="button">Halkalarım</button>
             </div>
             <div class="control-row">
               <div class="chips" role="group" aria-label="İçerik filtresi">
@@ -264,7 +253,7 @@
 
         <!-- ============ KÜTÜPHANE ============ -->
         <section class="view" id="view-library" aria-labelledby="library-title">
-          <div class="page-head">
+          <div class="page-head page-head--library">
             <div>
               <h1 id="library-title">Kütüphane</h1>
             </div>
@@ -908,6 +897,20 @@
             <button class="profile-tab" role="tab" aria-selected="false" data-interaction-tab="commented" type="button">Yorumladıklarım</button>
           </div>
           <div id="interaction-panel"></div>
+        </section>
+
+        <!-- ============ BİLDİRİMLERİM ============ -->
+        <section class="view" id="view-notifications" aria-labelledby="notifications-title">
+          <div class="page-head">
+            <div>
+              <h1 id="notifications-title" data-i18n="Bildirimlerim">Bildirimlerim</h1>
+              <p data-i18n="Beğeni, yorum, takip ve halka etkinliklerin burada toplanır.">Beğeni, yorum, takip ve halka etkinliklerin burada toplanır.</p>
+            </div>
+            <button class="btn btn-outline btn-sm" type="button" id="notifications-view-mark-read" data-i18n="Tümünü okundu işaretle">Tümünü okundu işaretle</button>
+          </div>
+          <div class="notifications-panel notifications-panel--page">
+            <div class="notifications-list" id="notifications-view-list"></div>
+          </div>
         </section>
 
         <section class="view" id="view-stats" aria-labelledby="stats-title">

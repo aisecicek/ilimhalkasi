@@ -1082,13 +1082,34 @@ function postHTML(post) {
   </article>`;
 }
 
+function joinedCircles() {
+  return (state.data.groups || []).filter((g) => g.kind === 'halka' && g.is_member);
+}
+
+function circleTabKey(id) {
+  return `circle:${id}`;
+}
+
+function renderFeedTabs() {
+  const host = $('.feed-controls .tabs');
+  if (!host) return;
+  const circles = joinedCircles();
+  const keys = new Set(circles.map((c) => circleTabKey(c.id)));
+  if (state.tab.startsWith('circle:') && !keys.has(state.tab)) state.tab = 'discover';
+  host.innerHTML = `
+    <button class="tab${state.tab === 'discover' ? ' is-active' : ''}" role="tab" aria-selected="${state.tab === 'discover'}" data-tab="discover" type="button" data-i18n="Keşfet">Keşfet</button>
+    <button class="tab${state.tab === 'following' ? ' is-active' : ''}" role="tab" aria-selected="${state.tab === 'following'}" data-tab="following" type="button" data-i18n="Takip Edilenler">Takip Edilenler</button>
+    ${circles.map((c) => {
+      const active = state.tab === circleTabKey(c.id);
+      return `<button class="tab${active ? ' is-active' : ''}" role="tab" aria-selected="${active}" data-tab="${esc(circleTabKey(c.id))}" type="button">${esc(c.name)}</button>`;
+    }).join('')}`;
+  applyStaticI18n(host);
+}
+
 function visiblePosts() {
-  const myCircleIds = new Set(
-    (state.data.groups || []).filter((g) => g.kind === 'halka' && g.is_member).map((g) => Number(g.id))
-  );
   let list = state.data.posts.filter((p) => {
     if (state.tab === 'following') return p.followed || p.author.id === state.user.id;
-    if (state.tab === 'circles') return myCircleIds.has(Number(p.group_id));
+    if (state.tab.startsWith('circle:')) return Number(p.group_id) === Number(state.tab.slice(7));
     return true;
   });
   if (state.filter !== 'all') list = list.filter((p) => p.type === state.filter);
@@ -2099,7 +2120,7 @@ function notificationItemHTML(n, unread) {
 
 function renderNotifications() {
   const announcementList = $('#notifications-list');
-  const allList = $('#all-notifications-list');
+  const allList = $('#notifications-view-list');
   if (!announcementList && !allList) return;
 
   const items = collectNotifications();
@@ -2123,9 +2144,10 @@ function renderNotifications() {
   };
   paint(announcementList, items.filter((n) => n.kind === 'announcement'), 'Henüz duyuru yok.');
   paint(allList, items, 'Henüz bildirim yok.');
-  [$('#notifications-panel'), $('#all-notifications-panel')].forEach((panel) => {
-    if (panel && !panel.hidden) applyStaticI18n(panel);
-  });
+  const panel = $('#notifications-panel');
+  if (panel && !panel.hidden) applyStaticI18n(panel);
+  const view = $('#view-notifications');
+  if (view?.classList.contains('is-active')) applyStaticI18n(view);
 }
 
 function toggleNotifications(force) {
@@ -2135,22 +2157,8 @@ function toggleNotifications(force) {
   panel.hidden = !open;
   $('#notifications-btn')?.setAttribute('aria-expanded', String(open));
   if (open) {
-    toggleAllNotifications(false);
     renderNotifications();
     markNotificationsSeen('announcement');
-  }
-}
-
-function toggleAllNotifications(force) {
-  const panel = $('#all-notifications-panel');
-  if (!panel) return;
-  const open = typeof force === 'boolean' ? force : panel.hidden;
-  panel.hidden = !open;
-  $('#sidebar-notifications-btn')?.setAttribute('aria-expanded', String(open));
-  if (open) {
-    toggleNotifications(false);
-    renderNotifications();
-    markNotificationsSeen('all');
   }
 }
 
@@ -2798,7 +2806,7 @@ function renderProfileCurricula() {
   host.innerHTML = list.length ? `<div class="profile-curricula-grid">${list.map((c) => `
     <button class="profile-curriculum" type="button" data-view="lists">
       <span class="selection-kind">${t('SEÇKİ')}</span>
-      <strong>${esc(c.title)}</strong>
+      <strong>${esc(c.title)} <span class="status-badge" data-status="approved">${t('Takip ediliyor')}</span></strong>
       <small>${esc(t('{done} / {total} eser', {
         done: c.progress?.completed || 0, total: c.progress?.total || 0
       }))} · %${Number(c.progress?.pct) || 0}</small>
@@ -2846,7 +2854,7 @@ function curriculumCardHTML(c) {
   const progress = c.progress || { completed: 0, total: c.steps?.length || 0, pct: 0 };
   return `<article class="curriculum-card">
     <span class="verified-seal">✓</span>
-    <h3>${esc(c.title)}</h3>
+    <h3>${esc(c.title)}${c.followed ? ` <span class="status-badge" data-status="approved">${t('Takip ediliyor')}</span>` : ''}</h3>
     <p class="curriculum-meta">${esc(c.meta)}</p>
     <div class="curriculum-progress-summary">
       <span>%${Number(progress.pct) || 0}</span>
@@ -2907,6 +2915,7 @@ function renderAll() {
   renderIdentity();
   renderRightRail();
   renderNotifications();
+  renderFeedTabs();
   renderFeed();
   renderLibrary();
   renderHomeBooks();
@@ -3150,6 +3159,7 @@ function switchView(name, skipHistory = false) {
   if (inDiscoverGroup) toggleDiscoverGroup(true);
   const mobileTabMap = {
     'circle-feed': 'circles',
+    'notifications': '',
     'book': 'profile',
     'library': 'profile',
     'public-profile': 'discover',
@@ -3172,6 +3182,10 @@ function switchView(name, skipHistory = false) {
   $$('#mobile-discover-tabs .md-tab').forEach((n) => n.classList.toggle('is-active', n.dataset.view === name));
   if (name === 'users') loadRecommendedUsers();
   if (name === 'profile' && !state.interactions) loadInteractions();
+  if (name === 'notifications') {
+    markNotificationsSeen('all');
+    applyStaticI18n($('#view-notifications') || document);
+  }
   if (name === 'discover') renderDiscoverSections();
   if (name === 'lists') renderListsView();
   if (name === 'stats') renderStatsView();
@@ -3658,15 +3672,17 @@ $('#sidebar-toggle').addEventListener('click', () => {
   }
 });
 
-$$('.feed-controls .tab[data-tab]').forEach((tab) => tab.addEventListener('click', () => {
-  $$('.feed-controls .tab[data-tab]').forEach((t) => {
+$('.feed-controls .tabs')?.addEventListener('click', (e) => {
+  const tab = e.target.closest('.tab[data-tab]');
+  if (!tab) return;
+  $$('.feed-controls .tabs .tab[data-tab]').forEach((t) => {
     t.classList.remove('is-active'); t.setAttribute('aria-selected', 'false');
   });
   tab.classList.add('is-active');
   tab.setAttribute('aria-selected', 'true');
   state.tab = tab.dataset.tab;
   renderFeed();
-}));
+});
 
 $$('[data-community-tab]').forEach((tab) => tab.addEventListener('click', () => selectCommunityTab(tab.dataset.communityTab)));
 $$('[data-journal-tab]').forEach((tab) => tab.addEventListener('click', () => selectJournalTab(tab.dataset.journalTab)));
@@ -3675,7 +3691,6 @@ function handleNotificationClick(e) {
   const item = e.target.closest('[data-notification-view]');
   if (!item) return;
   toggleNotifications(false);
-  toggleAllNotifications(false);
   const actorId = Number(item.dataset.notificationActor || 0);
   if (item.dataset.notificationKind === 'follow' && actorId) {
     openPublicProfile(actorId);
@@ -3695,26 +3710,15 @@ $('#notifications-btn')?.addEventListener('click', (e) => {
   e.currentTarget.blur();
   toggleNotifications();
 });
-$('#sidebar-notifications-btn')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  e.preventDefault();
-  e.currentTarget.blur();
-  toggleAllNotifications();
-});
 $('#notifications-close')?.addEventListener('click', () => toggleNotifications(false));
-$('#all-notifications-close')?.addEventListener('click', () => toggleAllNotifications(false));
 $('#notifications-mark-read')?.addEventListener('click', () => markNotificationsSeen('announcement'));
-$('#all-notifications-mark-read')?.addEventListener('click', () => markNotificationsSeen('all'));
+$('#notifications-view-mark-read')?.addEventListener('click', () => markNotificationsSeen('all'));
 $('#notifications-list')?.addEventListener('click', handleNotificationClick);
-$('#all-notifications-list')?.addEventListener('click', handleNotificationClick);
+$('#notifications-view-list')?.addEventListener('click', handleNotificationClick);
 
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('#notifications-panel')
-    && !e.target.closest('#notifications-btn')
-    && !e.target.closest('#all-notifications-panel')
-    && !e.target.closest('#sidebar-notifications-btn')) {
+  if (!e.target.closest('#notifications-panel') && !e.target.closest('#notifications-btn')) {
     toggleNotifications(false);
-    toggleAllNotifications(false);
   }
 });
 

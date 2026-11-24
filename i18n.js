@@ -61,6 +61,8 @@ window.ILIM_I18N = {
     'Henüz duyuru yok.': 'No announcements yet.',
     'Henüz bildirim yok.': 'No notifications yet.',
     'Bildirimlerim': 'My notifications',
+    'Beğeni, yorum, takip ve halka etkinliklerin burada toplanır.': 'Likes, comments, follows and circle activity are gathered here.',
+    'Takip ediliyor': 'Following',
     'Duyuruları okundu işaretle': 'Mark announcements as read',
     'Duyuru': 'Announcement',
     'Bayram / özel gün': 'Eid / special day',
