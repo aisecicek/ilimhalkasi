@@ -503,6 +503,7 @@ class SmokeAPITests(unittest.TestCase):
         index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
         app_js = (PROJECT_ROOT / "app.js").read_text(encoding="utf-8")
         css = (PROJECT_ROOT / "styles.css").read_text(encoding="utf-8")
+        i18n_js = (PROJECT_ROOT / "i18n.js").read_text(encoding="utf-8")
 
         profile = index_html.split('<section class="view" id="view-profile"', 1)[1]
         profile = profile.split("</section>", 1)[0]
@@ -545,6 +546,15 @@ class SmokeAPITests(unittest.TestCase):
         self.assertIn("function circleTabKey(", app_js)
         self.assertNotIn('data-tab="circles"', index_html)
         self.assertIn('data-status="approved">${t(\'Takip ediliyor\')}', app_js)
+
+        self.assertIn('id="top-brand" type="button" data-view="home"', index_html)
+        self.assertIn('data-i18n-aria="İlim Halkası — ana sayfa"', index_html)
+        self.assertIn('data-i18n-title="Ana sayfa"', index_html)
+        brand_handler = app_js.split("$('#top-brand')?.addEventListener('click'", 1)[1].split("});", 1)[0]
+        self.assertIn("switchView('home')", brand_handler)
+        self.assertNotIn("classList.add('is-open')", brand_handler)
+        self.assertNotIn("Beğeni, yorum, takip ve halka etkinliklerin burada toplanır.", index_html)
+        self.assertNotIn("Beğeni, yorum, takip ve halka etkinliklerin burada toplanır.", i18n_js)
 
     def test_posts_recent_like_and_comment(self) -> None:
         marker = _marker("post")

@@ -3619,21 +3619,12 @@ $('.side-user')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchView('profile'); }
 });
 
-/* Üst marka: geniş ekranda ana sayfaya gider, telefonda menü çekmecesini açar. */
-function syncTopBrandLabel() {
-  const brand = $('#top-brand');
-  if (!brand) return;
-  const mobile = window.matchMedia('(max-width: 640px)').matches;
-  brand.setAttribute('aria-label', mobile ? t('İlim Halkası — menüyü aç') : t('İlim Halkası — ana sayfa'));
-  brand.title = mobile ? t('Menüyü aç') : t('Ana sayfa');
-}
-syncTopBrandLabel();
-window.addEventListener('resize', syncTopBrandLabel);
+/* Üst marka: her ekranda ana sayfaya götürür. */
 $('#top-brand')?.addEventListener('click', (e) => {
-  if (!window.matchMedia('(max-width: 640px)').matches) return;
   e.preventDefault();
   e.stopPropagation();
-  $('.sidebar').classList.add('is-open');
+  e.currentTarget.blur();
+  switchView('home');
 });
 
 /* Görünür Menü butonu: mobilde sol menü çekmecesini açar/kapatır. */
