@@ -559,10 +559,49 @@ class SmokeAPITests(unittest.TestCase):
         self.assertIn(".app-shell .bottom-nav .nav-item,", css)
         self.assertIn("line-height: 1.3;", css)
 
+        side_nav = index_html.split('<nav class="side-nav"', 1)[1].split("</nav>", 1)[0]
+        self.assertEqual(side_nav.count('class="nav-section"'), 4)
+        section_positions = []
+        for label in ("ANA AKIŞ", "SOSYAL", "KİŞİSEL ALANIM", "HESABIM VE YÖNETİM"):
+            self.assertIn('data-i18n="{}">{}<'.format(label, label), side_nav)
+            section_positions.append(side_nav.index('data-i18n="{}"'.format(label)))
+        self.assertEqual(section_positions, sorted(section_positions))
+        self.assertNotIn("SOSYAL VE KİŞİSEL ALAN", index_html)
+        self.assertNotIn("SOSYAL VE KİŞİSEL ALAN", i18n_js)
+        self.assertIn(".nav-section + .nav-section", css)
+
         self.assertNotIn('data-theme-choice="gece"', index_html)
         self.assertNotIn("{ key: 'gece'", app_js)
         self.assertIn("state.settings.theme === 'gece'", app_js)
         self.assertNotIn("'Gece': 'Night',", i18n_js)
+
+    def test_mobile_standard_fixes_are_wired(self) -> None:
+        index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+        app_js = (PROJECT_ROOT / "app.js").read_text(encoding="utf-8")
+        css = (PROJECT_ROOT / "styles.css").read_text(encoding="utf-8")
+        manifest = (PROJECT_ROOT / "android" / "app" / "src" / "main"
+                    / "AndroidManifest.xml").read_text(encoding="utf-8")
+        activity = (PROJECT_ROOT / "android" / "app" / "src" / "main" / "java"
+                    / "com" / "ilimhalkasi" / "app" / "MainActivity.java").read_text(encoding="utf-8")
+
+        self.assertIn("viewport-fit=cover", index_html)
+        self.assertIn('role="group" aria-label="Keşfet kategorileri"', index_html)
+        self.assertNotIn('role="tablist" aria-label="Keşfet kategorileri"', index_html)
+        self.assertIn("aria-current", app_js)
+        self.assertIn("docEl.style.scrollBehavior = 'auto'", app_js)
+        self.assertIn("openModal.querySelector('.modal-close')", app_js)
+        self.assertIn("$(input).value = ''", app_js)
+        self.assertIn("@media (prefers-reduced-motion: reduce)", css)
+        self.assertIn("html { scroll-behavior: auto; }", css)
+
+        self.assertIn('android:configChanges="orientation|screenSize|keyboardHidden|uiMode|locale|layoutDirection"', manifest)
+        self.assertIn("onReceivedHttpError", activity)
+        self.assertIn("webView.saveState(state)", activity)
+        self.assertIn("webView.restoreState(savedWebViewState)", activity)
+        self.assertIn("protected void onPause()", activity)
+        self.assertIn("protected void onResume()", activity)
+        self.assertIn("CookieManager.getInstance().flush()", activity)
+        self.assertIn("setMediaPlaybackRequiresUserGesture(true)", activity)
 
     def test_posts_recent_like_and_comment(self) -> None:
         marker = _marker("post")

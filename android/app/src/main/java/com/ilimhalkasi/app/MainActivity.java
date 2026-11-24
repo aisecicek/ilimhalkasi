@@ -22,6 +22,7 @@ import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -53,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREF_HOST = "host_url";
     private static final String PREF_NOTIFY_PREFS = "notification_prefs";
     private static final String NOTIFY_CHANNEL = "ilimhalkasi";
+    private static final String KEY_WEBVIEW_STATE = "webview_state";
 
     private SharedPreferences prefs;
     private WebView webView;
@@ -86,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setMediaPlaybackRequiresUserGesture(true);
 
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(true);
@@ -115,6 +117,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 showErrorPage(view);
+            }
+
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse response) {
+                if (request.isForMainFrame() && response.getStatusCode() >= 400) showErrorPage(view);
             }
         });
 
@@ -166,7 +173,11 @@ public class MainActivity extends AppCompatActivity {
         // Hata ekranından sunucu adresini değiştirebilmek için köprü.
         webView.addJavascriptInterface(new HostBridge(), "IlimNative");
 
-        webView.loadUrl(hostUrl);
+        // Süreç yeniden başladığında sayfayı sıfırdan açmak yerine WebView durumunu geri yükle.
+        Bundle savedWebViewState = savedInstanceState == null
+                ? null : savedInstanceState.getBundle(KEY_WEBVIEW_STATE);
+        if (savedWebViewState != null) webView.restoreState(savedWebViewState);
+        else webView.loadUrl(hostUrl);
     }
 
     /** WebView hata ekranından çağrılan, sunucu adresini kalıcı kaydeden köprü. */
@@ -312,6 +323,28 @@ public class MainActivity extends AppCompatActivity {
         filePathCallback.onReceiveValue(results);
         filePathCallback = null;
         cameraImageUri = null;
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (webView == null) return;
+        Bundle state = new Bundle();
+        webView.saveState(state);
+        outState.putBundle(KEY_WEBVIEW_STATE, state);
+    }
+
+    @Override
+    protected void onPause() {
+        if (webView != null) webView.onPause();
+        CookieManager.getInstance().flush();
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (webView != null) webView.onResume();
     }
 
     @Override

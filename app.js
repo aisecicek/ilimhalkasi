@@ -772,6 +772,7 @@ function photoUploader({ input, button, remove, preview, onChange, crop = cropAv
   $(input).addEventListener('change', async () => {
     const file = $(input).files && $(input).files[0];
     if (!file) return;
+    $(input).value = ''; // Aynı dosyanın ikinci seçiminde de change olayı çalışsın.
     try {
       value = await crop(file);
       previewEl.innerHTML = `<img src="${value}" alt="" />`;
@@ -3183,7 +3184,12 @@ function switchView(name, skipHistory = false) {
   const discoverTabViews = ['discover', 'authors', 'users', 'lists'];
   const mobileTabs = $('#mobile-discover-tabs');
   if (mobileTabs) mobileTabs.hidden = !discoverTabViews.includes(name);
-  $$('#mobile-discover-tabs .md-tab').forEach((n) => n.classList.toggle('is-active', n.dataset.view === name));
+  $$('#mobile-discover-tabs .md-tab').forEach((n) => {
+    const active = n.dataset.view === name;
+    n.classList.toggle('is-active', active);
+    if (active) n.setAttribute('aria-current', 'page');
+    else n.removeAttribute('aria-current');
+  });
   if (name === 'users') loadRecommendedUsers();
   if (name === 'profile' && !state.interactions) loadInteractions();
   if (name === 'notifications') {
@@ -3195,7 +3201,12 @@ function switchView(name, skipHistory = false) {
   if (name === 'stats') renderStatsView();
   if (name === 'authors') loadCatalogAuthors();
   $('.sidebar').classList.remove('is-open');
+  // Görünüm değişiminde yumuşak kaydırma hareketi istenmiyor; anında üste dön.
+  const docEl = document.documentElement;
+  const previousBehavior = docEl.style.scrollBehavior;
+  docEl.style.scrollBehavior = 'auto';
   window.scrollTo(0, 0);
+  docEl.style.scrollBehavior = previousBehavior;
 }
 
 // Halka akışı dahil tüm alt sayfalardan bir önceki görünüme döner.
@@ -3218,7 +3229,14 @@ function appBack() {
   const panel = $('#notifications-panel');
   if (panel && !panel.hidden) { toggleNotifications(false); return true; }
   const openModal = document.querySelector('.modal-backdrop:not([hidden])');
-  if (openModal) { openModal.hidden = true; return true; }
+  if (openModal) {
+    const closeButton = openModal.querySelector('.modal-close');
+    if (closeButton) closeButton.click();
+    else openModal.hidden = true;
+    return true;
+  }
+  const quickSheet = $('#quick-sheet');
+  if (quickSheet && !quickSheet.hidden) { closeQuickSheet(); return true; }
   const sidebar = document.querySelector('.sidebar.is-open');
   if (sidebar) { sidebar.classList.remove('is-open'); return true; }
   if (state.currentView === 'search') { closeMobileSearch(); return true; }

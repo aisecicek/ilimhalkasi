@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="description" content="İlim Halkası — ilim halkaları, kitaplar ve hatıratlar için sakin bir okuma dünyası." />
   <meta name="theme-color" content="#1F4E3D" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
@@ -29,74 +29,84 @@
         <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Menüyü daralt veya genişlet" title="Menüyü aç / kapat"><i data-lucide="panel-left-close"></i></button>
       </div>
 
-      <nav class="side-nav">
-        <p class="nav-label nav-label--long">ANA AKIŞ</p>
-        <button class="nav-item is-active" data-view="home" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="house"></i></span> Ana Sayfa
-        </button>
-        <button class="nav-item" data-view="library" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="library"></i></span> Kütüphane
-        </button>
-        <div class="nav-group" id="discover-nav-group">
-          <button class="nav-item nav-item--group" data-view="discover" type="button">
-            <span class="nav-icon" aria-hidden="true"><i data-lucide="compass"></i></span> Keşfet
+      <nav class="side-nav" aria-label="Bölümler">
+        <div class="nav-section">
+          <p class="nav-label nav-label--long" data-i18n="ANA AKIŞ">ANA AKIŞ</p>
+          <button class="nav-item is-active" data-view="home" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="house"></i></span> Ana Sayfa
           </button>
-          <button class="nav-group-toggle" id="discover-group-toggle" type="button"
-            data-i18n-aria="Keşfet alt bölümlerini aç" data-i18n-title="Keşfet alt bölümlerini aç"
-            aria-label="Keşfet alt bölümlerini aç" title="Keşfet alt bölümlerini aç"
-            aria-expanded="false" aria-controls="discover-subitems">
-            <i data-lucide="chevron-down" aria-hidden="true"></i>
+          <button class="nav-item" data-view="library" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="library"></i></span> Kütüphane
           </button>
+          <div class="nav-group" id="discover-nav-group">
+            <button class="nav-item nav-item--group" data-view="discover" type="button">
+              <span class="nav-icon" aria-hidden="true"><i data-lucide="compass"></i></span> Keşfet
+            </button>
+            <button class="nav-group-toggle" id="discover-group-toggle" type="button"
+              data-i18n-aria="Keşfet alt bölümlerini aç" data-i18n-title="Keşfet alt bölümlerini aç"
+              aria-label="Keşfet alt bölümlerini aç" title="Keşfet alt bölümlerini aç"
+              aria-expanded="false" aria-controls="discover-subitems">
+              <i data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="nav-subitems" id="discover-subitems" aria-label="Keşfet alt bölümleri" hidden>
+            <button class="nav-item nav-item--sub" data-view="users" type="button">
+              <span class="nav-icon" aria-hidden="true"><i data-lucide="users"></i></span> Kullanıcılar
+            </button>
+            <button class="nav-item nav-item--sub" data-view="authors" type="button">
+              <span class="nav-icon" aria-hidden="true"><i data-lucide="feather"></i></span> Yazarlar
+            </button>
+            <button class="nav-item nav-item--sub" data-view="lists" type="button">
+              <span class="nav-icon" aria-hidden="true"><i data-lucide="list"></i></span> Seçkiler
+            </button>
+          </div>
         </div>
-        <div class="nav-subitems" id="discover-subitems" aria-label="Keşfet alt bölümleri" hidden>
-          <button class="nav-item nav-item--sub" data-view="users" type="button">
-            <span class="nav-icon" aria-hidden="true"><i data-lucide="users"></i></span> Kullanıcılar
+
+        <div class="nav-section">
+          <p class="nav-label nav-label--long" data-i18n="SOSYAL">SOSYAL</p>
+          <button class="nav-item" data-view="circles" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="users-round"></i></span> İlim Halkaları
           </button>
-          <button class="nav-item nav-item--sub" data-view="authors" type="button">
-            <span class="nav-icon" aria-hidden="true"><i data-lucide="feather"></i></span> Yazarlar
+          <button class="nav-item" data-view="messages" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="message-circle"></i></span> Mesajlar
           </button>
-          <button class="nav-item nav-item--sub" data-view="lists" type="button">
-            <span class="nav-icon" aria-hidden="true"><i data-lucide="list"></i></span> Seçkiler
+          <button class="nav-item" type="button" data-view="notifications" id="sidebar-notifications-btn" data-i18n-aria="Bildirimlerim" aria-label="Bildirimlerim">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="bell"></i></span> Bildirimlerim
+            <span class="badge-count" hidden>0</span>
           </button>
         </div>
 
-        <p class="nav-label nav-label--spaced nav-label--long">SOSYAL VE KİŞİSEL ALAN</p>
-        <button class="nav-item" data-view="circles" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="users-round"></i></span> İlim Halkaları
-        </button>
-        <button class="nav-item" data-view="journal" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="pen-line"></i></span> Hatıratım
-        </button>
-        <button class="nav-item" type="button" data-view="notifications" id="sidebar-notifications-btn" data-i18n-aria="Bildirimlerim" aria-label="Bildirimlerim">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="bell"></i></span> Bildirimlerim
-          <span class="badge-count" hidden>0</span>
-        </button>
-        <button class="nav-item" data-view="messages" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="message-circle"></i></span> Mesajlar
-        </button>
+        <div class="nav-section">
+          <p class="nav-label nav-label--long" data-i18n="KİŞİSEL ALANIM">KİŞİSEL ALANIM</p>
+          <button class="nav-item" data-view="profile" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="user-round"></i></span> Profilim
+          </button>
+          <button class="nav-item" data-view="journal" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="pen-line"></i></span> Hatıratım
+          </button>
+          <button class="nav-item" data-view="stats" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="chart-no-axes-column-increasing"></i></span> İstatistiklerim
+          </button>
+        </div>
 
-        <p class="nav-label nav-label--spaced nav-label--long">HESABIM VE YÖNETİM</p>
-        <button class="nav-item" data-view="profile" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="user-round"></i></span> Profilim
-        </button>
-        <button class="nav-item" data-view="stats" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="chart-no-axes-column-increasing"></i></span> İstatistiklerim
-        </button>
-        <button class="nav-item" data-view="settings" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="settings-2"></i></span> Ayarlar
-        </button>
-        <button class="nav-item" data-view="about" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="info"></i></span> Biz Kimiz?
-        </button>
-        <button class="nav-item" data-view="support" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="mail"></i></span> Şikayet & Talepler
-        </button>
-        <button class="nav-item nav-item--admin" data-view="admin" data-admin-only hidden type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="shield"></i></span> Yönetim Paneli
-        </button>
-        <button class="nav-item nav-item--logout" type="button" id="logout-btn">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="log-out"></i></span> Çıkış Yap
-        </button>
+        <div class="nav-section">
+          <p class="nav-label nav-label--long" data-i18n="HESABIM VE YÖNETİM">HESABIM VE YÖNETİM</p>
+          <button class="nav-item" data-view="settings" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="settings-2"></i></span> Ayarlar
+          </button>
+          <button class="nav-item" data-view="support" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="mail"></i></span> Şikayet & Talepler
+          </button>
+          <button class="nav-item" data-view="about" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="info"></i></span> Biz Kimiz?
+          </button>
+          <button class="nav-item nav-item--admin" data-view="admin" data-admin-only hidden type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="shield"></i></span> Yönetim Paneli
+          </button>
+          <button class="nav-item nav-item--logout" type="button" id="logout-btn">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="log-out"></i></span> Çıkış Yap
+          </button>
+        </div>
       </nav>
 
       <div class="sidebar-foot">
@@ -152,8 +162,8 @@
 
         <!-- MOBİL: Keşfet çatısı altındaki yatay sekmeler -->
         <div class="mobile-discover-tabs" id="mobile-discover-tabs" hidden
-             role="tablist" aria-label="Keşfet kategorileri">
-          <button class="md-tab" type="button" data-view="discover" data-i18n="Keşfet">Keşfet</button>
+             role="group" aria-label="Keşfet kategorileri">
+          <button class="md-tab" type="button" data-view="discover" data-i18n="Keşfet" aria-current="page">Keşfet</button>
           <button class="md-tab" type="button" data-view="authors" data-i18n="Yazarlar">Yazarlar</button>
           <button class="md-tab" type="button" data-view="users" data-i18n="Kullanıcılar">Kullanıcılar</button>
           <button class="md-tab" type="button" data-view="lists" data-i18n="Seçkiler">Seçkiler</button>
@@ -933,7 +943,7 @@
           <p class="footer-hadith">“Müminler birbirlerini sevmekte, birbirlerine acımakta ve birbirlerini korumakta bir vücuda benzerler.”<small>— Buhârî, Edeb 27; Müslim, Birr 66</small></p>
           <nav class="footer-links" aria-label="Alt menü">
             <div class="footer-menu-group">
-              <p class="footer-menu-label">ANA AKIŞ</p>
+              <p class="footer-menu-label" data-i18n="ANA AKIŞ">ANA AKIŞ</p>
               <button type="button" data-view="home">Ana Sayfa</button>
               <button type="button" data-view="library">Kütüphane</button>
               <button type="button" data-view="discover">Keşfet</button>
@@ -942,19 +952,22 @@
               <button type="button" data-view="lists">Seçkiler</button>
             </div>
             <div class="footer-menu-group">
-              <p class="footer-menu-label">SOSYAL VE KİŞİSEL ALAN</p>
+              <p class="footer-menu-label" data-i18n="SOSYAL">SOSYAL</p>
               <button type="button" data-view="circles">İlim Halkaları</button>
-              <button type="button" data-view="journal">Hatıratım</button>
               <button type="button" data-view="messages">Mesajlar</button>
               <button class="footer-action" type="button" id="footer-new-circle-btn">Yeni Halka Kur</button>
             </div>
             <div class="footer-menu-group">
-              <p class="footer-menu-label">HESABIM VE YÖNETİM</p>
+              <p class="footer-menu-label" data-i18n="KİŞİSEL ALANIM">KİŞİSEL ALANIM</p>
               <button type="button" data-view="profile">Profilim</button>
+              <button type="button" data-view="journal">Hatıratım</button>
               <button type="button" data-view="stats">İstatistiklerim</button>
+            </div>
+            <div class="footer-menu-group">
+              <p class="footer-menu-label" data-i18n="HESABIM VE YÖNETİM">HESABIM VE YÖNETİM</p>
               <button type="button" data-view="settings">Ayarlar</button>
-              <button type="button" data-view="about">Biz Kimiz?</button>
               <button type="button" data-view="support">Şikayet & Talepler</button>
+              <button type="button" data-view="about">Biz Kimiz?</button>
               <button type="button" data-view="admin" data-admin-only hidden>Yönetim Paneli</button>
               <button class="footer-logout" type="button" id="footer-logout-btn">Çıkış Yap</button>
             </div>

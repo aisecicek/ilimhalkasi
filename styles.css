@@ -109,13 +109,18 @@ a { color: inherit; text-decoration: none; }
 .brand-text .brand-name::after { content: ""; display: block; width: 50%; height: 1px; margin: 6px 0 0; background: var(--brand-sidebar-accent); opacity: .9; }
 .brand-text small { color: var(--brand-sidebar-accent); font-size: 10px; letter-spacing: .18em; margin-top: 6px; white-space: nowrap; }
 .nav-label {
-  margin: 10px 10px 7px;
+  margin: 0 10px 7px;
   font-size: 9px;
   letter-spacing: .22em;
   color: rgba(239,231,212,.42);
   font-weight: 700;
 }
-.nav-label--spaced { margin-top: 26px; }
+.nav-section:first-child .nav-label { margin-top: 10px; }
+.nav-section + .nav-section {
+  margin-top: 13px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(255,255,255,.11);
+}
 .nav-item {
   position: relative;
   width: 100%;
@@ -1660,7 +1665,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
 .reset-hint { margin: 10px 0 0; padding: 9px 11px; border: 1px dashed var(--line-gold); border-radius: 8px; background: rgba(166,110,56,.07); color: var(--ink-soft); font-size: 10.5px; line-height: 1.6; word-break: break-all; }
 .reset-hint[hidden] { display: none; }
 .auth-foot { margin: 20px 0 0; color: var(--ink-faint); font-size: 9.5px; letter-spacing: .1em; }
-.nav-item--logout { margin-top: 6px; color: var(--copper); }
+.nav-item--logout { margin-top: 10px; color: var(--copper); }
 .book-search-form { display: flex; gap: 8px; margin: 4px 0 14px; }
 .book-search-form[hidden] { display: none; }
 .book-search-form input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: #FFFFFF; outline: 0; font-size: 12px; }
@@ -3426,4 +3431,11 @@ body::before {
   .home-book-card { flex: 0 0 36%; scroll-snap-align: start; }
   .home-book-card .book-cover { width: 100%; max-width: none; height: 132px; }
   .home-book-card strong, .home-book-card small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+/* Erişilebilirlik: cihazda "hareketi azalt" açıksa geçişler kalkar. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .view, .bottom-sheet { animation: none !important; }
+  .nav-item, .nav-group-toggle svg, .action, .sheet-action { transition: none !important; }
 }
