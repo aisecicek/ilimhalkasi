@@ -198,19 +198,19 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     if (!notificationEnabled(kind)) return;
                     if (Build.VERSION.SDK_INT >= 33
-                            && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                            && ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS)
                             != PackageManager.PERMISSION_GRANTED) {
                         return;
                     }
                     int notificationId = id == null
                             ? (int) (System.currentTimeMillis() % Integer.MAX_VALUE)
                             : id.hashCode();
-                    Intent intent = new Intent(this, MainActivity.class);
+                    Intent intent = new Intent(MainActivity.this, MainActivity.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                     PendingIntent contentIntent = PendingIntent.getActivity(
-                            this, notificationId, intent,
+                            MainActivity.this, notificationId, intent,
                             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                    Notification notification = new NotificationCompat.Builder(this, NOTIFY_CHANNEL)
+                    Notification notification = new NotificationCompat.Builder(MainActivity.this, NOTIFY_CHANNEL)
                             .setSmallIcon(R.drawable.ic_notification)
                             .setContentTitle(title == null ? getString(R.string.app_name) : title)
                             .setContentText(body == null ? "" : body)
@@ -219,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
                             .setAutoCancel(true)
                             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                             .build();
-                    NotificationManagerCompat.from(this).notify(notificationId, notification);
+                    NotificationManagerCompat.from(MainActivity.this).notify(notificationId, notification);
                 } catch (Exception e) {
                     Log.e(TAG, "Notification could not be shown", e);
                 }
