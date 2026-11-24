@@ -214,6 +214,13 @@ CREATE TABLE IF NOT EXISTS book_list_items (
   PRIMARY KEY (list_id, book_id)
 );
 
+CREATE TABLE IF NOT EXISTS user_meta (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  key     TEXT NOT NULL,
+  value   TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (user_id, key)
+);
+
 CREATE TABLE IF NOT EXISTS debates (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   book_title TEXT NOT NULL,
@@ -1544,6 +1551,31 @@ def init_db() -> None:
     seed_figure_accounts(conn)
     conn.commit()
     conn.close()
+    ensure_favorites_list()
+
+
+def ensure_favorites_list() -> None:
+    """Her kullanıcıya bir kez 'Favorilerim' listesi verir; silinirse tekrar gelmez."""
+    conn = connect()
+    try:
+        for row in conn.execute("SELECT id FROM users").fetchall():
+            uid = row["id"]
+            marker = conn.execute(
+                "SELECT 1 FROM user_meta WHERE user_id=? AND key='favorites_seeded'", (uid,)
+            ).fetchone()
+            if marker:
+                continue
+            conn.execute(
+                "INSERT OR IGNORE INTO book_lists (user_id,name,created_at) VALUES (?,?,?)",
+                (uid, "Favorilerim", now()),
+            )
+            conn.execute(
+                "INSERT OR REPLACE INTO user_meta (user_id,key,value) VALUES (?,?,?)",
+                (uid, "favorites_seeded", "1"),
+            )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def seed_groups(conn: sqlite3.Connection) -> None:
@@ -2789,6 +2821,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.create_list(uid, body)
         if path == "/api/lists/add":
             return self.add_to_list(uid, body)
+        if path == "/api/lists/update":
+            return self.update_list(uid, body)
+        if path == "/api/lists/delete":
+            return self.delete_list(uid, body)
         if path == "/api/debates":
             return self.create_debate(uid, body)
         if path == "/api/chat":
@@ -2923,6 +2959,14 @@ class Handler(BaseHTTPRequestHandler):
             expires = int(now() + SESSION_DAYS * 86400)
             token = secrets.token_urlsafe(32)
             conn.execute("INSERT INTO sessions (token,user_id,expires_at) VALUES (?,?,?)", (token, uid, expires))
+            conn.execute(
+                "INSERT OR IGNORE INTO book_lists (user_id,name,created_at) VALUES (?,?,?)",
+                (uid, "Favorilerim", now()),
+            )
+            conn.execute(
+                "INSERT OR REPLACE INTO user_meta (user_id,key,value) VALUES (?,?,?)",
+                (uid, "favorites_seeded", "1"),
+            )
             conn.commit()
             user = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
             return self.send_json({"user": user_me(user)}, cookie=token)
@@ -3365,6 +3409,49 @@ class Handler(BaseHTTPRequestHandler):
                 row = conn.execute("SELECT * FROM book_lists WHERE id=?", (cur.lastrowid,)).fetchone()
                 conn.commit()
             return self.send_json({"list": {"id": row["id"], "name": row["name"], "books": []}})
+        finally:
+            conn.close()
+
+    def update_list(self, uid: int, body: dict) -> None:
+        try:
+            list_id = int(body.get("list_id", 0))
+        except (ValueError, TypeError):
+            return self.send_json({"error": "Geçersiz liste"}, 400)
+        name = str(body.get("name", "")).strip()[:80]
+        if not name:
+            return self.send_json({"error": "Liste adı gerekli"}, 400)
+        conn = connect()
+        try:
+            row = conn.execute(
+                "SELECT id FROM book_lists WHERE id=? AND user_id=?", (list_id, uid)
+            ).fetchone()
+            if not row:
+                return self.send_json({"error": "Liste bulunamadı"}, 404)
+            clash = conn.execute(
+                "SELECT 1 FROM book_lists WHERE user_id=? AND name=? AND id<>?", (uid, name, list_id)
+            ).fetchone()
+            if clash:
+                return self.send_json({"error": "Bu adda bir listen zaten var"}, 409)
+            conn.execute("UPDATE book_lists SET name=? WHERE id=?", (name, list_id))
+            conn.commit()
+            return self.send_json({"ok": True, "list": {"id": list_id, "name": name}})
+        finally:
+            conn.close()
+
+    def delete_list(self, uid: int, body: dict) -> None:
+        try:
+            list_id = int(body.get("list_id", 0))
+        except (ValueError, TypeError):
+            return self.send_json({"error": "Geçersiz liste"}, 400)
+        conn = connect()
+        try:
+            cur = conn.execute(
+                "DELETE FROM book_lists WHERE id=? AND user_id=?", (list_id, uid)
+            )
+            if not cur.rowcount:
+                return self.send_json({"error": "Liste bulunamadı"}, 404)
+            conn.commit()
+            return self.send_json({"ok": True})
         finally:
             conn.close()
 

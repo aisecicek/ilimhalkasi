@@ -37,18 +37,28 @@
         <button class="nav-item" data-view="library" type="button">
           <span class="nav-icon" aria-hidden="true"><i data-lucide="library"></i></span> Kütüphane
         </button>
-        <button class="nav-item" data-view="discover" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="compass"></i></span> Keşfet
-        </button>
-        <button class="nav-item" data-view="users" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="users"></i></span> Kullanıcılar
-        </button>
-        <button class="nav-item" data-view="authors" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="feather"></i></span> Yazarlar
-        </button>
-        <button class="nav-item" data-view="lists" type="button">
-          <span class="nav-icon" aria-hidden="true"><i data-lucide="list"></i></span> Listeler / Seçkiler
-        </button>
+        <div class="nav-group" id="discover-nav-group">
+          <button class="nav-item nav-item--group" data-view="discover" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="compass"></i></span> Keşfet
+          </button>
+          <button class="nav-group-toggle" id="discover-group-toggle" type="button"
+            data-i18n-aria="Keşfet alt bölümlerini aç" data-i18n-title="Keşfet alt bölümlerini aç"
+            aria-label="Keşfet alt bölümlerini aç" title="Keşfet alt bölümlerini aç"
+            aria-expanded="false" aria-controls="discover-subitems">
+            <i data-lucide="chevron-down" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="nav-subitems" id="discover-subitems" aria-label="Keşfet alt bölümleri" hidden>
+          <button class="nav-item nav-item--sub" data-view="users" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="users"></i></span> Kullanıcılar
+          </button>
+          <button class="nav-item nav-item--sub" data-view="authors" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="feather"></i></span> Yazarlar
+          </button>
+          <button class="nav-item nav-item--sub" data-view="lists" type="button">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="list"></i></span> Seçkiler
+          </button>
+        </div>
 
         <p class="nav-label nav-label--spaced nav-label--long">SOSYAL VE KİŞİSEL ALAN</p>
         <button class="nav-item" data-view="circles" type="button">
@@ -86,7 +96,7 @@
       </nav>
 
       <div class="sidebar-foot">
-        <button class="btn btn-gold btn-block" type="button" id="new-circle-btn">+ Yeni Halka Kur</button>
+        <button class="btn btn-gold btn-block" type="button" id="new-circle-btn">Yeni Halka Kur</button>
         <div class="side-user" data-view="profile" title="Profilimi aç" role="button" tabindex="0">
           <span class="avatar avatar--olive" id="side-avatar">M</span>
           <span class="side-user-info">
@@ -182,7 +192,7 @@
               <div class="greeting-stats" id="greeting-stats"></div>
               <div class="greeting-actions">
                 <button class="btn btn-outline btn-sm" type="button" id="share-quote-btn"><i data-lucide="share-2"></i> <span data-i18n="Paylaşım yap">Paylaşım yap</span></button>
-                <button class="btn btn-ghost btn-sm" type="button" id="theme-cycle-btn" title="Temayı değiştir"><i data-lucide="palette"></i> <span id="theme-cycle-label">Medine</span></button>
+                <button class="btn btn-ghost btn-sm" type="button" id="theme-cycle-btn" data-i18n-title="Temayı değiştir" title="Temayı değiştir"><i data-lucide="palette"></i> <span id="theme-cycle-label" data-i18n="Sistem">Sistem</span></button>
                 <button class="text-btn" type="button" data-view="profile">Profilime git →</button>
               </div>
             </div>
@@ -198,7 +208,6 @@
             <div class="page-head page-head--small">
               <div>
                 <h2 id="home-books-title">Önerilenler</h2>
-                <p>İslami ilimler ve dünya klasikleri; birlikte okumak için iyi bir başlangıç.</p>
               </div>
               <button class="text-btn" type="button" data-view="library">Tüm kitaplar →</button>
             </div>
@@ -217,7 +226,6 @@
           <div class="feed-head">
             <div>
               <h2>Akış</h2>
-              <p>Takip ettiklerin ve keşfedebileceğin alıntı ve incelemeler.</p>
             </div>
             <button class="text-btn" type="button" id="refresh-feed">↻ Yenile</button>
           </div>
@@ -243,6 +251,8 @@
             </div>
           </div>
 
+          <div class="home-circle-strip" id="home-circle-strip" hidden></div>
+
           <div class="feed" id="feed" aria-live="polite"></div>
           <div class="feed-empty" id="feed-empty" hidden>Henüz bir paylaşım yok.</div>
         </section>
@@ -253,9 +263,8 @@
             <div>
               <p class="eyebrow">KÜTÜPHANE</p>
               <h1 id="library-title">Kütüphane</h1>
-              <p>İslami ilimlerden dünya klasiklerine; kapak, tür ve özet bilgileriyle büyüyen bir kütüphane.</p>
             </div>
-            <button class="btn btn-outline btn-sm" type="button" id="book-add-btn">+ Kitap Ekle</button>
+            <button class="btn btn-outline btn-sm" type="button" id="book-add-btn">Kitap Ekle</button>
           </div>
           <form class="book-search-form" id="book-search-form" hidden>
             <input id="book-search-input" type="search" placeholder="Kitap adı veya yazar yaz" aria-label="Kitap ara" />
@@ -309,20 +318,20 @@
           </div>
 
           <div class="page-head page-head--small">
-            <div><h2>En yeni paylaşımlar</h2><p>Akıştan henüz düşmüş alıntılar ve incelemeler.</p></div>
+            <div><h2>En yeni paylaşımlar</h2></div>
             <button class="text-btn" type="button" data-view="home">Akışa git →</button>
           </div>
           <div class="writing-list" id="discover-latest-posts"></div>
 
           <div class="page-head page-head--small">
-            <div><h2>Popüler kitaplar</h2><p>Kütüphanede en çok ilgi gören eserler.</p></div>
+            <div><h2>Popüler kitaplar</h2></div>
             <button class="text-btn" type="button" data-view="library">Tüm kitaplar →</button>
           </div>
           <div class="home-book-grid" id="discover-popular-books"></div>
 
           <div class="page-head page-head--small">
-            <div><h2>Listeler ve seçkiler</h2><p>Ekibimizin sizler için hazırladığı bazı seçkiler.</p></div>
-            <button class="text-btn" type="button" data-view="lists">Tüm listeler →</button>
+            <div><h2>Seçkiler</h2></div>
+            <button class="text-btn" type="button" data-view="lists">Tüm seçkiler →</button>
           </div>
           <div class="curriculum-grid" id="discover-curated-lists"></div>
         </section>
@@ -341,7 +350,6 @@
           <div class="discover-search-card">
             <div>
               <h2>Kullanıcı adıyla ara</h2>
-              <p class="rail-muted">@kullanıcıadı veya görünen ad ile ara; profiline gidip takip edebilirsin.</p>
             </div>
             <form id="user-search-form" class="inline-form">
               <input id="user-search-input" type="search" placeholder="Örn. ckaise" aria-label="Kullanıcı ara" autocomplete="off" />
@@ -360,23 +368,12 @@
         <section class="view" id="view-lists" aria-labelledby="lists-title">
           <div class="page-head">
             <div>
-              <p class="eyebrow">LİSTELER / SEÇKİLER</p>
-              <h1 id="lists-title">Listeler ve seçkiler</h1>
-              <p>Ekibimiz tarafından hazırlanan seçkilerimiz, ve oluşturduğunuz kitap listeleri.</p>
+              <p class="eyebrow">SEÇKİLER</p>
+              <h1 id="lists-title">Seçkiler</h1>
             </div>
           </div>
 
-          <div class="page-head page-head--small">
-            <div><h2>Ekip Seçkileri</h2><p>Ekibimizin sizler için seçtiği kitaplar.</p></div>
-            <button class="text-btn" type="button" data-view="authors">Tüm yazarlar →</button>
-          </div>
           <div class="curriculum-grid" id="list-curricula"></div>
-
-          <div class="page-head page-head--small">
-            <div><h2>Listelerim</h2><p>Oluşturduğunuz listeler.</p></div>
-            <button class="text-btn" type="button" data-view="profile">Profilde gör →</button>
-          </div>
-          <div id="list-my-lists"></div>
         </section>
 
         <!-- ============ HERKESİN PROFİLİ ============ -->
@@ -427,26 +424,9 @@
               <p>Birlikte okuyacağınız, müzakere edeceğiniz ve öğrendiklerinizi kaydedeceğiniz alanlar.</p>
             </div>
             <div class="head-actions">
-              <button class="btn btn-outline btn-sm" type="button" data-open-halka>+ Halka Kur</button>
-              <button class="btn btn-gold btn-sm" type="button" data-open-meclis>+ Meclis Kur</button>
+              <button class="btn btn-outline btn-sm" type="button" data-open-halka id="create-halka-btn">Halka Kur</button>
+              <button class="btn btn-gold btn-sm" type="button" data-open-meclis id="create-meclis-btn" hidden>Meclis Kur</button>
             </div>
-          </div>
-          <div class="community-functions" aria-label="Halka ve meclislerin işlevleri">
-            <article class="function-card">
-              <span class="function-icon"><i data-lucide="book-open"></i></span>
-              <h3>Ortak okuma</h3>
-              <p data-i18n="Aynı eseri birlikte oku, ilerlemeyi paylaş.">Aynı eseri birlikte oku, ilerlemeyi paylaş.</p>
-            </article>
-            <article class="function-card">
-              <span class="function-icon"><i data-lucide="messages-square"></i></span>
-              <h3>Müzakere</h3>
-              <p>Sorularını sor, farklı bakış açılarıyla birlikte düşün.</p>
-            </article>
-            <article class="function-card">
-              <span class="function-icon"><i data-lucide="quote"></i></span>
-              <h3>Paylaşım</h3>
-              <p data-i18n="Öne çıkan alıntıları ve incelemeleri halkayla paylaş.">Öne çıkan alıntıları ve incelemeleri halkayla paylaş.</p>
-            </article>
           </div>
           <div class="tabs" role="tablist" aria-label="Halka veya meclis">
             <button class="tab is-active" role="tab" aria-selected="true" data-community-tab="circles" type="button">İlim Halkalarım</button>
@@ -454,6 +434,23 @@
           </div>
 
           <div id="community-circles">
+            <div class="community-functions" aria-label="Halkaların işlevleri">
+              <article class="function-card">
+                <span class="function-icon"><i data-lucide="book-open"></i></span>
+                <h3>Ortak okuma</h3>
+                <p data-i18n="Aynı eseri birlikte oku, ilerlemeyi paylaş.">Aynı eseri birlikte oku, ilerlemeyi paylaş.</p>
+              </article>
+              <article class="function-card">
+                <span class="function-icon"><i data-lucide="messages-square"></i></span>
+                <h3>Müzakere</h3>
+                <p>Sorularını sor, farklı bakış açılarıyla birlikte düşün.</p>
+              </article>
+              <article class="function-card">
+                <span class="function-icon"><i data-lucide="quote"></i></span>
+                <h3>Paylaşım</h3>
+                <p data-i18n="Öne çıkan alıntıları ve incelemeleri halkayla paylaş.">Öne çıkan alıntıları ve incelemeleri halkayla paylaş.</p>
+              </article>
+            </div>
             <div class="circle-grid" id="circle-grid"></div>
             <div class="page-head page-head--small">
               <div><h2>Katılabileceğin Halkalar</h2><p>Bir halkaya katıldığında üstteki listeye eklenir.</p></div>
@@ -477,7 +474,7 @@
             </div>
             <div class="head-actions">
               <button class="btn btn-outline btn-sm" type="button" id="circle-feed-back"><span data-i18n="← Halkalara dön">← Halkalara dön</span></button>
-              <button class="btn btn-gold btn-sm" type="button" id="circle-feed-share"><span data-i18n="+ Paylaşım yap">+ Paylaşım yap</span></button>
+              <button class="btn btn-gold btn-sm" type="button" id="circle-feed-share"><span data-i18n="Paylaşım yap">Paylaşım yap</span></button>
             </div>
           </div>
           <div id="circle-feed" class="feed"></div>
@@ -713,7 +710,7 @@
               <p>İncelemelerin ve alıntıların; hepsi bir yerde.</p>
             </div>
             <button class="btn btn-gold btn-sm" type="button" id="journal-primary-btn">
-              <span aria-hidden="true">+</span> <span id="journal-primary-label" data-i18n="Yeni inceleme">Yeni inceleme</span>
+              <span id="journal-primary-label" data-i18n="Yeni inceleme">Yeni inceleme</span>
             </button>
           </div>
           <div class="tabs" role="tablist" aria-label="Hatırat bölümleri">
@@ -735,9 +732,8 @@
           <div class="page-head">
             <div>
               <h1 id="messages-title">Mesajlar</h1>
-              <p>Kullanıcılarla sohbet et.</p>
             </div>
-            <button class="btn btn-gold btn-sm" type="button" id="new-direct-btn">+ Yeni Mesaj</button>
+            <button class="btn btn-gold btn-sm" type="button" id="new-direct-btn">Yeni Mesaj</button>
           </div>
           <div class="messages-layout">
             <aside class="conversation-list" id="conversation-list"></aside>
@@ -785,12 +781,20 @@
           </div>
 
           <div class="settings-card">
-            <h3 data-i18n="Temalar">Temalar</h3>
-            <p data-i18n="Tema seçebilirsin.">Tema seçebilirsin.</p>
+            <h3 data-i18n="Tema">Tema</h3>
+            <p data-i18n="Telefonunun açık/koyu modunu takip edebilir veya bir tema seçebilirsin.">Telefonunun açık/koyu modunu takip edebilir veya bir tema seçebilirsin.</p>
             <div class="theme-options" role="group" aria-label="Tema seçimi" data-i18n-aria="Tema seçimi">
+              <button class="theme-choice" type="button" data-theme-choice="auto">
+                <span class="theme-swatch theme-swatch--auto" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span><strong data-i18n="Sistem">Sistem</strong></span>
+              </button>
               <button class="theme-choice" type="button" data-theme-choice="medine">
                 <span class="theme-swatch theme-swatch--medine" aria-hidden="true"><i></i><i></i><i></i></span>
                 <span><strong>Medine</strong></span>
+              </button>
+              <button class="theme-choice" type="button" data-theme-choice="gece">
+                <span class="theme-swatch theme-swatch--gece" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span><strong data-i18n="Gece">Gece</strong></span>
               </button>
               <button class="theme-choice" type="button" data-theme-choice="kudus">
                 <span class="theme-swatch theme-swatch--kudus" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -801,9 +805,11 @@
                 <span><strong>Mekke</strong></span>
               </button>
             </div>
-            <label class="field theme-select-field"><span>Seçili Tema</span>
+            <label class="field theme-select-field"><span data-i18n="Seçili tema">Seçili tema</span>
               <select data-setting="theme">
+                <option value="auto" data-i18n="Sistem">Sistem</option>
                 <option value="medine">Medine</option>
+                <option value="gece" data-i18n="Gece">Gece</option>
                 <option value="kudus">Kudüs</option>
                 <option value="mekke">Mekke</option>
               </select>
@@ -811,10 +817,16 @@
           </div>
 
           <div class="settings-card">
-            <h3>Bildirimler</h3>
-            <p>Halka mesajları, meclis hatırlatmaları ve yorumlar.</p>
-            <label class="switch-row"><span>Takip ettiğim kişiler yeni alıntı paylaştığında haber ver</span><input type="checkbox" data-setting="followPosts" checked /></label>
-            <label class="switch-row"><span>Halka sohbetlerinde etiketlendiğimde bildir</span><input type="checkbox" data-setting="circleMentions" /></label>
+            <h3 data-i18n="Bildirim tercihleri">Bildirim tercihleri</h3>
+            <p data-i18n="Hangi bildirimlerin bildirim merkezinde ve telefonda görüneceğini seç.">Hangi bildirimlerin bildirim merkezinde ve telefonda görüneceğini seç.</p>
+            <label class="switch-row"><span data-i18n="Duyuru ve genel bilgilendirmeler">Duyuru ve genel bilgilendirmeler</span><input type="checkbox" data-setting="notifyAnnouncements" checked /></label>
+            <label class="switch-row"><span data-i18n="Halkalarda yeni paylaşımlar">Halkalarda yeni paylaşımlar</span><input type="checkbox" data-setting="notifyCirclePosts" checked /></label>
+            <label class="switch-row"><span data-i18n="Paylaşımlarıma yorum yapıldığında">Paylaşımlarıma yorum yapıldığında</span><input type="checkbox" data-setting="notifyComments" checked /></label>
+            <label class="switch-row"><span data-i18n="Bir paylaşımda anıldığımda">Bir paylaşımda anıldığımda</span><input type="checkbox" data-setting="notifyMentions" checked /></label>
+            <label class="switch-row"><span data-i18n="Yeni meclis mesajları">Yeni meclis mesajları</span><input type="checkbox" data-setting="notifyMessages" checked /></label>
+            <label class="switch-row"><span data-i18n="Yeni takipçiler">Yeni takipçiler</span><input type="checkbox" data-setting="notifyFollowers" checked /></label>
+            <label class="switch-row"><span data-i18n="Destek taleplerime yanıtlar">Destek taleplerime yanıtlar</span><input type="checkbox" data-setting="notifySupport" checked /></label>
+            <small class="field-hint" data-i18n="Telefona bildirim düşmesi için cihazda uygulama bildirimlerini de açık tut.">Telefona bildirim düşmesi için cihazda uygulama bildirimlerini de açık tut.</small>
           </div>
 
           <div class="settings-card">
@@ -864,7 +876,7 @@
               <p class="profile-bio" id="profile-bio" hidden></p>
               <div class="follow-counts" id="follow-counts"></div>
             </div>
-            <button class="btn btn-outline btn-sm" type="button" id="edit-profile-btn">Profili Düzenle</button>
+            <button class="btn btn-outline btn-sm" type="button" id="edit-profile-btn" data-i18n="Profilini Düzenle">Profilini Düzenle</button>
           </div>
 
           <div class="karne-card">
@@ -876,17 +888,12 @@
           </div>
 
           <div class="page-head page-head--small">
-            <div><h2>İlim Yolculuğum</h2><p>Mescid-i Nebevî'deki Suffa geleneğine ve Medine medreselerindeki aşamalara doğrudan atıf yapan en özgün seri budur.</p></div>
-          </div>
-          <div class="level-ladder" id="title-ladder"></div>
-
-          <div class="page-head page-head--small">
-            <div><h2>Aktif Halkalarım</h2><p>Ortak okuma ilerlemesi ve sohbete tek tıkla geçiş.</p></div>
+            <div><h2 data-i18n="Aktif Halkalarım">Aktif Halkalarım</h2></div>
           </div>
           <div class="profile-circles" id="profile-circles"></div>
 
           <div class="page-head page-head--small">
-            <div><h2>Kitaplığım</h2><p>Halihazırda okudukların ve ileride okumak istediklerin.</p></div>
+            <div><h2 data-i18n="Kütüphanem">Kütüphanem</h2><p data-i18n="Halihazırda okudukların ve ileride okumak istediklerin.">Halihazırda okudukların ve ileride okumak istediklerin.</p></div>
           </div>
           <div class="profile-tabs" role="tablist" aria-label="Kitap rafları">
             <button class="profile-tab is-active" role="tab" aria-selected="true" data-profile-tab="reading" type="button">Şu An Okuduklarım</button>
@@ -898,32 +905,27 @@
           <div id="shelf-panel"></div>
 
           <div class="page-head page-head--small">
-            <div><h2>Kütüphanem</h2><p>Altını çizdiklerin ve kaleme aldıkların.</p></div>
+            <div><h2 data-i18n="Hatıratım">Hatıratım</h2><p data-i18n="Altını çizdiklerin ve kaleme aldıkların.">Altını çizdiklerin ve kaleme aldıkların.</p></div>
           </div>
-          <div class="profile-tabs" role="tablist" aria-label="Kütüphanem">
-            <button class="profile-tab is-active" role="tab" aria-selected="true" data-library-tab="quotes" type="button">Alıntılar</button>
-            <button class="profile-tab" role="tab" aria-selected="false" data-library-tab="reviews" type="button">İncelemeler</button>
+          <div class="profile-tabs" role="tablist" aria-label="Hatıratım">
+            <button class="profile-tab is-active" role="tab" aria-selected="true" data-library-tab="quotes" type="button" data-i18n="Alıntılarım">Alıntılarım</button>
+            <button class="profile-tab" role="tab" aria-selected="false" data-library-tab="reviews" type="button" data-i18n="İncelemelerim">İncelemelerim</button>
           </div>
           <div id="library-panel"></div>
 
-          <button class="hatirat-shortcut" type="button" data-view="journal">
-            <span>✎</span>
-            <span><strong>Hatıratım</strong><small>İncelemelerin ve alıntıların</small></span>
-            <span aria-hidden="true">→</span>
-          </button>
-
           <div class="page-head page-head--small">
-            <div><h2>Rozetlerim</h2></div>
+            <div>
+              <h2 data-i18n="İlim Yolculuğum">İlim Yolculuğum</h2>
+              <p data-i18n="Her kitap ve paylaşım seni bir sonraki seviyeye taşır.">Her kitap ve paylaşım seni bir sonraki seviyeye taşır.</p>
+            </div>
           </div>
-          <div class="badge-grid" id="badge-grid"></div>
+          <div class="level-ladder" id="title-ladder"></div>
         </section>
 
         <section class="view" id="view-stats" aria-labelledby="stats-title">
           <div class="page-head">
             <div>
-              <p class="eyebrow">KARNE</p>
               <h1 id="stats-title">İstatistiklerim</h1>
-              <p>Okuma serüvenin, topluluk hareketliliğin ve halkaların tek yerde.</p>
             </div>
             <button class="btn btn-outline btn-sm" type="button" data-view="profile">Profile dön →</button>
           </div>
@@ -951,14 +953,14 @@
               <button type="button" data-view="discover">Keşfet</button>
               <button type="button" data-view="users">Kullanıcılar</button>
               <button type="button" data-view="authors">Yazarlar</button>
-              <button type="button" data-view="lists">Listeler / Seçkiler</button>
+              <button type="button" data-view="lists">Seçkiler</button>
             </div>
             <div class="footer-menu-group">
               <p class="footer-menu-label">SOSYAL VE KİŞİSEL ALAN</p>
               <button type="button" data-view="circles">İlim Halkaları</button>
               <button type="button" data-view="journal">Hatıratım</button>
               <button type="button" data-view="messages">Mesajlar</button>
-              <button class="footer-action" type="button" id="footer-new-circle-btn">+ Yeni Halka Kur</button>
+              <button class="footer-action" type="button" id="footer-new-circle-btn">Yeni Halka Kur</button>
             </div>
             <div class="footer-menu-group">
               <p class="footer-menu-label">HESABIM VE YÖNETİM</p>
@@ -1029,8 +1031,8 @@
       <button class="nav-item" type="button" data-view="circles" data-i18n-aria="Halkalar" aria-label="Halkalar">
         <i data-lucide="users-round" aria-hidden="true"></i><span data-i18n="Halkalar">Halkalar</span>
       </button>
-      <button class="nav-item" type="button" data-view="profile" data-i18n-aria="Kütüphanem" aria-label="Kütüphanem">
-        <i data-lucide="library" aria-hidden="true"></i><span data-i18n="Kütüphanem">Kütüphanem</span>
+      <button class="nav-item" type="button" data-view="profile" data-i18n-aria="Profilim" aria-label="Profilim">
+        <i data-lucide="user-round" aria-hidden="true"></i><span data-i18n="Profilim">Profilim</span>
       </button>
     </nav>
   </div>
@@ -1057,8 +1059,7 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
       <button class="modal-close" type="button" data-close-profile-modal aria-label="Kapat">×</button>
       <p class="eyebrow">PROFİLİM</p>
-      <h2 id="profile-modal-title">Profili düzenle</h2>
-      <p class="modal-desc">Adın, kullanıcı adın, avatarın ve biyografin burada güncellenir.</p>
+      <h2 id="profile-modal-title" data-i18n="Profilini Düzenle">Profilini Düzenle</h2>
       <form id="profile-form" class="stack-form">
         <label class="field"><span>Görünen ad</span><input id="edit-display-name" type="text" maxlength="60" required /></label>
         <label class="field"><span>Kullanıcı adı</span><input id="edit-username" type="text" maxlength="24" pattern="[a-z0-9_]{3,24}" required /></label>
@@ -1066,7 +1067,6 @@
           <div class="photo-upload">
             <span class="photo-preview" id="photo-preview"><span class="avatar avatar--xl avatar--olive" id="photo-preview-avatar">A</span></span>
             <div class="photo-upload-actions">
-              <p class="photo-hint">İstediğin fotoğrafı yükle; daire içine alıp ortalarız.</p>
               <input id="photo-input" type="file" accept="image/*" hidden />
               <button class="btn btn-outline btn-sm" type="button" id="photo-upload-btn">Fotoğraf yükle</button>
               <button class="text-btn" type="button" id="photo-remove-btn">Fotoğrafı kaldır</button>

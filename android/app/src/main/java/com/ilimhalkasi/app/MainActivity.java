@@ -3,7 +3,6 @@ package com.ilimhalkasi.app;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.os.Build;
@@ -23,6 +22,7 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import java.io.File;
@@ -58,9 +58,9 @@ public class MainActivity extends AppCompatActivity {
 
         webView = findViewById(R.id.webview);
         WebSettings settings = webView.getSettings();
-        webView.setBackgroundColor(Color.parseColor("#F7F4EC"));
+        webView.setBackgroundColor(ContextCompat.getColor(this, R.color.webview_background));
         settings.setJavaScriptEnabled(true);
-        // Telefon karanlık modda olsa bile siteyi tasarlandığı renklerle göster.
+        // Chromium çift karartma yapmasın; koyu paleti web uygulaması yönetir.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             settings.setForceDark(WebSettings.FORCE_DARK_OFF);
         }

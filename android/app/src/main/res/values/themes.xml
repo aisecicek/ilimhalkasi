@@ -4,8 +4,9 @@
         <item name="colorPrimary">#1F4E3D</item>
         <item name="colorPrimaryDark">#16382C</item>
         <item name="colorAccent">#C6A15B</item>
-        <item name="android:statusBarColor">#1F4E3D</item>
-        <item name="android:navigationBarColor">#F7F4EC</item>
-        <item name="android:windowBackground">#F7F4EC</item>
+        <item name="android:statusBarColor">@color/app_status_bar</item>
+        <item name="android:navigationBarColor">@color/app_navigation_bar</item>
+        <item name="android:windowBackground">@color/app_window_background</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

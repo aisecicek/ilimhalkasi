@@ -146,26 +146,40 @@ const state = {
   authorLetter: 'all',
   authorLimit: 200,
   editing: null,
+  renamingListId: null,
   settings: null
 };
 
 const DEFAULT_SETTINGS = {
-  followPosts: true,
-  circleMentions: false,
+  notifyAnnouncements: true,
+  notifyCirclePosts: true,
+  notifyComments: true,
+  notifyMentions: true,
+  notifyMessages: true,
+  notifyFollowers: true,
+  notifySupport: true,
   yearlyGoal: 24,
   yearlyGoals: {},
   textSize: 'normal',
   showRating: true,
   showJoinYear: true,
-  theme: 'medine',
+  theme: 'auto',
   language: 'tr'
 };
 
 const THEMES = [
+  { key: 'auto', label: 'Sistem' },
   { key: 'medine', label: 'Medine' },
+  { key: 'gece', label: 'Gece' },
   { key: 'kudus', label: 'Kudüs' },
   { key: 'mekke', label: 'Mekke' }
 ];
+
+const SYSTEM_DARK = window.matchMedia('(prefers-color-scheme: dark)');
+function resolvedTheme(mode) {
+  if (mode === 'auto') return SYSTEM_DARK.matches ? 'gece' : 'medine';
+  return THEMES.some((t) => t.key === mode) ? mode : 'medine';
+}
 
 /* Tek SVG şablonundan amblem üretir; clip kimliği her kopyada benzersiz olur. */
 function initEmblems() {
@@ -197,6 +211,7 @@ function initWatermarks() {
 function emblemFaviconUri(theme) {
   const palette = {
     medine: { bg: '#163D2B', cover: '#163D2B', dome: '#246346' },
+    gece: { bg: '#121714', cover: '#1B2420', dome: '#6DB694' },
     kudus: { bg: '#16425B', cover: '#16425B', dome: '#D4AF37' },
     mekke: { bg: '#1F1F1F', cover: '#121212', dome: '#0D0D0D' }
   };
@@ -215,27 +230,42 @@ function emblemFaviconUri(theme) {
   return 'data:image/svg+xml,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
 }
 
-function applyTheme(key) {
-  const theme = THEMES.some((t) => t.key === key) ? key : 'medine';
+function applyTheme(mode) {
+  const selected = THEMES.some((item) => item.key === mode) ? mode : 'auto';
+  const theme = resolvedTheme(selected);
+  document.documentElement.dataset.themeMode = selected;
   document.documentElement.dataset.theme = theme;
   const icon = $('link[rel="icon"]');
   const favicon = emblemFaviconUri(theme);
   if (icon && favicon) icon.href = favicon;
+  const metaTheme = $('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.content = theme === 'gece' ? '#121714' : '#1F4E3D';
   const label = $('#theme-cycle-label');
-  if (label) label.textContent = THEMES.find((t) => t.key === theme).label;
+  if (label) {
+    const selectedTheme = THEMES.find((item) => item.key === selected);
+    const key = selected === 'auto' ? 'Sistem' : selectedTheme.label;
+    label.textContent = t(key);
+    label.setAttribute('data-i18n', key);
+    $('#theme-cycle-btn')?.setAttribute('title', t('Temayı değiştir'));
+  }
   $$('[data-theme-choice]').forEach((btn) => {
-    const active = btn.dataset.themeChoice === theme;
+    const active = btn.dataset.themeChoice === selected;
     btn.classList.toggle('is-active', active);
     btn.setAttribute('aria-pressed', String(active));
   });
 }
 
 function cycleTheme() {
-  const current = state.settings?.theme || 'medine';
-  const index = THEMES.findIndex((t) => t.key === current);
-  state.settings.theme = THEMES[(index + 1) % THEMES.length].key;
-  saveSettings(`${t(THEMES[(index + 1) % THEMES.length].label)}${t(' iklimine geçildi')}`);
+  const current = state.settings?.theme || 'auto';
+  const index = THEMES.findIndex((item) => item.key === current);
+  const next = THEMES[(index + 1) % THEMES.length];
+  state.settings.theme = next.key;
+  saveSettings(`${t(next.label)}${t(' iklimine geçildi')}`);
 }
+
+SYSTEM_DARK.addEventListener?.('change', () => {
+  if ((state.settings?.theme || 'auto') === 'auto') applyTheme('auto');
+});
 
 function syncPasswordToggles() {
   $$('[data-password-toggle]').forEach((button) => {
@@ -1582,7 +1612,7 @@ function renderLibrary() {
   }).join('') : `<p class="rail-muted">${t('Bu kategoride kitap yok.')}</p>`;
   const more = state.bookHasMore
     ? `<button class="btn btn-outline btn-sm book-load-more" type="button" data-load-more>${
-        state.bookLoading ? t('Yükleniyor…') : t('Daha fazla kitap yükle ({n}/{m})', { n: books.length, m: state.bookTotal })
+        state.bookLoading ? t('Yükleniyor…') : t('Daha fazla kitap yükle')
       }</button>`
     : '';
   grid.innerHTML = cards + more;
@@ -1689,18 +1719,32 @@ function renderCircleFeed() {
   if (empty) empty.hidden = posts.length > 0;
 }
 
+function directPeer(group) {
+  if (group?.kind !== 'direct') return null;
+  return (group.members || []).find((m) => Number(m.id) !== Number(state.user?.id)) || null;
+}
+
+function messageAuthorLabel(author) {
+  if (!author) return t('Bilinmeyen yazar');
+  return author.username ? `@${author.username}` : author.display_name || t('Bilinmeyen yazar');
+}
+
 function renderMessages() {
   const groups = (state.data.groups || []).filter((g) => g.kind !== 'halka');
   const list = $('#conversation-list');
-  list.innerHTML = groups.length ? groups.map((g) => `
+  list.innerHTML = groups.length ? groups.map((g) => {
+    const peer = directPeer(g);
+    const title = peer ? messageAuthorLabel(peer) : g.name;
+    return `
     <button class="conversation-item ${g.id === state.activeGroupId ? 'is-active' : ''}" type="button" data-open-group="${g.id}">
       <span class="group-avatar group-avatar--${esc(g.avatar_color)}">${groupIcon(g)}</span>
       <span class="conversation-copy">
-        <strong>${esc(g.name)}</strong>
+        <strong>${esc(title)}</strong>
         <small>${esc(g.last_message || (g.kind === 'direct' ? t('Özel mesaj') : t('Sohbet')))}</small>
       </span>
       ${g.last_at ? `<time>${esc(timeAgo(g.last_at))}</time>` : ''}
-    </button>`).join('')
+    </button>`;
+  }).join('')
     : `<p class="rail-muted">${t('Henüz sohbetin yok. “Yeni Mesaj” ile birine yazabilirsin.')}</p>`;
 
   const group = groups.find((g) => g.id === state.activeGroupId);
@@ -1712,10 +1756,8 @@ function renderMessages() {
   $('#conversation-empty').hidden = true;
   $('#message-chat').hidden = false;
   const nameEl = $('#message-chat-name');
-  nameEl.textContent = group.name;
-  const peer = group.kind === 'direct'
-    ? (group.members || []).find((m) => m.id !== state.user.id)
-    : null;
+  const peer = directPeer(group);
+  nameEl.textContent = peer ? messageAuthorLabel(peer) : group.name;
   if (peer) nameEl.dataset.profileUser = peer.id;
   else delete nameEl.dataset.profileUser;
   nameEl.classList.toggle('is-profile-link', Boolean(peer));
@@ -1728,7 +1770,7 @@ function renderMessages() {
   const messages = (state.data.group_messages || {})[group.id] || [];
   const box = $('#message-messages');
   box.innerHTML = messages.length ? messages.map((m) => `
-    <div class="chat-bubble ${m.is_me ? 'is-me' : ''}"><button class="chat-profile-link" type="button" data-profile-user="${esc(m.author.id)}">${esc(m.author.display_name)}</button>${esc(m.text)}</div>`).join('')
+    <div class="chat-bubble ${m.is_me ? 'is-me' : ''}"><button class="chat-profile-link" type="button" data-profile-user="${esc(m.author.id)}">${esc(messageAuthorLabel(m.author))}</button>${esc(m.text)}</div>`).join('')
     : `<p class="rail-muted">${t('Henüz mesaj yok. İlk cümleyi sen yaz.')}</p>`;
   box.scrollTop = box.scrollHeight;
 }
@@ -1784,6 +1826,21 @@ function renderHomeBooks() {
     : `<p class="rail-muted">${t('Bu kategoride henüz kitap yok.')}</p>`;
 }
 
+/* Ana sayfada üye olunan halkaları kısayol olarak gösterir. */
+function renderHomeCircles() {
+  const strip = $('#home-circle-strip');
+  if (!strip) return;
+  const circles = (state.data?.groups || [])
+    .filter((g) => g.kind === 'halka' && g.is_member)
+    .slice(0, 8);
+  strip.hidden = circles.length === 0;
+  strip.innerHTML = circles.map((g) => `
+    <button class="home-circle-chip${g.id === state.activeCircleId ? ' is-active' : ''}" type="button"
+      data-open-circle="${esc(g.id)}" title="${esc(g.name)}">
+      ${groupIcon(g)}<span>${esc(g.name)}</span>
+    </button>`).join('');
+}
+
 function renderAnnouncements() {
   const list = state.data.announcements || [];
   $('#home-announcements').innerHTML = list.length
@@ -1815,6 +1872,21 @@ function markNotificationsSeen() {
   renderNotifications();
 }
 
+const NOTIFICATION_PREFS = {
+  announcement: 'notifyAnnouncements',
+  circle_post: 'notifyCirclePosts',
+  comment: 'notifyComments',
+  mention: 'notifyMentions',
+  group_message: 'notifyMessages',
+  follow: 'notifyFollowers',
+  support: 'notifySupport'
+};
+
+function notificationAllowed(kind) {
+  const key = NOTIFICATION_PREFS[kind];
+  return !key || state.settings?.[key] !== false;
+}
+
 function collectNotifications() {
   const data = state.data;
   const me = state.user;
@@ -1829,6 +1901,7 @@ function collectNotifications() {
       title: t('Duyuru yayınlandı'),
       body: [a.title, a.body].filter(Boolean).join(' · '),
       ts: Number(a.created_at) || 0,
+      kind: 'announcement',
       view: 'home',
       target: 'home-announcements'
     });
@@ -1881,6 +1954,7 @@ function collectNotifications() {
           title: t('Yorumun var'),
           body: `${c.author?.display_name || t('Bilinmeyen yazar')} ${t('yeni bir yorum yazdı')} · ${post.book}`,
           ts: Number(c.created_at) || 0,
+          kind: 'comment',
           view: 'journal',
           target: null
         });
@@ -1901,13 +1975,17 @@ function collectNotifications() {
         title: t('Destek talebine yanıt geldi'),
         body: `${reply.admin.display_name}: ${reply.body}`,
         ts: Number(reply.created_at) || 0,
+        kind: 'support',
         view: 'support',
         target: null
       });
     });
   });
 
-  return items.sort((a, b) => b.ts - a.ts).slice(0, 30);
+  return items
+    .filter((n) => notificationAllowed(n.kind))
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 30);
 }
 
 function renderNotifications() {
@@ -2425,11 +2503,36 @@ function shelfBook(entry) {
     </div>`;
 }
 
+function listCardHTML(list) {
+  const id = Number(list.id);
+  const renameLabel = esc(t('Listeyi yeniden adlandır'));
+  const deleteLabel = esc(t('Listeyi sil'));
+  return `<article class="list-card" data-list-id="${esc(list.id)}">
+    <div class="list-card-head">
+      <h3>${esc(list.name)} <small>${list.books.length} ${t('kitap')}</small></h3>
+      <div class="list-card-actions">
+        <button type="button" data-rename-list="${esc(list.id)}" aria-label="${renameLabel}" title="${renameLabel}">✎</button>
+        <button type="button" data-delete-list="${esc(list.id)}" aria-label="${deleteLabel}" title="${deleteLabel}">×</button>
+      </div>
+    </div>
+    ${state.renamingListId === id ? `<form class="list-rename-form" data-list-rename="${esc(list.id)}">
+      <input type="text" name="name" value="${esc(list.name)}" maxlength="80" aria-label="${esc(t('Yeni liste adı'))}" required />
+      <button type="submit">${esc(t('Kaydet'))}</button>
+    </form>` : ''}
+    ${list.books.length ? `<div class="shelf-grid">${list.books.map((b) => `
+      <div class="shelf-book" data-detail-book="${esc(b.id)}" title="${t('Kitap sayfasını aç')}">
+        ${bookCoverHTML(b)}
+        <strong>${esc(b.title)}</strong><small>${esc(b.author)}</small>
+      </div>`).join('')}</div>`
+      : `<p class="rail-muted">${t('Bu liste henüz boş.')}</p>`}
+  </article>`;
+}
+
 function listCreateFormHTML() {
   const label = esc(t('Liste adı'));
   return `<form class="list-create-form" data-list-create>
     <input type="text" class="list-name-input" placeholder="${label}" aria-label="${label}" maxlength="80" />
-    <button class="btn btn-gold btn-sm" type="submit">+ ${esc(t('Yeni liste'))}</button>
+    <button class="btn btn-gold btn-sm" type="submit">${esc(t('Yeni liste'))}</button>
   </form>`;
 }
 
@@ -2437,16 +2540,7 @@ function renderShelfPanel() {
   if (state.shelfTab === 'lists') {
     const lists = state.data.lists || [];
     $('#shelf-panel').innerHTML = listCreateFormHTML() + (lists.length
-      ? `<div class="profile-lists">${lists.map((list) => `
-          <article class="list-card">
-            <h3>${esc(list.name)} <small>${list.books.length} ${t('kitap')}</small></h3>
-            ${list.books.length ? `<div class="shelf-grid">${list.books.map((b) => `
-              <div class="shelf-book" data-detail-book="${esc(b.id)}" title="${t('Kitap sayfasını aç')}">
-                ${bookCoverHTML(b)}
-                <strong>${esc(b.title)}</strong><small>${esc(b.author)}</small>
-              </div>`).join('')}</div>`
-              : `<p class="rail-muted">${t('Bu liste henüz boş.')}</p>`}
-          </article>`).join('')}</div>`
+      ? `<div class="profile-lists">${lists.map(listCardHTML).join('')}</div>`
       : `<div class="shelf-empty">${esc(t('Henüz listen yok. Yukarıdan yeni bir liste oluşturabilirsin.'))}</div>`);
     return;
   }
@@ -2462,7 +2556,7 @@ function renderLibraryPanel() {
     const quotes = myPosts().filter((p) => p.type === 'quote');
     panel.innerHTML = quotes.length ? `<div class="postcard-grid">${quotes.map((p) => `
       <div class="mini-postcard"><span class="quote-mark">“</span><p>${esc(p.text)}</p><small>— ${esc(p.book)}, ${esc(p.writer)}</small>${ownActionsHTML('post', p.id)}</div>`).join('')}</div>`
-      : `<div class="shelf-empty">${t('Henüz defterinize bir cümle düşmemişsiniz. Okuduğunuz kitaplardan iz bırakan satırları buraya kaydedebilirsiniz.')}</div>`;
+      : `<div class="shelf-empty">${t('Henüz defterinize bir alıntı düşmemişsiniz.')}</div>`;
   } else {
     const reviews = myPosts().filter((p) => p.type === 'review');
     const debates = [];
@@ -2505,6 +2599,7 @@ function renderAll() {
   renderFeed();
   renderLibrary();
   renderHomeBooks();
+  renderHomeCircles();
   renderAnnouncements();
   renderCircles();
   renderPostcards();
@@ -2522,6 +2617,10 @@ function renderAll() {
   renderListsView();
   renderAccess();
   applySettings();
+  if (state.currentView === 'home') {
+    $$('#bottom-nav .nav-item[data-view]').forEach((n) =>
+      n.classList.toggle('is-active', n.dataset.view === 'home'));
+  }
   if (state.currentBook && $('.view.is-active')?.id === 'view-book') renderDebates();
   renderIcons();
 }
@@ -2560,20 +2659,12 @@ function renderDiscoverSections() {
   const listHost = $('#discover-curated-lists');
   if (listHost) {
     const curricula = (state.data?.curricula || []).slice(0, 3);
-    const lists = (state.data?.lists || []).filter((l) => l.books?.length).slice(0, 3);
-    const items = [
-      ...curricula.map((c) => `<article class="selection-card">
-        <span class="selection-kind">${t('REHBER SEÇKİSİ')}</span>
-        <h3>${esc(c.title)}</h3>
-        <p>${esc(c.meta)}</p>
-        <small>${esc(c.guide)} · ${t('{n} adım', { n: c.steps?.length || 0 })}</small>
-      </article>`),
-      ...lists.map((l) => `<article class="selection-card">
-        <span class="selection-kind">${t('LİSTELERİM')}</span>
-        <h3>${esc(l.name)}</h3>
-        <p>${t('{n} kitap', { n: l.books.length })}</p>
-      </article>`)
-    ];
+    const items = curricula.map((c) => `<article class="selection-card">
+      <span class="selection-kind">${t('REHBER SEÇKİSİ')}</span>
+      <h3>${esc(c.title)}</h3>
+      <p>${esc(c.meta)}</p>
+      <small>${esc(c.guide)} · ${t('{n} adım', { n: c.steps?.length || 0 })}</small>
+    </article>`);
     listHost.innerHTML = items.length
       ? items.join('')
       : `<div class="shelf-empty">${t('Henüz hazır bir seçki yok.')}</div>`;
@@ -2599,22 +2690,6 @@ function renderListsView() {
           </article>`).join('')
       : `<div class="shelf-empty">${t('Henüz rehber seçkisi yok.')}</div>`;
   }
-
-  const listHost = $('#list-my-lists');
-  if (!listHost) return;
-  const lists = state.data?.lists || [];
-  listHost.innerHTML = listCreateFormHTML() + (lists.length
-    ? `<div class="profile-lists">${lists.map((list) => `
-        <article class="list-card">
-          <h3>${esc(list.name)} <small>${list.books.length} ${t('kitap')}</small></h3>
-          ${list.books.length ? `<div class="shelf-grid">${list.books.map((b) => `
-            <div class="shelf-book" data-detail-book="${esc(b.id)}" title="${t('Kitap sayfasını aç')}">
-              ${bookCoverHTML(b)}
-              <strong>${esc(b.title)}</strong><small>${esc(b.author)}</small>
-            </div>`).join('')}</div>`
-            : `<p class="rail-muted">${t('Bu liste henüz boş.')}</p>`}
-        </article>`).join('')}</div>`
-    : `<div class="shelf-empty">${esc(t('Henüz listen yok. Yukarıdan yeni bir liste oluşturabilirsin.'))}</div>`);
 }
 
 const AUTHOR_LETTERS = 'ABCÇDEFGĞHIİJKLMNOÖPQRSŞTUÜVWXYZ'.split('');
@@ -2741,6 +2816,20 @@ async function openCatalogAuthor(name) {
   } catch (error) { host.innerHTML = `<p class="rail-muted">${esc(error.message)}</p>`; }
 }
 
+function toggleDiscoverGroup(force) {
+  const button = $('#discover-group-toggle');
+  const subitems = $('#discover-subitems');
+  if (!button || !subitems) return;
+  const expanded = typeof force === 'boolean' ? force : button.getAttribute('aria-expanded') !== 'true';
+  subitems.hidden = !expanded;
+  button.setAttribute('aria-expanded', String(expanded));
+  const key = expanded ? 'Keşfet alt bölümlerini kapat' : 'Keşfet alt bölümlerini aç';
+  button.setAttribute('aria-label', t(key));
+  button.setAttribute('title', t(key));
+  button.setAttribute('data-i18n-aria', key);
+  button.setAttribute('data-i18n-title', key);
+}
+
 function switchView(name) {
   if (name === 'admin' && !(state.user && state.user.is_admin)) {
     toast(t('Yönetim paneli yalnızca yöneticiye açık'));
@@ -2751,6 +2840,9 @@ function switchView(name) {
   $$('.view').forEach((v) => v.classList.toggle('is-active', v.id === 'view-' + name));
   $$('.nav-item[data-view]').forEach((n) => n.classList.toggle('is-active', n.dataset.view === navKey));
   $$('.footer-links [data-view]').forEach((n) => n.classList.toggle('is-active', n.dataset.view === navKey));
+  const inDiscoverGroup = ['users', 'authors', 'lists'].includes(name);
+  $('#discover-nav-group .nav-item--group')?.classList.toggle('is-parent-active', inDiscoverGroup);
+  if (inDiscoverGroup) toggleDiscoverGroup(true);
   const mobileTabMap = {
     'circle-feed': 'circles',
     'book': 'profile',
@@ -2809,6 +2901,10 @@ function selectCommunityTab(name) {
   });
   $('#community-circles').hidden = name !== 'circles';
   $('#community-meclis').hidden = name !== 'meclis';
+  const halkaBtn = $('#create-halka-btn');
+  const meclisBtn = $('#create-meclis-btn');
+  if (halkaBtn) halkaBtn.hidden = name !== 'circles';
+  if (meclisBtn) meclisBtn.hidden = name !== 'meclis';
 }
 
 function selectJournalTab(name) {
@@ -3179,6 +3275,13 @@ $('#menu-btn')?.addEventListener('click', (e) => {
   e.preventDefault();
   e.stopPropagation();
   $('.sidebar').classList.toggle('is-open');
+});
+
+/* Keşfet satırı sayfayı açar; yanındaki ok alt kategorileri açıp kapatır. */
+$('#discover-group-toggle')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  toggleDiscoverGroup();
 });
 
 /* Menü: masaüstünde daraltılabilir, tablette açılır şerit */
@@ -3783,10 +3886,6 @@ async function handleCurriculumClick(e) {
 
 $('#curriculum-grid').addEventListener('click', handleCurriculumClick);
 $('#list-curricula')?.addEventListener('click', handleCurriculumClick);
-$('#list-my-lists')?.addEventListener('click', (e) => {
-  const card = e.target.closest('[data-detail-book]');
-  if (card) openBook(card.dataset.detailBook);
-});
 
 $('#shelf-panel').addEventListener('click', (e) => {
   const card = e.target.closest('[data-detail-book]');
@@ -3831,6 +3930,55 @@ document.addEventListener('submit', async (e) => {
     toast(error.message);
   }
 });
+
+/* Liste yeniden adlandırma ve silme */
+document.addEventListener('click', (e) => {
+  const rename = e.target.closest('[data-rename-list]');
+  if (rename) {
+    e.preventDefault();
+    state.renamingListId = Number(rename.dataset.renameList);
+    renderShelfPanel();
+    return;
+  }
+  const remove = e.target.closest('[data-delete-list]');
+  if (remove) {
+    e.preventDefault();
+    deleteList(Number(remove.dataset.deleteList));
+  }
+});
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest('[data-list-rename]');
+  if (!form) return;
+  e.preventDefault();
+  const name = form.querySelector('input')?.value.trim();
+  if (!name) { toast(t('Liste adı gerekli')); return; }
+  try {
+    await api('/api/lists/update', {
+      method: 'POST',
+      body: { list_id: Number(form.dataset.listRename), name }
+    });
+    state.renamingListId = null;
+    await refresh();
+    toast(t('Liste güncellendi'));
+  } catch (error) {
+    toast(error.message);
+  }
+});
+
+async function deleteList(id) {
+  const list = (state.data?.lists || []).find((l) => Number(l.id) === id);
+  if (!list) return;
+  if (!window.confirm(t('“{name}” listesi silinsin mi?', { name: list.name }))) return;
+  try {
+    await api('/api/lists/delete', { method: 'POST', body: { list_id: id } });
+    if (state.renamingListId === id) state.renamingListId = null;
+    await refresh();
+    toast(t('Liste silindi'));
+  } catch (error) {
+    toast(error.message);
+  }
+}
 
 /* Profil düzenleme */
 const profileModal = $('#profile-modal');
@@ -4695,6 +4843,13 @@ $('#public-report-btn')?.addEventListener('click', openReportUserModal);
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.search-wrap')) hideGlobalSearch();
   if (!e.target.closest('.more-wrap')) closePublicMoreMenu();
+  const sidebar = $('.sidebar');
+  if (sidebar?.classList.contains('is-open')
+    && !e.target.closest('.sidebar')
+    && !e.target.closest('#menu-btn')
+    && !e.target.closest('#top-brand')) {
+    sidebar.classList.remove('is-open');
+  }
 });
 
 /* Ayarlar */
@@ -4709,6 +4864,7 @@ $$('[data-setting]').forEach((el) => el.addEventListener('change', () => {
     };
   }
   saveSettings();
+  if (key.startsWith('notify')) renderNotifications();
   if (key === 'language' && state.data) renderAll();
   if (key === 'yearlyGoal' && state.data) { renderIdentity(); renderStatsView(); }
 }));

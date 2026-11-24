@@ -20,6 +20,7 @@ import os
 import re
 import shutil
 import socket
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -357,6 +358,79 @@ class SmokeAPITests(unittest.TestCase):
             any(int(book.get("id", 0)) == book_id for book in lists[0].get("books") or []),
             "added book is missing from the list in bootstrap",
         )
+
+    def test_favorites_list_seeded_once(self) -> None:
+        opener, user = self.register_user()
+        names = [item.get("name") for item in self.bootstrap(opener=opener).get("lists") or []]
+        self.assertIn("Favorilerim", names, "new users should receive a favorites list")
+
+        conn = sqlite3.connect(self.tmp_dir / DB_FILENAME)
+        try:
+            marker = conn.execute(
+                "SELECT value FROM user_meta WHERE user_id=? AND key='favorites_seeded'",
+                (int(user["id"]),),
+            ).fetchone()
+        finally:
+            conn.close()
+        self.assertEqual(marker[0] if marker else None, "1", "favorites seed marker is missing")
+
+        favorites = next(
+            item for item in self.bootstrap(opener=opener).get("lists") or []
+            if item.get("name") == "Favorilerim"
+        )
+        status, body = self.post(
+            "/api/lists/delete", {"list_id": favorites["id"]}, opener=opener
+        )
+        self.assertEqual(status, 200, "deleting favorites failed: {}".format(body))
+
+        names = [item.get("name") for item in self.bootstrap(opener=opener).get("lists") or []]
+        self.assertNotIn("Favorilerim", names, "deleted favorites list must not come back")
+
+    def test_list_rename_and_delete_are_owner_only(self) -> None:
+        name = _marker("rename-list")
+        renamed = _marker("renamed-list")
+        status, body = self.post("/api/lists", {"name": name})
+        self.assertEqual(status, 200, "list creation failed: {}".format(body))
+        list_id = (body.get("list") or {}).get("id")
+        self.assertTrue(list_id)
+
+        status, updated = self.post(
+            "/api/lists/update", {"list_id": list_id, "name": renamed}
+        )
+        self.assertEqual(status, 200, "list rename failed: {}".format(updated))
+        self.assertTrue(updated.get("ok"))
+        names = [item.get("name") for item in self.bootstrap().get("lists") or []]
+        self.assertIn(renamed, names)
+        self.assertNotIn(name, names)
+
+        other_opener, _ = self.register_user()
+        status, body = self.post(
+            "/api/lists/update", {"list_id": list_id, "name": _marker("hijack")},
+            opener=other_opener,
+        )
+        self.assertEqual(status, 404, "other users must not rename this list")
+        status, body = self.post(
+            "/api/lists/delete", {"list_id": list_id}, opener=other_opener
+        )
+        self.assertEqual(status, 404, "other users must not delete this list")
+
+        status, body = self.post("/api/lists/delete", {"list_id": list_id})
+        self.assertEqual(status, 200, "owner delete failed: {}".format(body))
+        names = [item.get("name") for item in self.bootstrap().get("lists") or []]
+        self.assertNotIn(renamed, names)
+
+    def test_notification_preferences_and_theme_defaults_are_wired(self) -> None:
+        app_js = (PROJECT_ROOT / "app.js").read_text(encoding="utf-8")
+        index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+        for key in (
+            "notifyAnnouncements", "notifyCirclePosts", "notifyComments",
+            "notifyMentions", "notifyMessages", "notifyFollowers", "notifySupport",
+        ):
+            self.assertIn(key, app_js, "missing notification preference: " + key)
+            self.assertIn(key, index_html, "missing settings toggle: " + key)
+        self.assertIn("theme: 'auto'", app_js, "system theme should be the default")
+        self.assertIn("prefers-color-scheme: dark", app_js)
+        self.assertIn('data-theme-choice="auto"', index_html)
 
     def test_posts_recent_like_and_comment(self) -> None:
         marker = _marker("post")
