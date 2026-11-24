@@ -166,7 +166,6 @@ const DEFAULT_SETTINGS = {
   textSize: 'normal',
   showRating: true,
   showJoinYear: true,
-  sensoryFeedback: true,
   theme: 'auto',
   language: 'tr'
 };
@@ -174,79 +173,10 @@ const DEFAULT_SETTINGS = {
 const THEMES = [
   { key: 'auto', label: 'Sistem' },
   { key: 'medine', label: 'Medine' },
-  { key: 'gece', label: 'Gece' },
   { key: 'kudus', label: 'Kudüs' },
   { key: 'mekke', label: 'Mekke' }
 ];
-
-/* Sessiz Web Audio efektleri, titreşim ve seviye/mürekkep hareketleri. */
-let audioCtx = null;
-let lastKnownLevel = null;
-
-function sensoryEnabled() {
-  return state.settings?.sensoryFeedback !== false;
-}
-
-function tone(freq, duration = 0.05, volume = 0.014, type = 'sine', delay = 0) {
-  if (!sensoryEnabled()) return;
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtx) return;
-  try {
-    if (!audioCtx) audioCtx = new AudioCtx();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    const start = audioCtx.currentTime + delay;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, start);
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(volume, start + 0.008);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    osc.connect(gain).connect(audioCtx.destination);
-    osc.start(start);
-    osc.stop(start + duration + 0.02);
-  } catch { /* Ses desteklenmiyorsa sessizce devam et. */ }
-}
-
-function buzz(pattern = 10) {
-  if (!sensoryEnabled() || !navigator.vibrate) return;
-  try { navigator.vibrate(pattern); } catch { /* Titreşim izinli değilse yok say. */ }
-}
-
-function playCue(name) {
-  if (!sensoryEnabled()) return;
-  if (name === 'ink') {
-    tone(520, 0.045, 0.014);
-    buzz(9);
-  } else if (name === 'page') {
-    tone(330, 0.06, 0.012, 'triangle');
-    buzz(7);
-  } else if (name === 'seal') {
-    tone(392, 0.1, 0.016);
-    tone(523, 0.12, 0.014, 'sine', 0.09);
-    buzz([14, 40, 22]);
-  }
-}
-
-function animateInk(el) {
-  if (!el) return;
-  el.classList.remove('is-ink');
-  void el.offsetWidth;
-  el.classList.add('is-ink');
-}
-
-function announceLevel(level) {
-  if (lastKnownLevel !== null && level > lastKnownLevel) {
-    const badge = $('#profile-title-badge');
-    if (badge) {
-      badge.classList.remove('is-level-up');
-      void badge.offsetWidth;
-      badge.classList.add('is-level-up');
-    }
-    playCue('seal');
-  }
-  lastKnownLevel = level;
-}
+// 'gece' yalnızca Sistem seçeneğinin koyu paletidir; ayrı bir tema seçeneği değildir.
 
 const SYSTEM_DARK = window.matchMedia('(prefers-color-scheme: dark)');
 function resolvedTheme(mode) {
@@ -360,7 +290,6 @@ function applyLanguage(lang) {
 function applySettings() {
   const s = state.settings || DEFAULT_SETTINGS;
   document.body.classList.toggle('text-large', s.textSize === 'large');
-  document.documentElement.dataset.sensory = s.sensoryFeedback !== false ? 'on' : 'off';
   applyTheme(s.theme);
   applyLanguage(s.language);
   syncPhoneNotificationPrefs();
@@ -377,6 +306,10 @@ function loadSettings() {
   try { saved = JSON.parse(localStorage.getItem('ilimhalkasi.settings') || '{}') || {}; }
   catch { saved = {}; }
   state.settings = { ...DEFAULT_SETTINGS, ...saved };
+  if (state.settings.theme === 'gece') {
+    state.settings.theme = 'auto';
+    localStorage.setItem('ilimhalkasi.settings', JSON.stringify(state.settings));
+  }
   applySettings();
 }
 
@@ -1259,7 +1192,6 @@ function renderIdentity() {
   $('#profile-title').textContent = user.display_name;
   const level = levelIndex();
   $('#profile-title-badge').innerHTML = `${levelIconHTML(levels[level].icon)} ${esc(t(levels[level].name))}`;
-  announceLevel(level);
   const created = Number(user.created_at) * 1000;
   const joinYear = Number.isFinite(created) && created > 0
     ? new Date(created).getFullYear()
@@ -3222,13 +3154,6 @@ function switchView(name, skipHistory = false) {
     if (state.viewHistory.length > 20) state.viewHistory.shift();
   }
   state.currentView = name;
-  const activeView = document.getElementById('view-' + name);
-  if (activeView) {
-    activeView.classList.remove('is-turning');
-    void activeView.offsetWidth;
-    activeView.classList.add('is-turning');
-  }
-  playCue('page');
   const navKey = name === 'circle-feed' ? 'circles' : name;
   $$('.view').forEach((v) => v.classList.toggle('is-active', v.id === 'view-' + name));
   $$('.nav-item[data-view]').forEach((n) => n.classList.toggle('is-active', n.dataset.view === navKey));
@@ -3820,7 +3745,6 @@ $('#refresh-feed').addEventListener('click', async () => { await refresh(); toas
     post[countKey] = result.count;
     btn.classList.toggle('is-on', result.active);
     btn.setAttribute('aria-pressed', String(result.active));
-    if (result.active) { animateInk(btn); playCue('ink'); }
     $('[data-count="' + countKey + '"]', postEl).textContent = result.count;
     if (act === 'favorite') $('.fav-summary', postEl).innerHTML = t('Bu paylaşım <b>{n} kişi</b> tarafından favorilere eklendi.', { n: result.count });
     if (act === 'favorite' && result.active) toast(t('Kartpostal defterine eklendi ✧'));
@@ -5130,7 +5054,6 @@ $('#public-posts')?.addEventListener('click', async (e) => {
     post[kind === 'like' ? 'likes' : 'favorites'] = Number(result.count) || 0;
     action.classList.toggle('is-on', post[flag]);
     action.setAttribute('aria-pressed', String(post[flag]));
-    if (post[flag]) { animateInk(action); playCue('ink'); }
     const countEl = action.querySelector('[data-count]');
     if (countEl) countEl.textContent = String(post[kind === 'like' ? 'likes' : 'favorites']);
   } catch (error) { toast(error.message); }

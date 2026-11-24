@@ -639,8 +639,6 @@ window.ILIM_I18N = {
     'Sıfırlama bağlantısı geçersiz': 'Reset link is invalid',
     'İlim Halkası — ana sayfa': 'İlim Halkası — home',
     'Menüyü aç': 'Open menu',
-    'Duyusal geri bildirim': 'Sensory feedback',
-    'Ses ve titreşim': 'Sound and vibration',
     'Ana sayfa': 'Home page',
     'Akış güncellendi': 'Feed refreshed',
     'Kartpostal defterine eklendi ✧': 'Postcard added to your notebook ✧',
@@ -978,7 +976,6 @@ window.ILIM_I18N = {
     /* Yeni mobil kabuk, temalar ve tercihler */
     'Profilini Düzenle': 'Edit your profile',
     'Sistem': 'System',
-    'Gece': 'Night',
     'Tema': 'Theme',
     'Telefonunun açık/koyu modunu takip edebilir veya bir tema seçebilirsin.': 'You can follow your phone’s light/dark mode or pick a theme.',
     'Seçili tema': 'Selected theme',
