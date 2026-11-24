@@ -456,6 +456,11 @@ class SmokeAPITests(unittest.TestCase):
             "Hedef ve istatistikler her yıl başında sıfırlanır.",
             "Profilinde hangi bilgilerin görünmesini istediğini seç.",
             "Neden buradayız?",
+            "BİZ KİMİZ?",
+            "Ortak okuma ilerlemesi ve sohbete tek tıkla geçiş.",
+            "sesli oturum yok",
+            "⌘ K",
+            "Bir vücut bilinci",
             "⚑ Nefret, kin, hakaret veya ayrıştırıcı söz yazanların içerikleri kaldırılır",
             "Henüz bir duyuru yok.",
             "Profilime git",
@@ -531,6 +536,99 @@ class SmokeAPITests(unittest.TestCase):
         self.assertEqual(status, 200, "comment like failed: {}".format(comment_like))
         self.assertIn("active", comment_like)
         self.assertIn("count", comment_like)
+
+    def test_interactions_endpoint_groups_user_activity(self) -> None:
+        opener, _ = self.register_user()
+        marker = _marker("interaction")
+        status, body = self.post(
+            "/api/posts",
+            {"text": marker, "book": "Interaction Book", "writer": "Tester", "type": "quote"},
+            opener=opener,
+        )
+        self.assertEqual(status, 201, "post creation failed: {}".format(body))
+        post_id = (body.get("post") or {}).get("id")
+        self.assertTrue(post_id)
+
+        for action in ("like", "favorite"):
+            status, result = self.post(
+                "/api/posts/{}/{}".format(post_id, action), opener=opener
+            )
+            self.assertEqual(status, 200, "{} failed: {}".format(action, result))
+
+        status, comment_body = self.post(
+            "/api/posts/{}/comments".format(post_id),
+            {"text": _marker("interaction-comment")},
+            opener=opener,
+        )
+        self.assertEqual(status, 201, "comment creation failed: {}".format(comment_body))
+
+        status, data = self.get("/api/me/interactions", opener=opener)
+        self.assertEqual(status, 200, "interactions endpoint failed: {}".format(data))
+        for key in ("liked", "favorited", "commented"):
+            self.assertTrue(
+                any(int(item.get("id", 0)) == post_id for item in data.get(key) or []),
+                "post missing from interactions.{}".format(key),
+            )
+
+    def test_book_request_submission_and_admin_approval(self) -> None:
+        opener, _ = self.register_user()
+        title = _marker("bookrequest")
+        status, body = self.post(
+            "/api/book-requests",
+            {
+                "title": title,
+                "author": "Smoke Author",
+                "page_count": 321,
+                "about": _marker("about"),
+            },
+            opener=opener,
+        )
+        self.assertEqual(status, 200, "book request failed: {}".format(body))
+        request = body.get("request") or {}
+        request_id = request.get("id")
+        self.assertTrue(request_id)
+        self.assertEqual(request.get("status"), "pending")
+
+        status, data = self.get("/api/bootstrap", opener=opener)
+        self.assertEqual(status, 200, data)
+        self.assertTrue(
+            any(int(item.get("id", 0)) == request_id for item in data.get("book_requests") or []),
+            "own book request missing from bootstrap",
+        )
+        admin_data = self.bootstrap()
+        self.assertTrue(
+            any(int(item.get("id", 0)) == request_id
+                for item in (admin_data.get("admin") or {}).get("book_requests") or []),
+            "pending book request missing from admin bootstrap",
+        )
+
+        status, reviewed = self.post(
+            "/api/admin/book-requests/{}/review".format(request_id), {"approve": True}
+        )
+        self.assertEqual(status, 200, "book request approval failed: {}".format(reviewed))
+        updated = reviewed.get("request") or {}
+        self.assertEqual(updated.get("status"), "approved")
+        self.assertTrue((updated.get("book") or {}).get("id"), "approved book was not linked")
+
+    def test_curriculum_progress_is_exposed_in_bootstrap(self) -> None:
+        data = self.bootstrap()
+        curricula = data.get("curricula") or []
+        self.assertTrue(curricula, "bootstrap has no curricula")
+        curriculum = curricula[0]
+        step = curriculum["steps"][0]
+        self.assertTrue(step.get("book_id"), "first curriculum step is not linked to the catalogue")
+        self.assertIn(" - ", step.get("label", ""), "resolved step should show title - author")
+
+        status, result = self.post(
+            "/api/curricula/{}/steps/{}/progress".format(curriculum["key"], step["index"]),
+            {"status": "reading", "page": 40},
+        )
+        self.assertEqual(status, 200, "curriculum progress failed: {}".format(result))
+
+        updated = self.bootstrap()
+        updated_step = updated["curricula"][0]["steps"][0]
+        self.assertEqual(updated_step.get("status"), "reading")
+        self.assertEqual(int(updated_step.get("page", 0)), 40)
 
     def test_invalid_targets_return_clean_404(self) -> None:
         cases = (

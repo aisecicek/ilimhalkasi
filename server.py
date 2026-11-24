@@ -221,6 +221,22 @@ CREATE TABLE IF NOT EXISTS user_meta (
   PRIMARY KEY (user_id, key)
 );
 
+-- Kullanıcıların katalogda olmayan bir eser için gönderdiği öneriler.
+CREATE TABLE IF NOT EXISTS book_requests (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title        TEXT NOT NULL,
+  author       TEXT NOT NULL DEFAULT '',
+  page_count   INTEGER NOT NULL DEFAULT 0,
+  about        TEXT NOT NULL DEFAULT '',
+  cover        TEXT NOT NULL DEFAULT '',
+  status       TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+  reason       TEXT NOT NULL DEFAULT '',
+  book_id      INTEGER REFERENCES books(id) ON DELETE SET NULL,
+  created_at   REAL NOT NULL,
+  reviewed_at  REAL NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS debates (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   book_title TEXT NOT NULL,
@@ -292,7 +308,7 @@ CREATE TABLE IF NOT EXISTS follows (
 CREATE TABLE IF NOT EXISTS notifications (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  kind       TEXT NOT NULL CHECK(kind IN ('follow','circle_post','comment','mention','group_message')),
+  kind       TEXT NOT NULL CHECK(kind IN ('follow','circle_post','comment','mention','group_message','like','favorite','book_request')),
   actor_id   INTEGER REFERENCES users(id) ON DELETE SET NULL,
   post_id    INTEGER REFERENCES posts(id) ON DELETE SET NULL,
   group_id   INTEGER REFERENCES groups(id) ON DELETE SET NULL,
@@ -435,6 +451,94 @@ CURRICULA = [
                   "Beyaz Diş (Jack London)"],
     },
 ]
+
+_TR_FOLD = str.maketrans({"ı": "i", "İ": "i", "ş": "s", "Ş": "s",
+                          "ğ": "g", "Ğ": "g", "ü": "u", "Ü": "u",
+                          "ö": "o", "Ö": "o", "ç": "c", "Ç": "c"})
+
+
+def normalize_book_title(value) -> str:
+    """Kitap adını müfredat adımlarıyla eşleştirmek için sadeleştirir."""
+    text = re.sub(r"\s*\([^)]*\)", "", str(value or ""))
+    text = re.split(r"\s+[—–-]\s+", text)[0]
+    text = unicodedata.normalize("NFKD", text.casefold().translate(_TR_FOLD))
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return re.sub(r"[^a-z0-9]+", " ", text).strip()
+
+
+def find_curriculum_book(conn: sqlite3.Connection, raw_title: str) -> dict | None:
+    needle = normalize_book_title(raw_title)
+    if not needle:
+        return None
+    for row in conn.execute("SELECT * FROM books WHERE hidden=0"):
+        if normalize_book_title(row["title"]) == needle:
+            return dict(row)
+    words = needle.split()
+    if len(words) >= 2:
+        prefix = " ".join(words[:2]) + "%"
+        for row in conn.execute(
+            "SELECT * FROM books WHERE hidden=0 AND lower(title) LIKE ? LIMIT 1", (prefix.lower(),)
+        ):
+            return dict(row)
+    return None
+
+
+def curriculum_step_label(raw_title: str, book: dict | None) -> str:
+    """Çözülen adımlarda 'Başlık - Yazar' biçimini tutarlı biçimde kullanır."""
+    if book and book.get("author"):
+        title = re.sub(r"\s*\([^)]*\)", "", str(book.get("title") or "")).strip()
+        return f"{title} - {book['author']}".strip()
+    return re.sub(r"\s*\([^)]*\)\s*$", "", str(raw_title or "")).strip()
+
+
+def curriculum_with_progress(conn: sqlite3.Connection, user_id: int, curriculum: dict) -> dict:
+    followed = conn.execute(
+        "SELECT 1 FROM curriculum_follows WHERE user_id=? AND c_key=?",
+        (user_id, curriculum["key"]),
+    ).fetchone() is not None
+    shelf_rows = conn.execute(
+        "SELECT * FROM shelf_books WHERE user_id=?", (user_id,)
+    ).fetchall()
+    by_book: dict[int, list[sqlite3.Row]] = {}
+    for row in shelf_rows:
+        by_book.setdefault(row["book_id"], []).append(row)
+
+    steps = []
+    for index, raw in enumerate(curriculum.get("steps", [])):
+        book = find_curriculum_book(conn, raw)
+        row = None
+        if book:
+            candidates = by_book.get(book["id"], [])
+            rank = {"reading": 0, "finished": 1, "wishlist": 2, "abandoned": 3}
+            row = sorted(candidates, key=lambda r: rank.get(r["status"], 9))[0] if candidates else None
+        pct = int(row["progress"] or 0) if row else 0
+        if row and row["status"] == "finished":
+            pct = 100
+        steps.append({
+            "index": index,
+            "raw": raw,
+            "label": curriculum_step_label(raw, book),
+            "book_id": book["id"] if book else None,
+            "book": ({
+                "id": book["id"], "title": book["title"], "author": book.get("author", ""),
+                "cover": book.get("cover", ""), "page_count": int(book.get("page_count") or 0),
+                "volume_count": int(book.get("volume_count") or 1),
+            } if book else None),
+            "status": row["status"] if row else "",
+            "page": int(row["page"] or 0) if row else 0,
+            "volume": int(row["volume"] or 1) if row else 1,
+            "pct": max(0, min(100, pct)),
+        })
+    total = len(steps)
+    completed = sum(1 for step in steps if step["status"] == "finished")
+    average = round(sum(step["pct"] for step in steps) / total) if total else 0
+    return {
+        **curriculum,
+        "steps": steps,
+        "followed": followed,
+        "progress": {"completed": completed, "total": total, "pct": average},
+    }
+
 
 FIGURE_ACCOUNTS = [
     {
@@ -1466,6 +1570,28 @@ def start_figure_scheduler() -> None:
 def init_db() -> None:
     conn = connect()
     conn.executescript(SCHEMA)
+    # Eski veritabanlarında bildirim türleri sınırlıydı; like/favorite eklemek için tabloyu yenile.
+    notif_sql = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='notifications'"
+    ).fetchone()[0]
+    if any(f"'{kind}'" not in notif_sql for kind in ("like", "favorite", "book_request")):
+        conn.execute("ALTER TABLE notifications RENAME TO notifications_old")
+        conn.execute("""
+            CREATE TABLE notifications (
+              id         INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              kind       TEXT NOT NULL CHECK(kind IN
+                ('follow','circle_post','comment','mention','group_message','like','favorite','book_request')),
+              actor_id   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+              post_id    INTEGER REFERENCES posts(id) ON DELETE SET NULL,
+              group_id   INTEGER REFERENCES groups(id) ON DELETE SET NULL,
+              text       TEXT NOT NULL DEFAULT '',
+              target     TEXT NOT NULL DEFAULT '',
+              created_at REAL NOT NULL
+            )
+        """)
+        conn.execute("INSERT INTO notifications SELECT * FROM notifications_old")
+        conn.execute("DROP TABLE notifications_old")
     # Eski veritabanları için sütun göçü.
     columns = {row[1] for row in conn.execute("PRAGMA table_info(users)")}
     if "is_admin" not in columns:
@@ -1729,6 +1855,42 @@ def clean_avatar_image(value) -> str:
     if not text.startswith("data:image/png;base64,") or len(text) > 400_000:
         raise ValueError("Fotoğraf PNG olarak yüklenmeli ve 300 KB'dan küçük olmalı")
     return text
+
+
+def clean_book_image(value) -> str:
+    """Kitap önerisi kapağı için PNG veri URL'sini doğrular."""
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if not text.startswith("data:image/png;base64,") or len(text) > 600_000:
+        raise ValueError("Kapak PNG olarak yüklenmeli ve 450 KB'dan küçük olmalı")
+    return text
+
+
+def serialize_book_request(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
+    book = None
+    if row["book_id"]:
+        b = conn.execute(
+            "SELECT id,title,author,cover FROM books WHERE id=?", (row["book_id"],)
+        ).fetchone()
+        if b:
+            book = dict(b)
+    return {
+        "id": row["id"],
+        "title": row["title"],
+        "author": row["author"],
+        "page_count": int(row["page_count"] or 0),
+        "about": row["about"],
+        "cover": row["cover"],
+        "status": row["status"],
+        "reason": row["reason"],
+        "book": book,
+        "requester": user_public(conn.execute(
+            "SELECT * FROM users WHERE id=?", (row["user_id"],)
+        ).fetchone()),
+        "created_at": row["created_at"],
+        "reviewed_at": row["reviewed_at"],
+    }
 
 
 def user_public(row: sqlite3.Row | None) -> dict | None:
@@ -2029,6 +2191,10 @@ def serialize_notification(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         view = "circles" if not group or group["kind"] == "halka" else "messages"
     elif kind == "comment":
         view = "journal"
+    elif kind in ("like", "favorite"):
+        view = "journal"
+    elif kind == "book_request":
+        view = "admin"
     elif kind == "group_message":
         view = "messages"
     else:
@@ -2038,7 +2204,8 @@ def serialize_notification(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "id": f"server-{row['id']}",
         "kind": kind,
         "icon": {"follow": "＋", "circle_post": "◎", "comment": "✎",
-                 "mention": "@", "group_message": "✉"}.get(kind, "◈"),
+                 "mention": "@", "group_message": "✉",
+                 "like": "♥", "favorite": "★", "book_request": "✧"}.get(kind, "◈"),
         "ts": row["created_at"],
         "created_at": row["created_at"],
         "view": view,
@@ -2106,12 +2273,19 @@ def build_bootstrap(conn: sqlite3.Connection, user_id: int) -> dict:
         if g["id"] not in joined_ids
     ]
 
-    curricula = []
-    for c in CURRICULA:
-        followed = conn.execute(
-            "SELECT 1 FROM curriculum_follows WHERE user_id=? AND c_key=?", (user_id, c["key"])
-        ).fetchone() is not None
-        curricula.append({**c, "followed": followed})
+    curricula = [curriculum_with_progress(conn, user_id, c) for c in CURRICULA]
+    curriculum_titles_by_book: dict[int, list[str]] = {}
+    for item in curricula:
+        for step in item["steps"]:
+            if step["book_id"]:
+                titles = curriculum_titles_by_book.setdefault(step["book_id"], [])
+                if item["title"] not in titles:
+                    titles.append(item["title"])
+    shelf_data = []
+    for row in shelf:
+        item = dict(row)
+        item["curricula"] = curriculum_titles_by_book.get(row["book_id"], [])
+        shelf_data.append(item)
 
     announcements = [
         {**dict(a), "admin": author_of(conn, a["admin_id"])}
@@ -2154,8 +2328,11 @@ def build_bootstrap(conn: sqlite3.Connection, user_id: int) -> dict:
             "ORDER BY CASE WHEN source='curated' THEN 0 ELSE 1 END, id LIMIT 300"
         )],
         "posts": [serialize_post(conn, p, user_id) for p in posts],
-        "shelf": [dict(s) for s in shelf],
+        "shelf": shelf_data,
         "lists": lists,
+        "book_requests": [serialize_book_request(conn, r) for r in conn.execute(
+            "SELECT * FROM book_requests WHERE user_id=? ORDER BY created_at DESC LIMIT 50", (user_id,)
+        )],
         "debates": debates,
         "chat": chat,
         "groups": groups,
@@ -2200,6 +2377,9 @@ def build_bootstrap(conn: sqlite3.Connection, user_id: int) -> dict:
             "comments": recent_comments[:30],
             "hidden_books": [dict(b) for b in conn.execute(
                 "SELECT id,title,author,hidden_reason FROM books WHERE hidden=1 ORDER BY id DESC LIMIT 100"
+            )],
+            "book_requests": [serialize_book_request(conn, r) for r in conn.execute(
+                "SELECT * FROM book_requests ORDER BY CASE WHEN status='pending' THEN 0 ELSE 1 END, created_at DESC LIMIT 100"
             )],
         }
     return result
@@ -2385,6 +2565,25 @@ class Handler(BaseHTTPRequestHandler):
                     "deleted": deleted,
                     "serverTime": now(),
                 })
+            finally:
+                conn.close()
+
+        if path == "/api/me/interactions":
+            viewer = self.require_user()
+            if not viewer:
+                return
+            return self.list_interactions(viewer["id"])
+
+        if path == "/api/book-requests":
+            viewer = self.require_user()
+            if not viewer:
+                return
+            conn = connect()
+            try:
+                return self.send_json({"book_requests": [serialize_book_request(conn, r) for r in conn.execute(
+                    "SELECT * FROM book_requests WHERE user_id=? ORDER BY created_at DESC LIMIT 50",
+                    (viewer["id"],)
+                )]})
             finally:
                 conn.close()
 
@@ -2831,6 +3030,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_chat(uid, body)
         if path == "/api/support":
             return self.create_ticket(uid, body)
+        if path == "/api/book-requests":
+            return self.create_book_request(uid, body)
         if path == "/api/reports":
             return self.create_report(uid, body)
         if path == "/api/follow":
@@ -2873,6 +3074,9 @@ class Handler(BaseHTTPRequestHandler):
         match = re.fullmatch(r"/api/admin/comments/(post|scholar)/(\d+)/delete", path)
         if match:
             return self.delete_comment(uid, match.group(1), int(match.group(2)))
+        match = re.fullmatch(r"/api/admin/book-requests/(\d+)/review", path)
+        if match:
+            return self.review_book_request(uid, int(match.group(1)), body)
         match = re.fullmatch(r"/api/admin/books/(\d+)/moderate", path)
         if match:
             return self.moderate_book(uid, int(match.group(1)), body)
@@ -2911,6 +3115,9 @@ class Handler(BaseHTTPRequestHandler):
         match = re.fullmatch(r"/api/follows/(\d+)", path)
         if match:
             return self.toggle_follow(uid, int(match.group(1)))
+        match = re.fullmatch(r"/api/curricula/([a-z0-9_-]+)/steps/(\d+)/progress", path)
+        if match:
+            return self.set_curriculum_progress(uid, match.group(1), int(match.group(2)), body)
         match = re.fullmatch(r"/api/curricula/([a-z0-9_-]+)/follow", path)
         if match:
             return self.toggle_key(uid, "curriculum_follows", "c_key", match.group(1))
@@ -3392,6 +3599,150 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             conn.close()
 
+    def list_interactions(self, uid: int) -> None:
+        """Beğenilen, favorilenen ve yorumlanan paylaşımları viewer'a göre döndürür."""
+        conn = connect()
+        try:
+            groups = {
+                "liked": (
+                    "SELECT p.* FROM post_likes l JOIN posts p ON p.id=l.post_id "
+                    "WHERE l.user_id=? ORDER BY p.created_at DESC LIMIT 100"
+                ),
+                "favorited": (
+                    "SELECT p.* FROM post_favorites f JOIN posts p ON p.id=f.post_id "
+                    "WHERE f.user_id=? ORDER BY p.created_at DESC LIMIT 100"
+                ),
+                "commented": (
+                    "SELECT DISTINCT p.* FROM comments c JOIN posts p ON p.id=c.post_id "
+                    "WHERE c.user_id=? ORDER BY p.created_at DESC LIMIT 100"
+                ),
+            }
+            result = {}
+            for key, sql in groups.items():
+                result[key] = [serialize_post(conn, row, uid) for row in conn.execute(sql, (uid,))]
+            return self.send_json(result)
+        finally:
+            conn.close()
+
+    def create_book_request(self, uid: int, body: dict) -> None:
+        title = clean_text(body.get("title")).strip()[:200]
+        author = clean_text(body.get("author")).strip()[:200]
+        about = clean_text(body.get("about")).strip()[:2000]
+        try:
+            page_count = int(body.get("page_count", 0) or 0)
+        except (TypeError, ValueError):
+            return self.send_json({"error": "Geçersiz sayfa sayısı"}, 400)
+        page_count = max(0, min(page_count, 50000))
+        if len(title) < 2 or not author:
+            return self.send_json({"error": "Kitap adı ve yazarı gerekli"}, 400)
+        try:
+            cover = clean_book_image(body.get("cover", ""))
+        except ValueError as error:
+            return self.send_json({"error": str(error)}, 400)
+
+        conn = connect()
+        try:
+            duplicate = conn.execute(
+                "SELECT 1 FROM book_requests WHERE user_id=? AND lower(title)=lower(?) "
+                "AND lower(author)=lower(?) AND status='pending'",
+                (uid, title, author),
+            ).fetchone()
+            if duplicate:
+                return self.send_json({"error": "Bu kitap önerisi zaten incelemede"}, 409)
+            cur = conn.execute(
+                "INSERT INTO book_requests (user_id,title,author,page_count,about,cover,status,created_at) "
+                "VALUES (?,?,?,?,?,?,'pending',?)",
+                (uid, title, author, page_count, about, cover, now()),
+            )
+            row = conn.execute("SELECT * FROM book_requests WHERE id=?", (cur.lastrowid,)).fetchone()
+            actor = author_of(conn, uid).get("display_name") or "Bir kullanıcı"
+            for admin in conn.execute(
+                "SELECT id FROM users WHERE is_admin=1 AND blocked=0 AND is_system=0"
+            ):
+                add_notification(
+                    conn, admin["id"], "book_request", uid, None, None,
+                    f"{actor} kitap önerisi gönderdi: {title}", str(row["id"]),
+                )
+            conn.commit()
+            return self.send_json({"request": serialize_book_request(conn, row)})
+        finally:
+            conn.close()
+
+    def review_book_request(self, uid: int, request_id: int, body: dict) -> None:
+        """Yönetici öneriyi onaylar (kitabı kataloğa ekler) veya reddeder."""
+        if not self.require_admin(uid):
+            return
+        approve = bool(body.get("approve"))
+        reason = clean_text(body.get("reason"))[:300]
+        if not approve and not reason:
+            return self.send_json({"error": "Ret gerekçesi gerekli"}, 400)
+        conn = connect()
+        try:
+            row = conn.execute("SELECT * FROM book_requests WHERE id=?", (request_id,)).fetchone()
+            if not row:
+                return self.send_json({"error": "Kitap önerisi bulunamadı"}, 404)
+            if row["status"] != "pending":
+                return self.send_json({"error": "Bu öneri zaten incelendi"}, 409)
+            book_id = row["book_id"]
+            if approve:
+                existing = conn.execute(
+                    "SELECT * FROM books WHERE lower(title)=lower(?) AND lower(author)=lower(?)",
+                    (row["title"], row["author"]),
+                ).fetchone()
+                if existing:
+                    book_id = existing["id"]
+                    if existing["hidden"]:
+                        conn.execute(
+                            "UPDATE books SET hidden=0, hidden_reason='' WHERE id=?", (book_id,)
+                        )
+                else:
+                    book = cache_book(conn, {
+                        "title": row["title"], "author": row["author"],
+                        "category": "Keşfedilen", "cover": row["cover"],
+                        "description": row["about"], "page_count": row["page_count"],
+                        "source": "user_request",
+                    })
+                    if not book:
+                        return self.send_json({"error": "Kitap kataloğa eklenemedi"}, 500)
+                    book_id = book["id"]
+            conn.execute(
+                "UPDATE book_requests SET status=?, reason=?, book_id=?, reviewed_at=? WHERE id=?",
+                ("approved" if approve else "rejected", reason, book_id, now(), request_id),
+            )
+            verb = "onaylandı ve kataloğa eklendi" if approve else f"reddedildi: {reason}"
+            add_notification(
+                conn, row["user_id"], "book_request", uid, None, None,
+                f"“{row['title']}” önerin {verb}", str(request_id),
+            )
+            conn.commit()
+            updated = conn.execute("SELECT * FROM book_requests WHERE id=?", (request_id,)).fetchone()
+            return self.send_json({"ok": True, "request": serialize_book_request(conn, updated)})
+        finally:
+            conn.close()
+
+    def set_curriculum_progress(self, uid: int, key: str, index: int, body: dict) -> None:
+        curriculum = next((c for c in CURRICULA if c["key"] == key), None)
+        if not curriculum or index < 0 or index >= len(curriculum["steps"]):
+            return self.send_json({"error": "Müfredat adımı bulunamadı"}, 404)
+        conn = connect()
+        try:
+            book = find_curriculum_book(conn, curriculum["steps"][index])
+        finally:
+            conn.close()
+        if not book:
+            return self.send_json({"error": "Bu adımın kitabı katalogda yok"}, 404)
+        status = str(body.get("status", "")).strip()
+        if status not in ("wishlist", "reading", "finished"):
+            return self.send_json({"error": "Geçersiz okuma durumu"}, 400)
+        try:
+            page = max(0, int(body.get("page", 0) or 0))
+        except (TypeError, ValueError):
+            return self.send_json({"error": "Geçersiz sayfa değeri"}, 400)
+        payload = {"book_id": book["id"], "status": status}
+        if status != "finished" or page > 0:
+            payload["page"] = page
+        return self.upsert_shelf(uid, payload)
+
     def create_list(self, uid: int, body: dict) -> None:
         name = str(body.get("name", "")).strip()[:80]
         if not name:
@@ -3713,13 +4064,18 @@ class Handler(BaseHTTPRequestHandler):
         column = "post_id"
         conn = connect()
         try:
-            if not conn.execute("SELECT 1 FROM posts WHERE id=?", (post_id,)).fetchone():
+            post = conn.execute("SELECT user_id FROM posts WHERE id=?", (post_id,)).fetchone()
+            if not post:
                 return self.send_json({"error": "Paylaşım bulunamadı"}, 404)
             exists = conn.execute(f"SELECT 1 FROM {table} WHERE {column}=? AND user_id=?", (post_id, uid)).fetchone()
             if exists:
                 conn.execute(f"DELETE FROM {table} WHERE {column}=? AND user_id=?", (post_id, uid))
             else:
                 conn.execute(f"INSERT INTO {table} ({column},user_id) VALUES (?,?)", (post_id, uid))
+                actor = author_of(conn, uid).get("display_name") or "Bir kullanıcı"
+                verb = "paylaşımını beğendi" if kind == "like" else "paylaşımını favorilerine ekledi"
+                add_notification(conn, post["user_id"], kind, uid, post_id, None,
+                                 f"{actor} {verb}", str(post_id))
             conn.execute("UPDATE posts SET updated_at=? WHERE id=?", (now(), post_id))
             conn.commit()
             count = conn.execute(f"SELECT COUNT(*) FROM {table} WHERE {column}=?", (post_id,)).fetchone()[0]
