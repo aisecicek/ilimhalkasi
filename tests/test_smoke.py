@@ -556,6 +556,41 @@ class SmokeAPITests(unittest.TestCase):
         self.assertNotIn("Beğeni, yorum, takip ve halka etkinliklerin burada toplanır.", index_html)
         self.assertNotIn("Beğeni, yorum, takip ve halka etkinliklerin burada toplanır.", i18n_js)
 
+    def test_visual_and_sensory_polish_are_wired(self) -> None:
+        index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+        app_js = (PROJECT_ROOT / "app.js").read_text(encoding="utf-8")
+        css = (PROJECT_ROOT / "styles.css").read_text(encoding="utf-8")
+        i18n_js = (PROJECT_ROOT / "i18n.js").read_text(encoding="utf-8")
+        manifest = (PROJECT_ROOT / "android" / "app" / "src" / "main"
+                    / "AndroidManifest.xml").read_text(encoding="utf-8")
+
+        self.assertIn(".app-shell .bottom-nav .nav-item,", css)
+        self.assertIn("line-height: 1.3;", css)
+        self.assertIn("@keyframes ink-spread", css)
+        self.assertIn("@keyframes page-turn-spring", css)
+        self.assertIn("@keyframes wax-seal", css)
+        self.assertIn(".view.is-turning", css)
+        self.assertIn("Haşiye tarzı yorum blokları", css)
+        self.assertIn("Kandil / tesbih ilerlemesi", css)
+
+        self.assertIn('id="icon-reed-pen"', index_html)
+        self.assertIn('class="reed-icon"', index_html)
+        self.assertIn('data-setting="sensoryFeedback"', index_html)
+
+        self.assertIn("sensoryFeedback: true", app_js)
+        self.assertIn("document.documentElement.dataset.sensory", app_js)
+        self.assertIn("function playCue(", app_js)
+        self.assertIn("function animateInk(", app_js)
+        self.assertIn("function announceLevel(", app_js)
+        self.assertIn("classList.add('is-turning')", app_js)
+        self.assertIn("playCue('ink')", app_js)
+        self.assertIn("playCue('page')", app_js)
+        self.assertIn("playCue('seal')", app_js)
+
+        self.assertIn("'Duyusal geri bildirim'", i18n_js)
+        self.assertIn("'Ses ve titreşim'", i18n_js)
+        self.assertIn("android.permission.VIBRATE", manifest)
+
     def test_posts_recent_like_and_comment(self) -> None:
         marker = _marker("post")
         status, body = self.post(

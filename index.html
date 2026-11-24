@@ -14,6 +14,13 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <svg class="icon-sprite" aria-hidden="true" focusable="false" width="0" height="0">
+    <symbol id="icon-reed-pen" viewBox="0 0 24 24">
+      <path d="M4 20c1.5-5.5 5-9.5 10.5-13.5L19 11C15 16.5 10 20 4 20Z" />
+      <path d="M14.5 6.5 19 11" />
+      <path d="M4 20c2.8-.6 5.2-1.9 7.2-3.9" />
+    </symbol>
+  </svg>
   <div class="app-shell">
 
     <!-- SOL MENÜ -->
@@ -809,6 +816,11 @@
           </div>
 
           <div class="settings-card">
+            <h3 data-i18n="Duyusal geri bildirim">Duyusal geri bildirim</h3>
+            <label class="switch-row"><span data-i18n="Ses ve titreşim">Ses ve titreşim</span><input type="checkbox" data-setting="sensoryFeedback" checked /></label>
+          </div>
+
+          <div class="settings-card">
             <h3>Gizlilik</h3>
             <label class="switch-row"><span>Profilimde katılım yılını göster</span><input type="checkbox" data-setting="showJoinYear" checked /></label>
           </div>
@@ -1033,7 +1045,7 @@
       <button class="sheet-handle" id="quick-sheet-close" type="button" data-i18n-aria="Kapat" aria-label="Kapat"></button>
       <h2 id="quick-sheet-title" data-i18n="Ne paylaşmak istersin?">Ne paylaşmak istersin?</h2>
       <button class="sheet-action" type="button" id="quick-add-quote">
-        <span class="sheet-action-icon"><i data-lucide="quote" aria-hidden="true"></i></span>
+        <span class="sheet-action-icon"><svg class="reed-icon" aria-hidden="true"><use href="#icon-reed-pen"></use></svg></span>
         <span><strong data-i18n="Satır / Alıntı Ekle">Satır / Alıntı Ekle</strong><small data-i18n="Kitabından bir alıntı veya inceleme paylaş">Kitabından bir alıntı veya inceleme paylaş</small></span>
       </button>
       <button class="sheet-action" type="button" id="quick-add-circle">
