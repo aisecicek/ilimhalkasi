@@ -1131,7 +1131,6 @@ function postHTML(post) {
         <button class="action" type="button" data-own-action="edit" data-own-kind="post" data-id="${post.id}"><span class="ico">✎</span> ${t('Düzenle')}</button>
         <button class="action" type="button" data-own-action="delete" data-own-kind="post" data-id="${post.id}"><span class="ico">×</span> ${t('Sil')}</button>` : ''}
     </div>
-    <div class="fav-summary">${t('Bu paylaşım <b>{n} kişi</b> tarafından favorilere eklendi.', { n: post.favorites })}</div>
     <div class="comments ${state.openComments.has(post.id) ? 'is-open' : ''}">
       ${post.comments.length ? post.comments.map((c) => commentHTML(c, post.id)).join('') : `<p class="rail-muted">${t('Henüz yorum yok. İlk yorumu sen yaz.')}</p>`}
       <form class="comment-form" data-post="${post.id}">
@@ -3853,8 +3852,6 @@ $('#refresh-feed').addEventListener('click', async () => { await refresh(); toas
     btn.classList.toggle('is-on', result.active);
     btn.setAttribute('aria-pressed', String(result.active));
     $('[data-count="' + countKey + '"]', postEl).textContent = result.count;
-    if (act === 'favorite') $('.fav-summary', postEl).innerHTML = t('Bu paylaşım <b>{n} kişi</b> tarafından favorilere eklendi.', { n: result.count });
-    if (act === 'favorite' && result.active) toast(t('Kartpostal defterine eklendi ✧'));
     return;
   }
 

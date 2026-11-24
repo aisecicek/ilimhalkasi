@@ -533,7 +533,7 @@ class SmokeAPITests(unittest.TestCase):
             "Etkileşimlerim should be the last profile section",
         )
 
-        self.assertIn("grid-template-columns: 34px minmax(0, 1fr) auto", css)
+        self.assertIn("grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr)", css)
         self.assertIn("grid-template-columns: repeat(5, minmax(0, 1fr))", css)
         self.assertIn("justify-self: center;", css)
         self.assertIn("transform: translateY(-10px)", css)
@@ -940,6 +940,7 @@ class SmokeAPITests(unittest.TestCase):
         app_js = (PROJECT_ROOT / "app.js").read_text(encoding="utf-8")
         index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
         css = (PROJECT_ROOT / "styles.css").read_text(encoding="utf-8")
+        i18n_js = (PROJECT_ROOT / "i18n.js").read_text(encoding="utf-8")
 
         # The old mobile rule hid every gold button's text and replaced it with ✧.
         self.assertNotIn("\n  .btn-gold { font-size: 0; }", css)
@@ -958,6 +959,43 @@ class SmokeAPITests(unittest.TestCase):
         self.assertIn('<span data-i18n="Şikayet ve talepler">Şikayet ve talepler</span>', index_html)
         self.assertIn("'Duyurular':", (PROJECT_ROOT / "i18n.js").read_text(encoding="utf-8"))
         self.assertIn("'Ara':", app_js + (PROJECT_ROOT / "i18n.js").read_text(encoding="utf-8"))
+
+        # Üst panel yalnızca Duyurular + Ara; marka tam ortada.
+        top_actions = index_html.split('<div class="top-actions">', 1)[1].split('</div>', 1)[0]
+        self.assertIn('id="notifications-btn"', top_actions)
+        self.assertIn('id="search-open-btn"', top_actions)
+        self.assertNotIn('class="icon-btn mobile-only" id="search-open-btn"', index_html)
+        self.assertIn("grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr);", css)
+        self.assertNotIn("grid-template-columns: 44px minmax(0, 1fr) auto;", css)
+        self.assertIn(".topbar .top-brand { grid-column: 2; justify-self: center; }", css)
+        self.assertIn("  .top-brand {\n    position: static;", css)
+        self.assertIn(".topbar .search-wrap,", css)
+        self.assertIn('.top-actions [data-view="support"],', css)
+        self.assertIn(".top-actions .top-logout,", css)
+        self.assertIn(".top-actions .top-guest { display: none !important; }", css)
+        self.assertNotIn(".top-brand { display: none !important; }", css)
+
+        # Menü düğmesi simge + yazıyı ortalar; önerilen başlıkları hizalar.
+        self.assertIn(".menu-btn {\n  display: none;\n  align-items: center;\n  justify-content: center;", css)
+        self.assertIn("  .topbar #menu-btn {\n    flex-direction: column;\n    align-items: center;\n    justify-content: center;", css)
+        self.assertIn(".home-book-group > h3 {\n  display: flex;\n  align-items: center;", css)
+        self.assertIn("  .home-book-group > h3 svg { width: 16px; height: 16px; flex-basis: 16px; }", css)
+
+        # Karşılama kartındaki aktif kitap ve paylaşım kontrolleri aynı ölçüde.
+        self.assertIn("  .greeting-stats .stat-chip,\n  .greeting-actions .btn {", css)
+        self.assertIn("    height: 34px;\n    min-height: 34px;\n    padding: 6px 10px;", css)
+
+        # Kütüphane düğmeleri arasında nefes alan boşluk var.
+        self.assertIn("    gap: 10px;\n    margin-top: 4px;\n  }\n  .page-head--library .head-actions .btn {", css)
+
+        # Hesap davetindeki gereksiz açıklama ve paylaşım gürültüsü kalktı.
+        self.assertNotIn("Önce kitapları, halkaları ve akışı keşfedebilirsin.", index_html)
+        self.assertNotIn("'Önce kitapları, halkaları ve akışı keşfedebilirsin.':", i18n_js)
+        self.assertNotIn('class="fav-summary"', app_js)
+        self.assertNotIn("kişi tarafından favorilere eklendi", app_js)
+        self.assertNotIn("Kartpostal defterine eklendi ✧", app_js)
+        self.assertNotIn("'Kartpostal defterine eklendi ✧':", i18n_js)
+        self.assertNotIn(".fav-summary", css)
 
         # Ana sayfadaki etiketler okunabilir boyutta olmalı; sadece simge kalmasın.
         uniform = css.split("/* ---------- Tek düzen: aynı tür kontrol her yerde aynı ölçüde ---------- */", 1)[1]
