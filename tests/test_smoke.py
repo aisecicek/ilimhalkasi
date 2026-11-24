@@ -975,9 +975,20 @@ class SmokeAPITests(unittest.TestCase):
         self.assertIn(".top-actions .top-guest { display: none !important; }", css)
         self.assertNotIn(".top-brand { display: none !important; }", css)
 
-        # Menü düğmesi simge + yazıyı ortalar; önerilen başlıkları hizalar.
+        # Üst panel etiketsiz: Menü / Duyurular / Ara yalnızca simge gösterir.
+        self.assertIn(
+            ".topbar #menu-btn > span,\n"
+            ".topbar #notifications-btn > span:not(.badge-count),\n"
+            ".topbar #search-open-btn > span { display: none !important; }",
+            css,
+        )
+        self.assertNotIn("  .topbar #menu-btn span { display: inline; }", css)
+        self.assertIn("  .topbar #notifications-btn svg,", css)
+        self.assertIn("  .topbar #search-open-btn svg { width: 18px; height: 18px; }", css)
+
+        # Menü simgesi kare alanda ortalanır; önerilen başlıkları hizalar.
         self.assertIn(".menu-btn {\n  display: none;\n  align-items: center;\n  justify-content: center;", css)
-        self.assertIn("  .topbar #menu-btn {\n    flex-direction: column;\n    align-items: center;\n    justify-content: center;", css)
+        self.assertIn("  .topbar #menu-btn {\n    align-items: center;\n    justify-content: center;\n    width: 44px;", css)
         self.assertIn(".home-book-group > h3 {\n  display: flex;\n  align-items: center;", css)
         self.assertIn("  .home-book-group > h3 svg { width: 16px; height: 16px; flex-basis: 16px; }", css)
 
