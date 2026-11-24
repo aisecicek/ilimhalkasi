@@ -1,8 +1,14 @@
 package com.ilimhalkasi.app;
 
+import android.Manifest;
 import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.os.Build;
@@ -22,8 +28,12 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +49,10 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "IlimHalkasi";
     private static final int REQUEST_FILE_CHOOSER = 1001;
+    private static final int REQUEST_NOTIFICATIONS = 1002;
     private static final String PREF_HOST = "host_url";
+    private static final String PREF_NOTIFY_PREFS = "notification_prefs";
+    private static final String NOTIFY_CHANNEL = "ilimhalkasi";
 
     private SharedPreferences prefs;
     private WebView webView;
@@ -55,6 +68,8 @@ public class MainActivity extends AppCompatActivity {
         // Kullanıcının kaydettiği adres varsa onu kullan; IP değişince APK yeniden derlenmez.
         hostUrl = prefs.getString(PREF_HOST, getString(R.string.app_host));
         setContentView(R.layout.activity_main);
+        createNotificationChannel();
+        requestNotificationPermissionIfNeeded();
 
         webView = findViewById(R.id.webview);
         WebSettings settings = webView.getSettings();
@@ -163,6 +178,81 @@ public class MainActivity extends AppCompatActivity {
             prefs.edit().putString(PREF_HOST, normalized).apply();
             hostUrl = normalized;
             runOnUiThread(() -> webView.loadUrl(hostUrl));
+        }
+
+        /** Web tarafındaki anahtarlar yalnızca telefon bildirimini açıp kapatır. */
+        @JavascriptInterface
+        public void setNotificationPreferences(String json) {
+            try {
+                JSONObject values = new JSONObject(json == null ? "{}" : json);
+                prefs.edit().putString(PREF_NOTIFY_PREFS, values.toString()).apply();
+            } catch (Exception e) {
+                Log.w(TAG, "Notification preferences could not be saved", e);
+            }
+        }
+
+        /** Uygulama içi bildirim merkezine düşen yeni olayı telefona da iletir. */
+        @JavascriptInterface
+        public void showNotification(String kind, String title, String body, String id) {
+            runOnUiThread(() -> {
+                try {
+                    if (!notificationEnabled(kind)) return;
+                    if (Build.VERSION.SDK_INT >= 33
+                            && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        return;
+                    }
+                    int notificationId = id == null
+                            ? (int) (System.currentTimeMillis() % Integer.MAX_VALUE)
+                            : id.hashCode();
+                    Intent intent = new Intent(this, MainActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    PendingIntent contentIntent = PendingIntent.getActivity(
+                            this, notificationId, intent,
+                            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                    Notification notification = new NotificationCompat.Builder(this, NOTIFY_CHANNEL)
+                            .setSmallIcon(R.drawable.ic_notification)
+                            .setContentTitle(title == null ? getString(R.string.app_name) : title)
+                            .setContentText(body == null ? "" : body)
+                            .setStyle(new NotificationCompat.BigTextStyle().bigText(body == null ? "" : body))
+                            .setContentIntent(contentIntent)
+                            .setAutoCancel(true)
+                            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                            .build();
+                    NotificationManagerCompat.from(this).notify(notificationId, notification);
+                } catch (Exception e) {
+                    Log.e(TAG, "Notification could not be shown", e);
+                }
+            });
+        }
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationChannel channel = new NotificationChannel(
+                NOTIFY_CHANNEL,
+                getString(R.string.notification_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT);
+        channel.setDescription(getString(R.string.notification_channel_description));
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null) manager.createNotificationChannel(channel);
+    }
+
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < 33) return;
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATIONS);
+    }
+
+    private boolean notificationEnabled(String kind) {
+        try {
+            JSONObject values = new JSONObject(prefs.getString(PREF_NOTIFY_PREFS, "{}"));
+            return !values.has(kind) || values.optBoolean(kind, true);
+        } catch (Exception e) {
+            return true;
         }
     }
 

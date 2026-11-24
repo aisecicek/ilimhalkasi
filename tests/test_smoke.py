@@ -431,6 +431,68 @@ class SmokeAPITests(unittest.TestCase):
         self.assertIn("theme: 'auto'", app_js, "system theme should be the default")
         self.assertIn("prefers-color-scheme: dark", app_js)
         self.assertIn('data-theme-choice="auto"', index_html)
+        self.assertIn("phoneNotificationAllowed", app_js)
+        self.assertIn("syncPhoneNotificationPrefs", app_js)
+        self.assertNotIn(".filter((n) => notificationAllowed(n.kind))", app_js,
+                         "preferences must not hide in-app notifications")
+
+    def test_removed_copy_and_clean_labels(self) -> None:
+        index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+        app_js = (PROJECT_ROOT / "app.js").read_text(encoding="utf-8")
+        removed = (
+            "İLK ADIMLAR",
+            "paylaşım akışı",
+            "Birlikte okuyacağınız, müzakere edeceğiniz ve öğrendiklerinizi kaydedeceğiniz alanlar.",
+            "Platform genelindeki en yeni içerikleri, popüler kitapları ve listeleri gösteren ana sayfa.",
+            "İncelemelerin ve alıntıların; hepsi bir yerde.",
+            "Henüz defterinize bir alıntı düşmemişsiniz.",
+            "Okuduklarından bir satır veya bir kitap hakkındaki düşünceni paylaş.",
+            "KÜTÜPHANEM · PAYLAŞIM",
+            "Hangi bildirimlerin bildirim merkezinde ve telefonda görüneceğini seç.",
+            "Telefona bildirim düşmesi için cihazda uygulama bildirimlerini de açık tut.",
+            "Bildirim tercihleri",
+            "Bildirim merkezi",
+            "Yıllık kitap hedefini, yazı boyutunu ve kitap kartlarını ayarla.",
+            "Hedef ve istatistikler her yıl başında sıfırlanır.",
+            "Profilinde hangi bilgilerin görünmesini istediğini seç.",
+            "Neden buradayız?",
+            "⚑ Nefret, kin, hakaret veya ayrıştırıcı söz yazanların içerikleri kaldırılır",
+            "Henüz bir duyuru yok.",
+            "Profilime git",
+            "Değişiklikleri Kaydet",
+            "Değişiklikleri kaydet",
+            "Tercihleri kaydet",
+            "Giriş Yap",
+        )
+        for text in removed:
+            self.assertNotIn(text, index_html, "removed copy still present: " + text)
+            self.assertNotIn(text, app_js, "removed copy still present: " + text)
+        self.assertIn("id=\"circle-feed-back\"", index_html)
+        self.assertIn('data-i18n="Seçkiler"', index_html)
+        self.assertIn("Henüz alıntı paylaşmadın.", app_js)
+
+    def test_back_navigation_filters_and_native_notifications_are_wired(self) -> None:
+        app_js = (PROJECT_ROOT / "app.js").read_text(encoding="utf-8")
+        index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+        css = (PROJECT_ROOT / "styles.css").read_text(encoding="utf-8")
+        manifest = (PROJECT_ROOT / "android" / "app" / "src" / "main"
+                    / "AndroidManifest.xml").read_text(encoding="utf-8")
+        activity = (PROJECT_ROOT / "android" / "app" / "src" / "main" / "java"
+                    / "com" / "ilimhalkasi" / "app" / "MainActivity.java").read_text(encoding="utf-8")
+
+        self.assertIn("viewHistory", app_js)
+        self.assertIn("function goBackView()", app_js)
+        self.assertIn("$('#circle-feed-back')?.addEventListener('click'", app_js)
+        self.assertIn("id=\"filter-toggle\"", index_html)
+        self.assertIn("$('#filter-toggle')?.addEventListener('click'", app_js)
+        self.assertIn(".book-filters.is-open { display: grid; }", css)
+
+        self.assertIn("pushNativeNotifications", app_js)
+        self.assertIn("bridge.showNotification", app_js)
+        self.assertIn("setNotificationPreferences", activity)
+        self.assertIn("showNotification", activity)
+        self.assertIn("createNotificationChannel", activity)
+        self.assertIn("android.permission.POST_NOTIFICATIONS", manifest)
 
     def test_posts_recent_like_and_comment(self) -> None:
         marker = _marker("post")

@@ -90,6 +90,7 @@ const state = {
   lastPostPollTs: 0,
   serverTime: 0,
   currentView: 'home',
+  viewHistory: [],
   tab: 'discover',
   filter: 'all',
   sort: 'recent',
@@ -240,14 +241,6 @@ function applyTheme(mode) {
   if (icon && favicon) icon.href = favicon;
   const metaTheme = $('meta[name="theme-color"]');
   if (metaTheme) metaTheme.content = theme === 'gece' ? '#121714' : '#1F4E3D';
-  const label = $('#theme-cycle-label');
-  if (label) {
-    const selectedTheme = THEMES.find((item) => item.key === selected);
-    const key = selected === 'auto' ? 'Sistem' : selectedTheme.label;
-    label.textContent = t(key);
-    label.setAttribute('data-i18n', key);
-    $('#theme-cycle-btn')?.setAttribute('title', t('Temayı değiştir'));
-  }
   $$('[data-theme-choice]').forEach((btn) => {
     const active = btn.dataset.themeChoice === selected;
     btn.classList.toggle('is-active', active);
@@ -297,6 +290,7 @@ function applySettings() {
   document.body.classList.toggle('text-large', s.textSize === 'large');
   applyTheme(s.theme);
   applyLanguage(s.language);
+  syncPhoneNotificationPrefs();
   $$('[data-setting]').forEach((el) => {
     const key = el.dataset.setting;
     if (!(key in s)) return;
@@ -359,6 +353,7 @@ async function api(path, options = {}) {
 
 let postPollTimer = null;
 let postPollBusy = false;
+let phoneNotifiedIds = null;
 
 function latestPostTimestamp() {
   return (state.data?.posts || []).reduce(
@@ -432,6 +427,7 @@ async function pollNewPosts() {
       }
     }
     if (notesChanged) renderNotifications();
+    if (notesChanged || changed) pushNativeNotifications();
     renderDiscoverSections();
   } catch { /* arka planda sessizce tekrar dene */ }
   finally { postPollBusy = false; }
@@ -455,6 +451,7 @@ async function refresh() {
   if (deleteCard) deleteCard.hidden = Boolean(state.user?.is_admin);
   loadedBooks.forEach(rememberBook);
   renderAll();
+  pushNativeNotifications(true);
 }
 
 /* ---------------- Yardımcılar ---------------- */
@@ -1090,9 +1087,6 @@ function renderIdentity() {
   sideAvatar.className = `avatar avatar--${esc(user.avatar)}`;
   $('#side-name').textContent = user.display_name;
   $('#side-handle').textContent = '@' + user.username;
-  const topAvatar = $('#top-avatar');
-  topAvatar.innerHTML = avatarInner;
-  topAvatar.className = `avatar avatar--small avatar--${esc(user.avatar)}`;
 
   const locale = state.settings?.language === 'en' ? 'en-US' : 'tr-TR';
   $('#greeting-date').textContent = new Date()
@@ -1627,7 +1621,7 @@ function groupIcon(g) {
 function groupCardHTML(g) {
   const isHalka = g.kind === 'halka';
   const kindLabel = isHalka
-    ? `◈ ${t('Halka')} · ${g.member_count}${t(' üye')} · ${t('paylaşım akışı')}`
+    ? `◈ ${t('Halka')} · ${g.member_count}${t(' üye')}`
     : `❖ ${t('Özel meclis')} · ${g.member_count}/50${t(' üye')}`;
   const openAttr = isHalka ? 'data-open-circle' : 'data-open-group';
   return `
@@ -1649,7 +1643,7 @@ function discoverCardHTML(g) {
       <span class="group-avatar group-avatar--${esc(g.avatar_color)}">${groupIcon(g)}</span>
       <h3>${esc(g.name)}</h3>
       <p>${esc(g.description || t('Herkese açık ilim halkası'))}</p>
-      <div class="group-meta"><span>◈ ${g.member_count}${t(' üye')}</span><span>${t('paylaşım akışı')}</span></div>
+      <div class="group-meta"><span>◈ ${g.member_count}${t(' üye')}</span></div>
       <div class="group-card-actions">
         ${g.is_member ? '' : `<button class="btn btn-gold btn-sm" type="button" data-join-halka="${g.id}">${t('Bu halkaya katıl')}</button>`}
         <button class="btn btn-outline btn-sm" type="button" data-open-circle="${g.id}">${t('Akışı aç →')}</button>
@@ -1695,7 +1689,7 @@ function renderPostcards() {
       <p>${esc(p.text)}</p>
       <small>— ${esc(p.book)}, ${esc(p.writer)}</small>
       ${ownActionsHTML('post', p.id)}
-    </div>`).join('') : '';
+    </div>`).join('') : `<p class="shelf-empty">${t('Henüz alıntı paylaşmadın.')}</p>`;
 }
 
 function renderCircleFeed() {
@@ -1706,6 +1700,13 @@ function renderCircleFeed() {
   const shareBtn = $('#circle-feed-share');
   if (title) title.textContent = group?.name || t('Halka akışı');
   if (desc) desc.textContent = group?.description || t('Bu halkanın alıntıları ve incelemeleri.');
+  const backLabel = $('#circle-feed-back span');
+  if (backLabel) {
+    const from = state.viewHistory[state.viewHistory.length - 1];
+    const key = from === 'home' ? '← Ana sayfaya dön' : from ? '← Halkalara dön' : '← Geri dön';
+    backLabel.textContent = t(key);
+    backLabel.setAttribute('data-i18n', key);
+  }
   if (shareBtn) {
     shareBtn.hidden = !group?.is_member;
     shareBtn.dataset.openShareCircle = group?.id || '';
@@ -1841,22 +1842,7 @@ function renderHomeCircles() {
     </button>`).join('');
 }
 
-function renderAnnouncements() {
-  const list = state.data.announcements || [];
-  $('#home-announcements').innerHTML = list.length
-    ? list.slice(0, 3).map((a) => `
-        <article class="announcement-card" data-kind="${esc(a.kind)}">
-          <div class="announcement-head">
-            <span class="announcement-kind">${esc(t(announcementKinds[a.kind] || 'Duyuru'))}</span>
-            <strong>${esc(a.title)}</strong>
-            <small class="curriculum-meta">${esc(timeAgo(a.created_at))}</small>
-          </div>
-          <p>${esc(a.body)}</p>
-        </article>`).join('')
-    : `<p class="announcement-empty">${t('Henüz bir duyuru yok.')}</p>`;
-}
-
-/* ---------------- Bildirim merkezi ---------------- */
+/* ---------------- Bildirimler ---------------- */
 
 function notificationsSeenKey() {
   return `ilimhalkasi.notifications.${state.user?.id || 'guest'}`;
@@ -1882,9 +1868,47 @@ const NOTIFICATION_PREFS = {
   support: 'notifySupport'
 };
 
-function notificationAllowed(kind) {
+// Tercihler yalnızca telefon bildirimini açıp kapatır; uygulama içi bildirim
+// merkezi her olayı göstermeye devam eder.
+function phoneNotificationAllowed(kind) {
   const key = NOTIFICATION_PREFS[kind];
   return !key || state.settings?.[key] !== false;
+}
+
+function syncPhoneNotificationPrefs() {
+  const bridge = window.IlimNative;
+  if (!bridge || typeof bridge.setNotificationPreferences !== 'function') return;
+  const prefs = {};
+  Object.entries(NOTIFICATION_PREFS).forEach(([kind, key]) => {
+    prefs[kind] = phoneNotificationAllowed(kind);
+  });
+  bridge.setNotificationPreferences(JSON.stringify(prefs));
+}
+
+// Uygulama içi bildirimler her olayı gösterir; tercihler yalnızca telefonu etkiler.
+// Yeni görünen olayları yerel Android bildirimi olarak da ilet.
+function pushNativeNotifications(baselineOnly = false) {
+  const bridge = window.IlimNative;
+  if (!bridge || typeof bridge.showNotification !== 'function') return;
+  const items = collectNotifications();
+  const ids = new Set(items.map((item) => String(item.id)));
+  if (phoneNotifiedIds === null || baselineOnly) {
+    phoneNotifiedIds = ids;
+    return;
+  }
+  items.forEach((item) => {
+    const id = String(item.id);
+    if (phoneNotifiedIds.has(id)) return;
+    phoneNotifiedIds.add(id);
+    if (!phoneNotificationAllowed(item.kind)) return;
+    bridge.showNotification(
+      String(item.kind || 'announcement'),
+      String(item.title || t('Yeni bildirim')),
+      String(item.body || ''),
+      id
+    );
+  });
+  phoneNotifiedIds = ids;
 }
 
 function collectNotifications() {
@@ -1903,7 +1927,7 @@ function collectNotifications() {
       ts: Number(a.created_at) || 0,
       kind: 'announcement',
       view: 'home',
-      target: 'home-announcements'
+      target: ''
     });
   });
 
@@ -1983,7 +2007,6 @@ function collectNotifications() {
   });
 
   return items
-    .filter((n) => notificationAllowed(n.kind))
     .sort((a, b) => b.ts - a.ts)
     .slice(0, 30);
 }
@@ -2556,7 +2579,7 @@ function renderLibraryPanel() {
     const quotes = myPosts().filter((p) => p.type === 'quote');
     panel.innerHTML = quotes.length ? `<div class="postcard-grid">${quotes.map((p) => `
       <div class="mini-postcard"><span class="quote-mark">“</span><p>${esc(p.text)}</p><small>— ${esc(p.book)}, ${esc(p.writer)}</small>${ownActionsHTML('post', p.id)}</div>`).join('')}</div>`
-      : `<div class="shelf-empty">${t('Henüz defterinize bir alıntı düşmemişsiniz.')}</div>`;
+      : `<div class="shelf-empty">${t('Henüz alıntı paylaşmadın.')}</div>`;
   } else {
     const reviews = myPosts().filter((p) => p.type === 'review');
     const debates = [];
@@ -2600,7 +2623,6 @@ function renderAll() {
   renderLibrary();
   renderHomeBooks();
   renderHomeCircles();
-  renderAnnouncements();
   renderCircles();
   renderPostcards();
   renderCircleFeed();
@@ -2798,7 +2820,7 @@ async function openCatalogAuthor(name) {
     host.innerHTML = `
       <div class="author-hero">
         <span class="avatar avatar--olive">${esc(name.charAt(0).toLocaleUpperCase('tr-TR'))}</span>
-        <div><p class="eyebrow">${t('KÜTÜPHANE YAZARI')}</p><h2>${esc(name)}</h2>
+        <div><h2>${esc(name)}</h2>
           <p>${total} ${t('eser')} · ${t('kütüphanede kayıtlı')}</p></div>
       </div>
       <section class="author-about">
@@ -2830,10 +2852,14 @@ function toggleDiscoverGroup(force) {
   button.setAttribute('data-i18n-title', key);
 }
 
-function switchView(name) {
+function switchView(name, skipHistory = false) {
   if (name === 'admin' && !(state.user && state.user.is_admin)) {
     toast(t('Yönetim paneli yalnızca yöneticiye açık'));
     return;
+  }
+  if (!skipHistory && name !== state.currentView && state.currentView) {
+    state.viewHistory.push(state.currentView);
+    if (state.viewHistory.length > 20) state.viewHistory.shift();
   }
   state.currentView = name;
   const navKey = name === 'circle-feed' ? 'circles' : name;
@@ -2874,7 +2900,21 @@ function switchView(name) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Android WebView geri tuşu için: açık panel/modalı kapatır, değilse ana sayfaya döner.
+// Halka akışı dahil tüm alt sayfalardan bir önceki görünüme döner.
+function goBackView() {
+  const previous = state.viewHistory.pop();
+  if (previous && previous !== state.currentView) {
+    switchView(previous, true);
+    return true;
+  }
+  if (state.currentView && state.currentView !== 'home') {
+    switchView('home', true);
+    return true;
+  }
+  return false;
+}
+
+// Android WebView geri tuşu için: açık panel/modalı kapatır, değilse bir önceki sayfaya döner.
 // true döndürürse uygulama olayı yuttu demektir, false ise Activity çıkışı yönetir.
 function appBack() {
   const panel = $('#notifications-panel');
@@ -2884,13 +2924,10 @@ function appBack() {
   const sidebar = document.querySelector('.sidebar.is-open');
   if (sidebar) { sidebar.classList.remove('is-open'); return true; }
   if (state.currentView === 'search') { closeMobileSearch(); return true; }
-  if (state.currentView && state.currentView !== 'home') {
-    switchView('home');
-    return true;
-  }
-  return false;
+  return goBackView();
 }
 window.appBack = appBack;
+window.goBackView = goBackView;
 
 function selectCommunityTab(name) {
   state.communityTab = name;
@@ -3140,6 +3177,9 @@ async function logout() {
   state.activeGroupId = null;
   state.activeCircleId = null;
   state.shareGroupId = null;
+  phoneNotifiedIds = null;
+  state.viewHistory = [];
+  state.currentView = 'home';
   showAuth(true);
   authTab('login');
 }
@@ -3803,6 +3843,18 @@ $('#book-overview').addEventListener('submit', (e) => {
     });
   }
 });
+
+/* Kitap filtreleri mobilde düğmeyle açılır; seçili durum aynı yerde görünür. */
+$('#filter-toggle')?.addEventListener('click', () => {
+  const filters = $('#book-filters');
+  const button = $('#filter-toggle');
+  if (!filters || !button) return;
+  const open = filters.classList.toggle('is-open');
+  button.setAttribute('aria-expanded', String(open));
+  if (open) filters.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+});
+
+$('#circle-feed-back')?.addEventListener('click', () => goBackView());
 
 /* Kitap arama ve rafa ekleme */
 $('#book-add-btn').addEventListener('click', () => {
@@ -4669,14 +4721,12 @@ async function openFollowList(userId, mode) {
   if (!id || (mode !== 'followers' && mode !== 'following')) return;
   const modal = $('#follow-list-modal');
   const title = $('#follow-list-title');
-  const eyebrow = $('#follow-list-eyebrow');
   const sub = $('#follow-list-sub');
   const body = $('#follow-list-body');
   const ownButton = $('#follow-list-own');
   if (!modal || !title || !body) return;
   const isFollowers = mode === 'followers';
   state.followListMode = mode;
-  eyebrow.textContent = id === Number(state.user?.id) ? t('PROFİLİM') : t('PROFİL');
   title.textContent = isFollowers ? t('Takipçiler') : t('Takip edilenler');
   if (sub) sub.textContent = '';
   body.innerHTML = `<p class="rail-muted">${t('Yükleniyor…')}</p>`;
@@ -4864,7 +4914,7 @@ $$('[data-setting]').forEach((el) => el.addEventListener('change', () => {
     };
   }
   saveSettings();
-  if (key.startsWith('notify')) renderNotifications();
+  if (key.startsWith('notify')) syncPhoneNotificationPrefs();
   if (key === 'language' && state.data) renderAll();
   if (key === 'yearlyGoal' && state.data) { renderIdentity(); renderStatsView(); }
 }));
@@ -4927,8 +4977,6 @@ $$('[data-theme-choice]').forEach((btn) => btn.addEventListener('click', () => {
   state.settings.theme = btn.dataset.themeChoice;
   saveSettings(`${t(THEMES.find((t) => t.key === state.settings.theme).label)}${t(' iklimine geçildi')}`);
 }));
-$('#theme-cycle-btn')?.addEventListener('click', cycleTheme);
-
 /* Alt menü */
 $('#footer-logout-btn')?.addEventListener('click', logout);
 $('#footer-new-circle-btn')?.addEventListener('click', () => { switchView('circles'); openHalkaModal(); });

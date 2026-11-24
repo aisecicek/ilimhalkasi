@@ -11,4 +11,6 @@
     <string name="server_address">Sunucu adresi</string>
     <string name="save_and_retry">Kaydet ve yeniden dene</string>
     <string name="retry">Tekrar dene</string>
+    <string name="notification_channel_name">İlim Halkası bildirimleri</string>
+    <string name="notification_channel_description">Halka paylaşımları, mesajlar ve diğer bildirimler</string>
 </resources>
