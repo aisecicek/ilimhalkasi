@@ -2576,7 +2576,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
 .public-actions { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
 .public-actions .btn:disabled { opacity: .5; cursor: not-allowed; }
 .more-wrap { position: relative; }
-.more-btn { width: 34px; height: 34px; font-size: 20px; line-height: 1; }
+.more-btn { min-width: 34px; font-size: 13px; line-height: 1.3; }
 .more-menu {
   position: absolute;
   top: calc(100% + 7px);
@@ -3368,6 +3368,24 @@ body::before {
   .profile-hero h1 { font-size: var(--title-size); }
   .profile-hero .title-badge { padding: 5px 9px; font-size: 10px; }
   .profile-hero .follow-counts { gap: 10px; margin-top: 8px; }
+  .profile-hero--public {
+    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-areas:
+      "avatar identity"
+      "actions actions";
+    gap: 12px;
+    align-items: center;
+  }
+  .profile-hero--public > .avatar-frame { grid-area: avatar; justify-self: center; }
+  .profile-hero--public > .profile-identity { grid-area: identity; }
+  .profile-hero--public > .public-actions { grid-area: actions; justify-self: stretch; }
+  .public-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 8px;
+    width: 100%;
+  }
+  .public-actions > .btn { width: 100%; }
   .topbar .mobile-only.icon-btn { width: 32px; height: 32px; }
   #search-open-btn {
     width: 34px;

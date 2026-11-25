@@ -2608,6 +2608,33 @@ def public_user_state(conn: sqlite3.Connection, viewer_id: int, row: sqlite3.Row
     return data
 
 
+def recent_public_books(conn: sqlite3.Connection, uid: int, limit: int = 4) -> list[dict]:
+    """Başka profilde gösterilecek son etkileşimli kitapları (en fazla 4) döndürür."""
+    post_activity: dict[str, float] = {}
+    for post in conn.execute(
+        "SELECT book, MAX(created_at) AS last_at FROM posts WHERE user_id=? GROUP BY book", (uid,)
+    ):
+        post_activity[str(post["book"])] = float(post["last_at"] or 0)
+
+    rows = conn.execute(
+        "SELECT s.book_id,s.status,s.rating,s.progress,s.page,s.page_count,s.volume,"
+        "s.created_at,s.finished_at,b.volume_count,b.title,b.author,b.cover,b.category,b.genre "
+        "FROM shelf_books s JOIN books b ON b.id=s.book_id WHERE s.user_id=? AND b.hidden=0 "
+        "AND s.status IN ('reading','finished','wishlist')", (uid,)
+    ).fetchall()
+    items = []
+    for shelf_row in rows:
+        item = dict(shelf_row)
+        item["activity_at"] = max(
+            float(shelf_row["created_at"] or 0),
+            float(shelf_row["finished_at"] or 0),
+            post_activity.get(str(shelf_row["title"]), 0),
+        )
+        items.append(item)
+    items.sort(key=lambda item: (-item["activity_at"], -int(item["book_id"])))
+    return items[:limit]
+
+
 def serialize_public_profile(conn: sqlite3.Connection, viewer_id: int, row: sqlite3.Row) -> dict:
     data = public_user_state(conn, viewer_id, row)
     created = row["created_at"] if "created_at" in row.keys() else 0
@@ -2620,12 +2647,12 @@ def serialize_public_profile(conn: sqlite3.Connection, viewer_id: int, row: sqli
             "SELECT COUNT(*) FROM follows WHERE follower_id=?", (row["id"],)
         ).fetchone()[0],
     }
-    data["shelf"] = [dict(s) for s in conn.execute(
-        "SELECT s.status,s.rating,s.progress,s.page,s.page_count,s.volume,b.volume_count,"
-        "b.id AS book_id,b.title,b.author,b.cover,b.category,b.genre "
-        "FROM shelf_books s JOIN books b ON b.id=s.book_id WHERE s.user_id=? AND b.hidden=0 "
-        "ORDER BY s.created_at DESC", (row["id"],)
-    )]
+    finished = conn.execute(
+        "SELECT COUNT(*) FROM shelf_books WHERE user_id=? AND status='finished'", (row["id"],)
+    ).fetchone()[0]
+    data["stats"]["finished_books"] = finished
+    # Başka profilde kütüphane kalabalık olmasın: yalnızca son etkileşilen 4 kitap.
+    data["shelf"] = recent_public_books(conn, row["id"])
     data["posts"] = [serialize_post(conn, p, viewer_id) for p in conn.execute(
         "SELECT * FROM posts WHERE user_id=? ORDER BY created_at DESC, id DESC", (row["id"],)
     )]

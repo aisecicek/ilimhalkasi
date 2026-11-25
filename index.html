@@ -379,11 +379,11 @@
               <p class="profile-bio" id="public-bio" hidden></p>
               <div class="follow-counts" id="public-follow-counts"></div>
             </div>
-            <div class="public-actions">
-              <button class="btn btn-outline btn-sm" type="button" id="public-message-btn"><i data-lucide="message-circle"></i> Mesaj At</button>
-              <button class="btn btn-gold btn-sm" type="button" id="public-follow-btn">Takip Et</button>
+            <div class="public-actions" role="group" aria-label="Profil işlemleri">
+              <button class="btn btn-gold btn-compact" type="button" id="public-follow-btn">Takip Et</button>
+              <button class="btn btn-outline btn-compact" type="button" id="public-message-btn"><i data-lucide="message-circle"></i> Mesaj At</button>
               <div class="more-wrap">
-                <button class="icon-btn more-btn" type="button" id="public-more-btn" aria-label="Daha fazla işlem" aria-expanded="false">⋯</button>
+                <button class="btn btn-ghost btn-compact more-btn" type="button" id="public-more-btn" aria-label="Daha fazla işlem" aria-expanded="false">Diğer</button>
                 <div class="more-menu" id="public-more-menu" hidden>
                   <button type="button" id="public-block-btn">Engelle</button>
                   <button type="button" id="public-report-btn">Bildir</button>
@@ -393,7 +393,7 @@
           </div>
 
           <div class="page-head page-head--small">
-            <div><h2>Kitaplığı</h2></div>
+            <div><h2>Son kitapları</h2></div>
           </div>
           <div class="shelf-grid" id="public-shelf"></div>
 

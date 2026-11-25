@@ -5160,7 +5160,7 @@ function renderPublicProfile() {
   avatar.innerHTML = user.avatar_image ? `<img src="${esc(user.avatar_image)}" alt="" />` : initial(user.display_name);
   avatar.className = `avatar avatar--xl avatar--${esc(user.avatar || 'olive')}`;
   $('#public-profile-title').textContent = user.display_name;
-  const pubFinished = (user.shelf || []).filter((s) => s.status === 'finished').length;
+  const pubFinished = Number(user.stats?.finished_books || 0);
   const pubPosts = (user.posts || []).filter((p) => p.author?.id === user.id).length;
   const pubLevel = pubFinished >= 6 && pubPosts >= 3 ? 3 : pubFinished >= 4 || pubPosts >= 3 ? 2 : pubPosts >= 1 ? 1 : 0;
   $('#public-title-badge').innerHTML = `${levelIconHTML(levels[pubLevel].icon)} ${esc(t(levels[pubLevel].name))}`;
@@ -5176,7 +5176,7 @@ function renderPublicProfile() {
 
   const followBtn = $('#public-follow-btn');
   followBtn.textContent = user.following ? t('✓ Takip ediliyor') : t('Takip Et');
-  followBtn.className = `btn btn-sm ${user.following ? 'btn-outline' : 'btn-gold'}`;
+  followBtn.className = `btn btn-compact ${user.following ? 'btn-outline' : 'btn-gold'}`;
   const canMessage = !user.blocked && Boolean(user.mutual);
   $('#public-message-btn').disabled = !canMessage;
   $('#public-message-btn').title = user.blocked ? t('Bu kullanıcı engelli')

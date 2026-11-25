@@ -528,6 +528,7 @@ window.ILIM_I18N = {
     'Yanlış bilgi': 'Misinformation',
     'Taciz': 'Harassment',
     'Diğer': 'Other',
+    'Son kitapları': 'Recent books',
     'Açıklama': 'Description',
     'Olayı kısaca anlat...': 'Briefly describe what happened...',
     'Şikayeti ilet': 'Submit report',
