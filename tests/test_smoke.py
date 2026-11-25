@@ -43,6 +43,19 @@ SOURCE_FILES = (
     "styles.css",
     "favicon.svg",
     "logo.svg",
+    "fonts/amiri-400-arabic.woff2",
+    "fonts/amiri-400-latin-ext.woff2",
+    "fonts/amiri-400-latin.woff2",
+    "fonts/amiri-700-arabic.woff2",
+    "fonts/amiri-700-latin-ext.woff2",
+    "fonts/amiri-700-latin.woff2",
+    "fonts/el-messiri-arabic.woff2",
+    "fonts/el-messiri-latin-ext.woff2",
+    "fonts/el-messiri-latin.woff2",
+    "fonts/lora-latin-ext.woff2",
+    "fonts/lora-latin.woff2",
+    "fonts/plus-jakarta-sans-latin-ext.woff2",
+    "fonts/plus-jakarta-sans-latin.woff2",
 )
 DB_FILENAME = "ilimhalkasi.db"
 
@@ -126,7 +139,9 @@ class SmokeAPITests(unittest.TestCase):
                 source = PROJECT_ROOT / filename
                 if not source.is_file():
                     raise RuntimeError("Missing source file required by smoke tests: " + filename)
-                shutil.copy2(source, cls.tmp_dir / filename)
+                target = cls.tmp_dir / filename
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
             shutil.copy2(PROJECT_ROOT / DB_FILENAME, cls.tmp_dir / DB_FILENAME)
 
             cls.port = _free_port()
@@ -1030,6 +1045,74 @@ class SmokeAPITests(unittest.TestCase):
                     / "com" / "ilimhalkasi" / "app" / "MainActivity.java").read_text(encoding="utf-8")
         self.assertIn("settings.setCacheMode(WebSettings.LOAD_NO_CACHE);", activity)
         self.assertIn("webView.clearCache(true);", activity)
+
+    def test_local_typography_is_self_hosted_and_readable(self) -> None:
+        index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+        css = (PROJECT_ROOT / "styles.css").read_text(encoding="utf-8")
+        server_py = (PROJECT_ROOT / "server.py").read_text(encoding="utf-8")
+        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+
+        # Harici font isteği yok; tüm yazı tipleri yerel WOFF2 dosyalarından gelir.
+        self.assertNotIn("fonts.googleapis.com", index_html)
+        self.assertNotIn("fonts.gstatic.com", index_html)
+        self.assertNotIn("family=El+Messiri", index_html)
+        self.assertNotIn("Newsreader", css)
+        self.assertNotIn("Playfair Display", css)
+        self.assertNotIn("Inter", css)
+
+        for marker in (
+            '@font-face {',
+            'font-family: "El Messiri";',
+            'font-weight: 600 700;',
+            'src: url("fonts/el-messiri-latin-ext.woff2") format("woff2");',
+            'unicode-range: U+0100-02BA',  # İ, ğ, ş için latin-ext
+            'src: url("fonts/el-messiri-latin.woff2") format("woff2");',
+            'unicode-range: U+0000-00FF, U+0131',  # ç, ı, ö, ü için latin
+            'font-family: "Lora";',
+            'src: url("fonts/lora-latin-ext.woff2") format("woff2");',
+            'font-family: "Amiri";',
+            'src: url("fonts/amiri-400-arabic.woff2") format("woff2");',
+            'font-family: "Plus Jakarta Sans";',
+            'font-display: swap;',
+        ):
+            self.assertIn(marker, css, "missing local font marker: " + marker)
+
+        for marker in (
+            '--brand-font: "El Messiri", "Cormorant Garamond", Georgia, serif;',
+            '--serif: "Lora", Georgia, "Times New Roman", serif;',
+            '--display: "Lora", Georgia, serif;',
+            '--sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;',
+            '--arabic: "Amiri", "Traditional Arabic", "Noto Naskh Arabic", serif;',
+            '--brand-size: clamp(19px, 5vw, 23px);',
+            '--title-size: clamp(22px, 5.4vw, 30px);',
+            '--heading-size: clamp(16px, 4.2vw, 18px);',
+            '--reading-size: clamp(16px, 4.2vw, 18px);',
+            '--reading-line: 1.75;',
+            '[data-theme="gece"] .top-brand { font-weight: 600; letter-spacing: .8px; }',
+        ):
+            self.assertIn(marker, css, "missing typography token: " + marker)
+
+        self.assertGreaterEqual(css.count("--brand-ink: var(--accent-primary);"), 4)
+        self.assertIn("h2, h3 { font-size: var(--heading-size); line-height: 1.35; }", css)
+        self.assertIn("font-size: var(--reading-size);\n  line-height: var(--reading-line);", css)
+
+        for font_name in (
+            "amiri-400-arabic.woff2", "amiri-400-latin-ext.woff2", "amiri-400-latin.woff2",
+            "amiri-700-arabic.woff2", "amiri-700-latin-ext.woff2", "amiri-700-latin.woff2",
+            "el-messiri-arabic.woff2", "el-messiri-latin-ext.woff2", "el-messiri-latin.woff2",
+            "lora-latin-ext.woff2", "lora-latin.woff2",
+            "plus-jakarta-sans-latin-ext.woff2", "plus-jakarta-sans-latin.woff2",
+        ):
+            font_path = PROJECT_ROOT / "fonts" / font_name
+            self.assertTrue(font_path.is_file(), "missing font file: " + font_name)
+            self.assertGreater(font_path.stat().st_size, 1000, "empty font file: " + font_name)
+            self.assertIn(
+                '"/fonts/{}": ("fonts/{}", "font/woff2"),'.format(font_name, font_name),
+                server_py,
+                "server does not serve font: " + font_name,
+            )
+
+        self.assertIn("yerel WOFF2", readme)
 
 
 if __name__ == "__main__":

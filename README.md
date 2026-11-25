@@ -66,7 +66,7 @@ Sağ sütundaki özet kartları (okumaya devam, yıllık hedef, haftalık okuma,
 
 ## Tasarım
 
-Tema `data-theme` ile değişir: **Medine** (çini yeşili / mat bakır), **Kudüs** (çini mavisi / altın), **Mekke** (mürekkep siyahı / altın). Seçim tarayıcıda saklanır. Başlıklar ve kitap adları Newsreader, arayüz Plus Jakarta Sans, ikonlar Lucide’dır. Karşılama kartında Cormorant Garamond kullanılır; besmele Arapça harflerle gösterilir. Amblem ve filigran tema ile birlikte değişir.
+Tema `data-theme` ile değişir: **Medine** (çini yeşili / mat bakır), **Kudüs** (çini mavisi / altın), **Mekke** (mürekkep siyahı / altın). Sistem seçimi telefonun görünümünü izler. Seçim tarayıcıda saklanır. Yazı tipleri `fonts/` klasöründeki yerel WOFF2 dosyalarından yüklenir: marka El Messiri, Türkçe okuma ve başlıklar Lora, Arapça besmele/ayet/hadis Amiri, arayüz Plus Jakarta Sans. Latin ve latin-ext altkümeleri `ç, ğ, ı, İ, ö, ş, ü` dahil tüm Türkçe harfleri kapsar. Başlıklar 22–30 px, bölüm başlıkları 16–18 px, okuma metni 16–18 px / 1.75 satır aralığıdır; alt menü etiketleri 10 px kalır. İkonlar Lucide’dır. Amblem ve filigran tema ile birlikte değişir.
 
 Duyarlı yerleşim: 1240 px altında sağ sütun gizlenir, 900 px altında sol menü ikonlara iner, 640 px altında menü çekmece olur. 320 px’e kadar yatay taşma yoktur.
 

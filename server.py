@@ -64,6 +64,19 @@ STATIC_FILES = {
     "/favicon.svg": ("favicon.svg", "image/svg+xml"),
     "/logo.svg": ("logo.svg", "image/svg+xml"),
     "/manifest.webmanifest": ("manifest.webmanifest", "application/manifest+json"),
+    "/fonts/amiri-400-arabic.woff2": ("fonts/amiri-400-arabic.woff2", "font/woff2"),
+    "/fonts/amiri-400-latin-ext.woff2": ("fonts/amiri-400-latin-ext.woff2", "font/woff2"),
+    "/fonts/amiri-400-latin.woff2": ("fonts/amiri-400-latin.woff2", "font/woff2"),
+    "/fonts/amiri-700-arabic.woff2": ("fonts/amiri-700-arabic.woff2", "font/woff2"),
+    "/fonts/amiri-700-latin-ext.woff2": ("fonts/amiri-700-latin-ext.woff2", "font/woff2"),
+    "/fonts/amiri-700-latin.woff2": ("fonts/amiri-700-latin.woff2", "font/woff2"),
+    "/fonts/el-messiri-arabic.woff2": ("fonts/el-messiri-arabic.woff2", "font/woff2"),
+    "/fonts/el-messiri-latin-ext.woff2": ("fonts/el-messiri-latin-ext.woff2", "font/woff2"),
+    "/fonts/el-messiri-latin.woff2": ("fonts/el-messiri-latin.woff2", "font/woff2"),
+    "/fonts/lora-latin-ext.woff2": ("fonts/lora-latin-ext.woff2", "font/woff2"),
+    "/fonts/lora-latin.woff2": ("fonts/lora-latin.woff2", "font/woff2"),
+    "/fonts/plus-jakarta-sans-latin-ext.woff2": ("fonts/plus-jakarta-sans-latin-ext.woff2", "font/woff2"),
+    "/fonts/plus-jakarta-sans-latin.woff2": ("fonts/plus-jakarta-sans-latin.woff2", "font/woff2"),
 }
 
 # ---------------------------------------------------------------------------

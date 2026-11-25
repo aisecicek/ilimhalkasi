@@ -1,8 +1,115 @@
 /* ==========================================================
    İLİM HALKASI — Tasarım Sistemi
    Sıcak kağıt · mürekkep · çini yeşili · mat bakır
-   Cormorant Garamond (marka) + Newsreader (editoryel) + Plus Jakarta Sans (arayüz)
+   El Messiri (marka) + Lora (Türkçe okuma) + Amiri (Arapça) + Plus Jakarta Sans (arayüz)
+   Fontlar yerel WOFF2 dosyalarından yüklenir; ağ bağımlılığı yoktur.
    ========================================================== */
+
+/* Yerel fontlar: Türkçe için latin-ext (İ, ğ, ş vb.) ve latin (ç, ı, ö, ü) altkümeleri. */
+@font-face {
+  font-family: "Amiri";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/amiri-400-arabic.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+}
+@font-face {
+  font-family: "Amiri";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/amiri-400-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Amiri";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/amiri-400-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Amiri";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("fonts/amiri-700-arabic.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+}
+@font-face {
+  font-family: "Amiri";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("fonts/amiri-700-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Amiri";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("fonts/amiri-700-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "El Messiri";
+  font-style: normal;
+  font-weight: 600 700;
+  font-display: swap;
+  src: url("fonts/el-messiri-arabic.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+}
+@font-face {
+  font-family: "El Messiri";
+  font-style: normal;
+  font-weight: 600 700;
+  font-display: swap;
+  src: url("fonts/el-messiri-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "El Messiri";
+  font-style: normal;
+  font-weight: 600 700;
+  font-display: swap;
+  src: url("fonts/el-messiri-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Lora";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("fonts/lora-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Lora";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("fonts/lora-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("fonts/plus-jakarta-sans-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("fonts/plus-jakarta-sans-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 :root {
   /* Rafine okuma platformu — sıcak kağıt, mürekkep, çini yeşili */
   --bg-main: #FAF9F6;
@@ -37,9 +144,17 @@
   --shadow-sm: var(--shadow-card);
   --shadow: var(--shadow-raised);
   --radius: 10px;
-  --serif: "Newsreader", Georgia, "Times New Roman", serif;
-  --display: "Newsreader", Georgia, serif;
+  /* Üç katmanlı tipografi: marka, Türkçe okuma ve arayüz. */
+  --brand-font: "El Messiri", "Cormorant Garamond", Georgia, serif;
+  --serif: "Lora", Georgia, "Times New Roman", serif;
+  --display: "Lora", Georgia, serif;
   --sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --arabic: "Amiri", "Traditional Arabic", "Noto Naskh Arabic", serif;
+  --brand-size: clamp(19px, 5vw, 23px);
+  --title-size: clamp(22px, 5.4vw, 30px);
+  --heading-size: clamp(16px, 4.2vw, 18px);
+  --reading-size: clamp(16px, 4.2vw, 18px);
+  --reading-line: 1.75;
 }
 
 * { box-sizing: border-box; }
@@ -103,7 +218,7 @@ a { color: inherit; text-decoration: none; }
 .brand { display: flex; align-items: center; gap: 11px; padding: 0 6px 28px; }
 .brand-mark { width: 42px; height: 42px; flex: none; display: block; }
 .brand-text { display: flex; flex-direction: column; line-height: 1; min-width: 0; }
-.brand-text .brand-name { display: block; color: var(--brand-sidebar-ink); font-family: var(--brand-font); font-size: 20px; font-weight: 700; letter-spacing: .02em; line-height: .98; white-space: nowrap; overflow: visible; text-overflow: clip; }
+.brand-text .brand-name { display: block; color: var(--brand-sidebar-ink); font-family: var(--brand-font); font-size: var(--brand-size); font-weight: 700; letter-spacing: .02em; line-height: .98; white-space: nowrap; overflow: visible; text-overflow: clip; }
 .brand-text .brand-name span { display: block; }
 .brand-text .brand-name span + span { font-weight: 500; }
 .brand-text .brand-name::after { content: ""; display: block; width: 50%; height: 1px; margin: 6px 0 0; background: var(--brand-sidebar-accent); opacity: .9; }
@@ -450,8 +565,8 @@ a { color: inherit; text-decoration: none; }
   background: none;
   color: var(--brand-ink);
   font-family: var(--brand-font);
-  font-size: 18px;
-  font-weight: 500;
+  font-size: var(--brand-size);
+  font-weight: 600;
   letter-spacing: .02em;
   line-height: 1.1;
   white-space: nowrap;
@@ -533,21 +648,21 @@ a { color: inherit; text-decoration: none; }
   margin: 0;
   font-family: var(--display);
   font-weight: 600;
-  font-size: 40px;
-  line-height: 1.12;
+  font-size: var(--title-size);
+  line-height: 1.18;
   letter-spacing: -.01em;
   color: var(--olive-deep);
 }
-.greeting h1 { font-family: var(--brand-font); font-weight: 700; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.12; color: var(--greeting-title); }
-.greeting .besmele { font-family: var(--brand-font); font-size: 15px; color: var(--greeting-accent); }
+.greeting h1 { font-family: var(--brand-font); font-weight: 700; font-size: var(--title-size); line-height: 1.18; color: var(--greeting-title); }
+.greeting .besmele { font-family: var(--arabic); font-size: 16px; color: var(--greeting-accent); }
 .greeting .eyebrow { color: var(--greeting-accent); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
 .greeting-sub {
   margin: 10px 0 0;
   max-width: 460px;
   color: #4A4A45;
-  font-family: var(--brand-font);
-  font-size: clamp(12px, 1.2vw, 17px);
-  line-height: 1.5;
+  font-family: var(--serif);
+  font-size: var(--reading-size);
+  line-height: var(--reading-line);
 }
 .greeting-stats {
   position: absolute;
@@ -585,7 +700,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ---------- Akış başlığı ve kontroller ---------- */
 .feed-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 34px 0 18px; }
-.feed-head h2, .page-head h2 { margin: 0; font-family: var(--display); font-size: 28px; font-weight: 600; color: var(--olive-deep); }
+.feed-head h2, .page-head h2 { margin: 0; font-family: var(--display); font-size: var(--heading-size); font-weight: 600; color: var(--olive-deep); }
 .feed-head p, .page-head p { margin: 4px 0 0; color: var(--ink-faint); font-size: 11.5px; }
 .feed-controls { margin-bottom: 18px; }
 .tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--line); }
@@ -1020,7 +1135,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
 .book-card small { display: block; margin: 3px 0 9px; color: var(--ink-faint); font-size: 10px; }
 .circle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 24px; }
 .circle-card { padding: 18px; border: 1px solid var(--line-gold); border-radius: 12px; background: rgba(255,255,255,.82); box-shadow: var(--shadow-sm); }
-.circle-card h3 { margin: 12px 0 4px; font-family: var(--serif); font-size: 16px; color: var(--olive-deep); }
+.circle-card h3 { margin: 12px 0 4px; font-family: var(--serif); font-size: var(--heading-size); color: var(--olive-deep); }
 .circle-card p { margin: 0 0 12px; color: var(--ink-faint); font-size: 11px; }
 .circle-card .progress { margin-bottom: 6px; }
 .postcard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; margin-top: 24px; }
@@ -1073,7 +1188,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
   background: linear-gradient(150deg, #FFFFFF, #F2EFE9);
   box-shadow: 0 24px 70px rgba(28,27,24,.35);
 }
-.modal h2 { margin: 0; font-family: var(--display); font-size: 30px; color: var(--olive-deep); }
+.modal h2 { margin: 0; font-family: var(--display); font-size: var(--title-size); color: var(--olive-deep); }
 .modal-desc { margin: 6px 0 20px; color: var(--ink-soft); font-size: 11.5px; }
 .modal-close { position: absolute; top: 14px; right: 16px; border: 0; background: none; font-size: 24px; color: var(--ink-faint); line-height: 1; }
 .share-type { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 16px; }
@@ -1195,7 +1310,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
   .content { padding: 8px 14px 50px; }
   .greeting { padding: 24px 20px; }
   .greeting-copy { max-width: 100%; }
-  .greeting h1, .page-head h1, .profile-hero h1 { font-size: 31px; }
+  .greeting h1, .page-head h1, .profile-hero h1 { font-size: var(--title-size); }
   .greeting-arch { width: 190px; right: 4px; bottom: 6px; }
   .greeting-arch .welcome-watermark { opacity: .2; }
   .period-grid { grid-template-columns: 1fr; }
@@ -1206,7 +1321,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
   .control-row .sortbox { margin-left: auto; font-size: 9.5px; }
   .control-row .sortbox select { max-width: 92px; padding: 5px 4px; font-size: 10px; }
   .quote-frame { padding: 24px 18px; }
-  .quote-text { font-size: 15px; }
+  .quote-text { font-size: var(--reading-size); }
   .profile-hero { flex-wrap: wrap; }
   .profile-stats { grid-template-columns: repeat(2, 1fr); }
   .action { padding: 6px 7px; font-size: 10px; }
@@ -1234,7 +1349,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
 .curriculum-intro p { margin: 3px 0 0; font-size: 11px; color: var(--ink-soft); }
 .curriculum-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 .curriculum-card { padding: 20px; border: 1px solid var(--line-gold); border-radius: 12px; background: rgba(255,255,255,.82); box-shadow: var(--shadow-sm); }
-.curriculum-card h3 { margin: 12px 0 4px; font-family: var(--serif); font-size: 16px; color: var(--olive-deep); }
+.curriculum-card h3 { margin: 12px 0 4px; font-family: var(--serif); font-size: var(--heading-size); color: var(--olive-deep); }
 .curriculum-meta { margin: 0 0 12px; color: var(--ink-faint); font-size: 10px; }
 .rehber { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .rehber .avatar { width: 30px; height: 30px; font-size: 14px; }
@@ -1333,7 +1448,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
   font-size: 110px; color: rgba(31,78,61,.12); line-height: 1;
 }
 .assembly-featured .eyebrow { color: var(--gold-light); }
-.assembly-featured h3 { position: relative; z-index: 1; margin: 0 0 6px; font-family: var(--display); font-size: 27px; }
+.assembly-featured h3 { position: relative; z-index: 1; margin: 0 0 6px; font-family: var(--display); font-size: var(--title-size); }
 .assembly-featured p { position: relative; z-index: 1; margin: 0 0 14px; font-size: 11.5px; color: rgba(246,236,213,.75); }
 .event-meta { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .event-meta span { padding: 4px 9px; border: 1px solid rgba(31,78,61,.35); border-radius: 30px; font-size: 10px; }
@@ -1355,7 +1470,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
   background: linear-gradient(120deg, rgba(255,255,255,.9), rgba(242,239,233,.8));
 }
 .book-hero-detail .book-cover { width: 74px; height: 104px; font-size: 13px; }
-.book-hero-detail h1, .book-hero-detail h2 { margin: 0; font-family: var(--display); font-size: 31px; color: var(--olive-deep); }
+.book-hero-detail h1, .book-hero-detail h2 { margin: 0; font-family: var(--display); font-size: var(--title-size); color: var(--olive-deep); }
 .book-hero-detail p { margin: 4px 0 10px; color: var(--ink-faint); font-size: 11px; }
 .detail-tabs { display: flex; gap: 24px; margin: 26px 0 18px; border-bottom: 1px solid var(--line); }
 .detail-tab { position: relative; border: 0; background: none; padding: 0 2px 12px; color: var(--ink-faint); font-size: 12px; font-weight: 700; }
@@ -1439,7 +1554,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
 .settings-card--danger { border-color: rgba(166,110,56,.45); background: rgba(255,250,245,.85); }
 .settings-card--danger h3 { color: var(--copper); }
 .settings-card--danger .btn { display: block; margin-left: auto; }
-.settings-card h3 { margin: 0; font-family: var(--serif); font-size: 16px; }
+.settings-card h3 { margin: 0; font-family: var(--serif); font-size: var(--heading-size); }
 .settings-card p { margin: 4px 0 14px; color: var(--ink-faint); font-size: 11px; }
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 11.5px; cursor: pointer; }
 .switch-row input { accent-color: var(--olive); width: 16px; height: 16px; }
@@ -1592,8 +1707,8 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
 .public-cover-link { flex: none; }
 .public-book-link { font-family: var(--serif); font-size: 13px; font-weight: 700; color: var(--olive-deep); }
 .public-book-link:hover { text-decoration: underline; }
-.public-quote-text { margin: 5px 0 8px !important; font-family: var(--serif); font-size: 12px !important; line-height: 1.7 !important; color: var(--ink-soft) !important; }
-.public-review-text { margin: 5px 0 8px !important; font-family: var(--serif); font-size: 12px !important; line-height: 1.7 !important; color: var(--ink-soft) !important; }
+.public-quote-text { margin: 5px 0 8px !important; color: var(--ink-soft) !important; }
+.public-review-text { margin: 5px 0 8px !important; color: var(--ink-soft) !important; }
 .writing-actions {
   display: flex;
   align-items: center;
@@ -1796,11 +1911,11 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
 .hadith-card blockquote { position: relative; margin: 0; font-family: var(--serif); font-size: 17px; font-style: italic; line-height: 1.95; color: #5C584F; }
 .hadith-source { position: relative; margin: 14px 0 0 !important; color: var(--gold) !important; font-weight: 700; font-size: 11px !important; }
 .roadmap-intro { padding: 6px 0 4px; }
-.roadmap-intro h2 { font-family: var(--display); font-size: 28px; color: var(--olive-deep); }
+.roadmap-intro h2 { font-family: var(--display); font-size: var(--title-size); color: var(--olive-deep); }
 .roadmap-intro p { max-width: 760px; margin: 8px 0; font-family: var(--serif); font-size: 13px; line-height: 1.9; color: var(--ink-soft); }
 .roadmap-intro strong { color: var(--olive-deep); }
 .about-guide { padding: 4px 0 6px; }
-.about-guide h2 { margin: 0 0 14px; font-family: var(--display); font-size: 27px; line-height: 1.35; color: var(--olive-deep); }
+.about-guide h2 { margin: 0 0 14px; font-family: var(--display); font-size: var(--title-size); line-height: 1.35; color: var(--olive-deep); }
 .about-guide h3 { margin: 22px 0 6px; font-family: var(--serif); font-size: 15px; color: var(--gold-dark, var(--gold)); }
 .about-guide p { max-width: 820px; margin: 9px 0; font-family: var(--serif); font-size: 13.5px; line-height: 1.95; color: var(--ink-soft); }
 .about-guide-closing { padding-left: 14px; border-left: 3px solid var(--gold); font-style: italic; }
@@ -1813,7 +1928,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
   border-radius: 12px;
   background: rgba(255,255,255,.7);
 }
-.about-rules h2 { margin: 0 0 10px; font-family: var(--display); font-size: 20px; color: var(--olive-deep); }
+.about-rules h2 { margin: 0 0 10px; font-family: var(--display); font-size: var(--heading-size); color: var(--olive-deep); }
 .about-rules > p { margin: 0 0 12px; font-family: var(--serif); font-size: 12.5px; line-height: 1.8; color: var(--ink-soft); }
 .about-rules ol { margin: 0; padding-left: 22px; }
 .about-rules li { margin: 8px 0; font-family: var(--serif); font-size: 12.5px; line-height: 1.8; color: var(--ink-soft); }
@@ -1845,10 +1960,10 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
 .scholar-detail { min-width: 0; padding: 24px; border: 1px solid var(--line-gold); border-radius: var(--radius); background: rgba(255,255,255,.85); box-shadow: var(--shadow-sm); }
 .scholar-hero { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
 .scholar-hero .avatar { width: 66px; height: 66px; flex: none; font-size: 30px; }
-.scholar-hero h2 { margin: 0; font-family: var(--display); font-size: 30px; color: var(--olive-deep); }
+.scholar-hero h2 { margin: 0; font-family: var(--display); font-size: var(--title-size); color: var(--olive-deep); }
 .scholar-hero p { margin: 2px 0 0; color: var(--ink-faint); font-size: 11px; }
 .scholar-section { margin-top: 20px; }
-.scholar-section h3 { margin: 0 0 8px; font-family: var(--display); font-size: 21px; color: var(--olive-deep); }
+.scholar-section h3 { margin: 0 0 8px; font-family: var(--display); font-size: var(--heading-size); color: var(--olive-deep); }
 .scholar-section p { margin: 0; font-family: var(--serif); font-size: 12.5px; line-height: 1.85; color: var(--ink-soft); }
 .scholar-books { display: flex; flex-wrap: wrap; gap: 7px; }
 .scholar-books span { padding: 5px 10px; border: 1px solid var(--line-gold); border-radius: 30px; background: rgba(31,78,61,.12); color: var(--olive); font-size: 10.5px; }
@@ -1891,7 +2006,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
 .support-reply strong { display: block; color: var(--olive); font-size: 10.5px; }
 .support-reply p { margin: 3px 0 0; font-size: 11.5px; }
 .admin-section { margin-top: 20px; padding: 20px; border: 1px solid var(--line-gold); border-radius: var(--radius); background: rgba(255,255,255,.72); }
-.admin-section > h2 { margin: 0; font-family: var(--display); font-size: 24px; color: var(--olive-deep); }
+.admin-section > h2 { margin: 0; font-family: var(--display); font-size: var(--heading-size); color: var(--olive-deep); }
 .admin-section > p { margin: 2px 0 14px; color: var(--ink-faint); font-size: 11px; }
 .admin-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .admin-reply { display: flex; gap: 7px; margin-top: 10px; }
@@ -1937,7 +2052,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
   .roadmap-grid { grid-template-columns: 1fr; }
   .scholar-detail { padding: 16px; }
   .scholar-hero { align-items: flex-start; }
-  .scholar-hero h2 { font-size: 25px; }
+  .scholar-hero h2 { font-size: var(--title-size); }
   .admin-section { padding: 15px; }
   .footer-bottom { flex-direction: column; }
   .site-footer { margin-top: 40px; padding-left: 14px; padding-right: 14px; }
@@ -2215,7 +2330,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
   text-align: center;
 }
 .conversation-empty > span { color: var(--gold); font-size: 34px; }
-.conversation-empty h2 { margin: 6px 0 4px; font-family: var(--display); font-size: 22px; color: var(--olive-deep); }
+.conversation-empty h2 { margin: 6px 0 4px; font-family: var(--display); font-size: var(--title-size); color: var(--olive-deep); }
 .conversation-empty p { margin: 0; color: var(--ink-faint); font-size: 11.5px; }
 .conversation-panel .chat-panel { margin-top: 0; }
 .conversation-panel .chat-messages { min-height: 300px; max-height: 460px; }
@@ -2260,7 +2375,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
 @media (max-width: 640px) {
   .photo-upload { flex-wrap: wrap; }
   .group-card p { min-height: 0; }
-  .sidebar .brand-text .brand-name { font-size: 19px; letter-spacing: .02em; }
+  .sidebar .brand-text .brand-name { font-size: var(--brand-size); letter-spacing: .02em; }
   .sidebar .brand-mark { width: 34px; height: 34px; }
   .conversation-panel .chat-messages { min-height: 240px; max-height: 360px; }
 }
@@ -2339,7 +2454,7 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
   border-radius: 14px;
   background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(242,239,233,.72));
 }
-.discover-search-card h2 { margin: 0; font-family: var(--display); font-size: 24px; color: var(--olive-deep); }
+.discover-search-card h2 { margin: 0; font-family: var(--display); font-size: var(--title-size); color: var(--olive-deep); }
 .discover-search-card p { margin: 4px 0 0; }
 .inline-form { display: flex; gap: 8px; margin-top: 14px; }
 .inline-form input {
@@ -2522,6 +2637,17 @@ h1, h2, h3, .book-title, .book-cover__title, .quote-text,
   font-style: italic;
   color: var(--text-secondary);
 }
+/* Başlıklar ve uzun okuma metni mobilde sabit, okunur ölçülerde. */
+h2, h3 { font-size: var(--heading-size); line-height: 1.35; }
+.post-body, .review-text, .quote-text, .hadith-card blockquote,
+.writing-item p, .public-quote-text, .public-review-text,
+.about-guide p, .about-rules > p, .about-rules li,
+.roadmap-intro p, .scholar-section p, .overview-card p,
+.announcement-card p, .public-note p {
+  font-family: var(--serif);
+  font-size: var(--reading-size);
+  line-height: var(--reading-line);
+}
 
 /* 2 — Sol menü: derin çini yeşili, bakır ince vurgular */
 .sidebar {
@@ -2658,7 +2784,7 @@ img.book-cover { box-shadow: inset 3px 0 6px rgba(0,0,0,0.12), 0 2px 8px rgba(28
   color: var(--accent-warm);
 }
 .besmele[lang="ar"] {
-  font-family: "Traditional Arabic", "Amiri", "Noto Naskh Arabic", "Segoe UI", serif;
+  font-family: var(--arabic);
   font-style: normal;
   font-size: 16px;
   letter-spacing: 0;
@@ -2668,7 +2794,10 @@ img.book-cover { box-shadow: inset 3px 0 6px rgba(0,0,0,0.12), 0 2px 8px rgba(28
 body.text-large { font-size: 15.5px; }
 body.text-large .greeting-sub,
 body.text-large .post-body,
-body.text-large .writing-item p { font-size: 14px; }
+body.text-large .writing-item p {
+  font-size: 18px;
+  line-height: 1.75;
+}
 
 .home-circle-strip {
   display: flex;
@@ -2787,7 +2916,7 @@ body.text-large .writing-item p { font-size: 14px; }
 .author-more { margin-top: 8px; }
 .author-detail { min-height: 420px; padding: 20px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-surface); box-shadow: var(--shadow-card); }
 .author-hero { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border-light); }
-.author-hero h2 { margin: 2px 0; font-family: var(--serif); font-size: 22px; }
+.author-hero h2 { margin: 2px 0; font-family: var(--serif); font-size: var(--title-size); }
 .author-hero p { margin: 0; color: var(--text-secondary); font-size: 11px; }
 .author-about { margin: 0 0 18px; padding: 0 0 16px; border-bottom: 1px solid var(--border-light); }
 .author-about h3 { margin: 0 0 6px; font-family: var(--serif); font-size: 15px; color: var(--accent-primary); }
@@ -2846,10 +2975,10 @@ body.text-large .writing-item p { font-size: 14px; }
   --olive-soft: #6D8A78;
   --gold-light: #C79A63;
   --line-gold: #D8CDBB;
-  /* Marka: tüm temalarda aynı font ve altın vurgu, temaya göre mürekkep rengi */
-  --brand-font: "Cormorant Garamond", Georgia, "Times New Roman", serif;
-  --brand-ink: #1B4332;
-  --brand-accent: #C59B27;
+  /* Marka: tüm temalarda aynı font; mürekkep ve vurgu temaya bağlı. */
+  --brand-font: "El Messiri", "Cormorant Garamond", Georgia, serif;
+  --brand-ink: var(--accent-primary);
+  --brand-accent: var(--accent-warm);
   --brand-sidebar-ink: #FAF8F5;
   --brand-sidebar-accent: #D4AF37;
   --em-bg: #163D2B;
@@ -2858,8 +2987,8 @@ body.text-large .writing-item p { font-size: 14px; }
   --greeting-title: #163D2B;
   --greeting-accent: #9E7B4F;
   --wm-stroke: #9E7B4F;
-  --serif: "Newsreader", Georgia, "Times New Roman", serif;
-  --display: "Newsreader", Georgia, serif;
+  --serif: "Lora", Georgia, "Times New Roman", serif;
+  --display: "Lora", Georgia, serif;
   --sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --radius: 10px;
   --texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
@@ -2881,7 +3010,7 @@ body.text-large .writing-item p { font-size: 14px; }
   --olive-soft: #7FA990;
   --gold-light: #E2C17E;
   --line-gold: #5B6A54;
-  --brand-ink: #F3F1EA;
+  --brand-ink: var(--accent-primary);
   --em-bg: #0F1C16;
   --em-cover: #16261E;
   --em-dome: #6DB694;
@@ -2906,16 +3035,13 @@ body.text-large .writing-item p { font-size: 14px; }
   --olive-soft: #6F8BA8;
   --gold-light: #E3C66A;
   --line-gold: #D6C79A;
-  --brand-ink: #1D3557;
+  --brand-ink: var(--accent-primary);
   --em-bg: #16425B;
   --em-cover: #16425B;
   --em-dome: #D4AF37;
   --greeting-title: #152A47;
   --greeting-accent: #B5892E;
   --wm-stroke: #B5892E;
-  --serif: "Playfair Display", Georgia, "Times New Roman", serif;
-  --display: "Playfair Display", Georgia, serif;
-  --sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --radius: 10px;
   --texture: repeating-linear-gradient(45deg, rgba(212,175,55,.045) 0 1px, transparent 1px 24px),
              repeating-linear-gradient(-45deg, rgba(212,175,55,.045) 0 1px, transparent 1px 24px),
@@ -2937,20 +3063,19 @@ body.text-large .writing-item p { font-size: 14px; }
   --olive-soft: #5A5A56;
   --gold-light: #FFD700;
   --line-gold: #E2D9A8;
-  --brand-ink: #1A1A1A;
+  --brand-ink: var(--accent-primary);
   --em-bg: #1F1F1F;
   --em-cover: #121212;
   --em-dome: #0D0D0D;
   --greeting-title: #141414;
   --greeting-accent: #B5892E;
   --wm-stroke: #9E8242;
-  --serif: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
-  --display: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
-  --sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
   --radius: 2px;
   --texture: none;
   --texture-opacity: 0;
 }
+/* Gece temasında marka daha açık ve geniş harf aralığıyla okunur. */
+[data-theme="gece"] .top-brand { font-weight: 600; letter-spacing: .8px; }
 body::before {
   content: "";
   position: fixed;
@@ -3050,7 +3175,7 @@ body::before {
 .footer-emblem { width: 30px; height: 30px; flex: none; display: block; }
 .auth-brand-block { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 12px; }
 .auth-emblem { width: 112px; height: 112px; display: block; flex: none; }
-.auth-brand { font-family: var(--brand-font); font-size: 28px; font-weight: 700; letter-spacing: .02em; line-height: 1; color: var(--brand-ink); }
+.auth-brand { font-family: var(--brand-font); font-size: var(--title-size); font-weight: 700; letter-spacing: .02em; line-height: 1.1; color: var(--brand-ink); }
 
 /* Takip�i/takip listesi modali ve admin kitap gizleme */
 .follow-list-sub { margin: 6px 0 0; color: var(--ink-soft); font-family: var(--serif); font-size: 11.5px; }
@@ -3093,7 +3218,7 @@ body::before {
   cursor: pointer;
 }
 .bottom-sheet .eyebrow { margin: 0 0 4px; color: var(--gold); }
-.bottom-sheet h2 { margin: 0 0 16px; font-family: var(--display); font-size: 20px; color: var(--olive-deep); }
+.bottom-sheet h2 { margin: 0 0 16px; font-family: var(--display); font-size: var(--heading-size); color: var(--olive-deep); }
 .sheet-action {
   width: 100%;
   display: flex;
@@ -3137,9 +3262,9 @@ body::before {
     position: static;
     display: flex !important;
     padding: 0;
-    font-size: 18px;
+    font-size: var(--brand-size);
     font-weight: 600;
-    line-height: 1;
+    line-height: 1.1;
   }
   .top-brand span { padding-bottom: 0; }
   .top-brand span::after,
@@ -3149,7 +3274,7 @@ body::before {
 
   .page-head--tight { flex-wrap: nowrap; align-items: center; gap: 8px; }
   .page-head--tight > div:first-child { flex: 1 1 auto; min-width: 0; }
-  .page-head--tight h1 { font-size: 21px; line-height: 1.1; }
+  .page-head--tight h1 { font-size: var(--title-size); line-height: 1.18; }
   .page-head--tight .head-actions {
     width: auto;
     flex: 0 0 auto;
@@ -3174,7 +3299,7 @@ body::before {
   .profile-hero > #edit-profile-btn { grid-column: 2; grid-row: 2; justify-self: start; margin-top: -2px; }
   .profile-hero .avatar--xl { width: 72px; height: 72px; font-size: 34px; }
   .profile-hero .identity-title { gap: 6px 8px; }
-  .profile-hero h1 { font-size: 25px; }
+  .profile-hero h1 { font-size: var(--title-size); }
   .profile-hero .title-badge { padding: 4px 8px; font-size: 9px; }
   .profile-hero .follow-counts { gap: 10px; margin-top: 7px; }
   .topbar .mobile-only.icon-btn { width: 32px; height: 32px; }
@@ -3377,7 +3502,7 @@ body::before {
   .md-tab.is-active { color: var(--accent-primary); border-bottom-color: var(--accent-warm); }
 
   .mobile-search-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-  .mobile-search-head h1 { font-size: 26px; }
+  .mobile-search-head h1 { font-size: var(--title-size); }
   .mobile-search-form {
     display: flex;
     align-items: center;
@@ -3440,8 +3565,8 @@ body::before {
   .greeting { min-height: 0; padding: 16px 16px 58px; border-radius: 12px; }
   .greeting::after { inset: 5px; }
   .greeting-copy { max-width: 100%; }
-  .greeting h1 { font-size: clamp(21px, 5.6vw, 28px); line-height: 1.16; overflow-wrap: anywhere; }
-  .greeting-sub { font-size: 12px; line-height: 1.5; }
+  .greeting h1 { font-size: var(--title-size); line-height: 1.18; overflow-wrap: anywhere; }
+  .greeting-sub { font-size: var(--reading-size); line-height: var(--reading-line); }
   .greeting-stats { left: 16px; bottom: 12px; max-width: calc(100% - 112px); gap: 6px; }
   .greeting-actions { right: 14px; bottom: 12px; gap: 8px; }
   .greeting-arch { width: 130px; right: -18px; bottom: -6px; opacity: .5; }
@@ -3450,7 +3575,7 @@ body::before {
   .home-book-columns { display: block; margin-top: 12px; }
   .home-book-group { padding: 14px 0 14px 14px; border: 0; border-radius: 0; background: transparent; }
   .home-book-group + .home-book-group { margin-top: 16px; }
-  .home-book-group > h3 { margin: 0 0 10px; padding-right: 14px; gap: 7px; font-size: 16px; }
+  .home-book-group > h3 { margin: 0 0 10px; padding-right: 14px; gap: 7px; font-size: var(--heading-size); }
   .home-book-group > h3 > :is(i, svg),
   .home-book-group > h3 svg { width: 16px; height: 16px; flex-basis: 16px; }
   .home-book-grid {
