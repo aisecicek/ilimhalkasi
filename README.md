@@ -30,7 +30,9 @@ telefondaki uygulama yeni sürümü açtığında görür.
 Domain henüz yoksa ilk APK ev Wi-Fi'sindeki `http://192.168.0.107:8765` adresine
 bağlanır (telefon ve bilgisayar aynı ağda olmalı). Uygulama içinden sunucu adresi
 değiştirilebilir; LAN aşamasında HTTP'ye izin verilir. Domain alınınca `APP_URL`
-değişkenine HTTPS adresini yazman yeterli.
+değişkenine HTTPS adresini yazman yeterli. Bu repository variable'ı tanımlıysa
+ kod içindeki LAN varsayılanını **ezdiği** için, IP değiştiğinde onu da güncellemek
+gerekir.
 
 - APK derlemesi GitHub Actions ile yapılır: `APP_URL` repository variable'ına gerçek
   HTTPS domain'i girip **Actions → Build Android APK** işini çalıştır; çıkan artifact
