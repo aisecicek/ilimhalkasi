@@ -1225,8 +1225,64 @@ class SmokeAPITests(unittest.TestCase):
             ".profile-hero .follow-counts b {",
             "font-size: 13px !important;",
             ".profile-hero .profile-bio { font-size: 14px !important;",
-            '"stats stats action"',
+            '". . action"',
             ".profile-hero > #edit-profile-btn { grid-area: action; justify-self: end; margin-top: 0; }",
+        ):
+            self.assertIn(marker, css, "missing layout marker: " + marker)
+
+    def test_library_filters_rules_and_compact_actions_are_tidy(self) -> None:
+        index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+        app_js = (PROJECT_ROOT / "app.js").read_text(encoding="utf-8")
+        css = (PROJECT_ROOT / "styles.css").read_text(encoding="utf-8")
+        i18n_js = (PROJECT_ROOT / "i18n.js").read_text(encoding="utf-8")
+
+        for removed in (
+            '<p class="modal-desc">Ortak okuma ve yazılı müzakere için bir halka kur.</p>',
+            "Halka fotoğrafı <small>(isteğe bağlı)</small>",
+            '<p class="modal-desc">Katalogda bulunmayan bir eseri öner. Yönetici inceleyip kataloğa ekleyecek.</p>',
+            '<span>Kitap ara</span>',
+            'id="book-search-input" type="search" placeholder="Kitap adı veya yazar yaz"',
+            'id="filter-author"',
+            'id="filter-publisher"',
+            "data-filter-search",
+        ):
+            self.assertNotIn(removed, index_html, "stale markup still present: " + removed)
+
+        for added in (
+            '<span data-i18n="Kitap/Yazar Ara">Kitap/Yazar Ara</span>',
+            'placeholder="Kitap/Yazar Ara" data-i18n-placeholder="Kitap/Yazar Ara" aria-label="Kitap/Yazar Ara"',
+            '<span data-i18n="Halka fotoğrafı">Halka fotoğrafı</span>',
+            '<button class="btn btn-outline btn-sm" type="button" id="book-add-btn">Kitap Ekle</button>',
+            'data-view="support" data-i18n="Şikayet & Talepler">Şikayet &amp; Talepler</button>',
+            'class="btn btn-outline btn-sm btn-compact" type="button" data-view="profile">Profile dön →',
+            'class="btn btn-outline btn-sm btn-compact" type="button" data-book-request-open>',
+        ):
+            source = app_js if "data-book-request-open" in added else index_html
+            self.assertIn(added, source, "missing updated markup: " + added)
+
+        settings = index_html.split('<div class="settings-actions">', 1)[1].split("</div>", 1)[0]
+        self.assertLess(
+            settings.index('id="settings-reset"'),
+            settings.index('id="settings-save"'),
+            "Varsayılanlara dön should sit left of Kaydet",
+        )
+
+        for button_id in ("journal-primary-btn", "settings-reset", "settings-save"):
+            match = re.search(r'<button[^>]*id="' + re.escape(button_id) + r'"[^>]*>', index_html)
+            self.assertIsNotNone(match, "missing button: " + button_id)
+            self.assertIn("btn-compact", match.group(0), button_id + " should stay compact")
+
+        for key in (
+            "Ayrıştırma yok:", "Saygılı tartışma:", "İlmî doğruluk:", "Özel bilgiler:",
+            "Reklam yok:", "Telif ve kaynak:", "Bildirim:", "Kitap/Yazar Ara",
+            "Kütüphanemizde bulunmayan bir kitabı önerebilirsiniz. Ekibimiz inceleyip ekleyecektir.",
+        ):
+            self.assertIn("'" + key + "':", i18n_js, "missing i18n key: " + key)
+
+        for marker in (
+            "  font-size: 17px;\n  box-shadow: none;\n}",
+            ".about-rules li strong { color: var(--olive-deep); font-family: var(--sans); font-size: var(--reading-size); font-weight: 700; }",
+            ".settings-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 18px; }",
         ):
             self.assertIn(marker, css, "missing layout marker: " + marker)
 

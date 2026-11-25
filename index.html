@@ -269,12 +269,12 @@
             <div class="head-actions">
               <button class="btn btn-outline btn-sm filter-toggle" type="button" id="filter-toggle" aria-expanded="false" aria-controls="book-filters"><i data-lucide="sliders-horizontal"></i> <span data-i18n="Filtreler">Filtreler</span></button>
               <button class="btn btn-outline btn-sm" type="button" id="catalog-search-toggle">Katalogda Ara</button>
-              <button class="btn btn-gold btn-sm" type="button" id="book-add-btn">Kitap Ekle</button>
+              <button class="btn btn-outline btn-sm" type="button" id="book-add-btn">Kitap Ekle</button>
             </div>
           </div>
           <form class="book-search-form" id="book-search-form" hidden>
-            <input id="book-search-input" type="search" placeholder="Kitap adı veya yazar yaz" aria-label="Kitap ara" />
-            <button class="btn btn-gold btn-sm" type="submit">Ara</button>
+            <input id="book-search-input" type="search" placeholder="Kitap/Yazar Ara" data-i18n-placeholder="Kitap/Yazar Ara" aria-label="Kitap/Yazar Ara" data-i18n-aria="Kitap/Yazar Ara" />
+            <button class="btn btn-outline btn-sm" type="submit">Ara</button>
           </form>
           <div class="book-search-results" id="book-search-results" hidden></div>
 
@@ -284,27 +284,13 @@
           <div id="book-requests-panel"></div>
 
           <div class="book-filters" id="book-filters" aria-label="Kütüphane filtreleri">
-            <label class="field"><span>Kitap ara</span><input id="filter-q" type="search" placeholder="Başlık veya yazar" /></label>
-            <label class="field"><span>Yazar</span>
-              <span class="filter-search">
-                <input id="filter-author" type="search" list="filter-authors" placeholder="Yazar ara veya seç" autocomplete="off" />
-                <button class="filter-search-btn" type="button" data-filter-search="author" aria-label="Yazar ara" title="Yazar ara"><i data-lucide="search"></i></button>
-              </span>
-              <datalist id="filter-authors"></datalist>
-            </label>
+            <label class="field"><span data-i18n="Kitap/Yazar Ara">Kitap/Yazar Ara</span><input id="filter-q" type="search" placeholder="Başlık veya yazar" data-i18n-placeholder="Başlık veya yazar" /></label>
             <label class="field"><span>TÜR</span>
               <select id="filter-topic">
                 <option value="" data-i18n="Tüm türler">Tüm türler</option>
               </select>
             </label>
             <label class="field"><span>Dönem</span><select id="filter-decade"><option value="">Tüm yıllar</option></select></label>
-            <label class="field"><span>Yayınevi</span>
-              <span class="filter-search">
-                <input id="filter-publisher" type="search" list="filter-publishers" placeholder="Yayınevi ara veya seç" autocomplete="off" />
-                <button class="filter-search-btn" type="button" data-filter-search="publisher" aria-label="Yayınevi ara" title="Yayınevi ara"><i data-lucide="search"></i></button>
-              </span>
-              <datalist id="filter-publishers"></datalist>
-            </label>
             <label class="field"><span>Sırala</span>
               <select id="filter-sort">
                 <option value="title">Başlığa göre</option>
@@ -557,13 +543,13 @@
             <h2>Topluluk Kuralları</h2>
             <p>⚑ Bu alan ilim, edep ve kardeşlik içindir. Kuralları ihlal eden içerikler kaldırılır; tekrarlayanların hesabı yönetici tarafından değerlendirilir.</p>
             <ol>
-              <li>Irk, mezhep, cinsiyet, bölge, dil veya düşünce farkı üzerinden kimseyi küçük düşüren, ötekileştiren veya hedef gösteren yazı yazılamaz.</li>
-              <li>Fikir ayrılığı saygıyı bozmaz. Hakaret, alay, taciz, tehdit ve dedikodu yoktur; tartışma delil ve nezaketle yürür.</li>
-              <li>Yanlış bilgi yayan içerik düzeltilir; ilmî iddialarda kaynak gösterilmesi esastır. Kasten yanıltan paylaşımlar kaldırılır.</li>
-              <li>Başkasının özel notunu, mesajını veya bilgisini izinsiz paylaşılamaz. Şikayet ve talepleriniz yalnızca yöneticiye ulaşır, cevap da sadece size gösterilir.</li>
-              <li>Ticari tanıtım, zincirleme mesaj ve alakasız paylaşımlar yasaktır.</li>
-              <li>Telife dikkat edilmelidir. Alıntılarda kaynak belirtiniz; başkasının emeğini kendi yazmış gibi sunmak yasaktır.</li>
-              <li>Kurallara uymayan içerikleri Şikayet &amp; Talepler bölümünden bildirebilirsiniz; her bir bildiriminiz özenle incelenecektir.</li>
+              <li><strong data-i18n="Ayrıştırma yok:">Ayrıştırma yok:</strong> Irk, mezhep, cinsiyet, bölge, dil veya düşünce farkı üzerinden kimseyi küçük düşüren, ötekileştiren veya hedef gösteren yazı yazılamaz.</li>
+              <li><strong data-i18n="Saygılı tartışma:">Saygılı tartışma:</strong> Fikir ayrılığı saygıyı bozmaz. Hakaret, alay, taciz, tehdit ve dedikodu yoktur; tartışma delil ve nezaketle yürür.</li>
+              <li><strong data-i18n="İlmî doğruluk:">İlmî doğruluk:</strong> Yanlış bilgi yayan içerik düzeltilir; ilmî iddialarda kaynak gösterilmesi esastır. Kasten yanıltan paylaşımlar kaldırılır.</li>
+              <li><strong data-i18n="Özel bilgiler:">Özel bilgiler:</strong> Başkasının özel notunu, mesajını veya bilgisini izinsiz paylaşılamaz. Şikayet ve talepleriniz yalnızca yöneticiye ulaşır, cevap da sadece size gösterilir.</li>
+              <li><strong data-i18n="Reklam yok:">Reklam yok:</strong> Ticari tanıtım, zincirleme mesaj ve alakasız paylaşımlar yasaktır.</li>
+              <li><strong data-i18n="Telif ve kaynak:">Telif ve kaynak:</strong> Telife dikkat edilmelidir. Alıntılarda kaynak belirtiniz; başkasının emeğini kendi yazmış gibi sunmak yasaktır.</li>
+              <li><strong data-i18n="Bildirim:">Bildirim:</strong> Kurallara uymayan içerikleri <button class="text-btn" type="button" data-view="support" data-i18n="Şikayet & Talepler">Şikayet &amp; Talepler</button> bölümünden bildirebilirsiniz; her bir bildiriminiz özenle incelenecektir.</li>
             </ol>
           </article>
 
@@ -715,7 +701,7 @@
             <div>
               <h1 id="journal-title">Hatıratım</h1>
             </div>
-            <button class="btn btn-gold btn-sm" type="button" id="journal-primary-btn">
+            <button class="btn btn-gold btn-sm btn-compact" type="button" id="journal-primary-btn">
               <span id="journal-primary-label" data-i18n="Yeni inceleme">Yeni inceleme</span>
             </button>
           </div>
@@ -841,8 +827,8 @@
           </div>
 
           <div class="settings-actions">
-            <button class="btn btn-gold btn-sm" type="button" id="settings-save" data-i18n="Kaydet">Kaydet</button>
-            <button class="btn btn-ghost btn-sm" type="button" id="settings-reset">Varsayılanlara dön</button>
+            <button class="btn btn-outline btn-sm btn-compact" type="button" id="settings-reset">Varsayılanlara dön</button>
+            <button class="btn btn-gold btn-sm btn-compact" type="button" id="settings-save" data-i18n="Kaydet">Kaydet</button>
           </div>
         </section>
 
@@ -857,8 +843,8 @@
               </div>
               <p id="profile-handle-line">@—</p>
               <p class="profile-bio" id="profile-bio" hidden></p>
+              <div class="follow-counts" id="follow-counts"></div>
             </div>
-            <div class="follow-counts" id="follow-counts"></div>
             <button class="btn btn-outline btn-sm btn-compact" type="button" id="edit-profile-btn" data-i18n="Profilini Düzenle">Profilini Düzenle</button>
           </div>
 
@@ -935,7 +921,7 @@
             <div>
               <h1 id="stats-title">İstatistiklerim</h1>
             </div>
-            <button class="btn btn-outline btn-sm" type="button" data-view="profile">Profile dön →</button>
+            <button class="btn btn-outline btn-sm btn-compact" type="button" data-view="profile">Profile dön →</button>
           </div>
           <div class="profile-tabs" role="tablist" aria-label="İstatistikler">
             <button class="profile-tab is-active" role="tab" aria-selected="true" data-stats-tab="reading" type="button">Okuma</button>
@@ -1188,11 +1174,10 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="halka-modal-title">
       <button class="modal-close" type="button" data-close-halka-modal aria-label="Kapat">×</button>
       <h2 id="halka-modal-title">Yeni halka kur</h2>
-      <p class="modal-desc">Ortak okuma ve yazılı müzakere için bir halka kur.</p>
       <form id="halka-form" class="stack-form">
         <label class="field"><span>Halka adı</span><input id="halka-name" type="text" maxlength="60" required placeholder="Örn. Sahih Buhari Okumaları" /></label>
         <label class="field"><span>Açıklama</span><textarea id="halka-description" rows="3" maxlength="300" placeholder="Bu halkada ne okuyorsunuz?"></textarea></label>
-        <div class="field"><span>Halka fotoğrafı <small>(isteğe bağlı)</small></span>
+        <div class="field"><span data-i18n="Halka fotoğrafı">Halka fotoğrafı</span>
           <div class="photo-upload">
             <span class="photo-preview" id="halka-photo-preview"><span class="avatar avatar--xl avatar--olive">◈</span></span>
             <div class="photo-upload-actions">
@@ -1248,7 +1233,7 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="book-request-title">
       <button class="modal-close" type="button" data-close-book-request-modal aria-label="Kapat">×</button>
       <h2 id="book-request-title">Kitap öner</h2>
-      <p class="modal-desc">Katalogda bulunmayan bir eseri öner. Yönetici inceleyip kataloğa ekleyecek.</p>
+      <p class="modal-desc" data-i18n="Kütüphanemizde bulunmayan bir kitabı önerebilirsiniz. Ekibimiz inceleyip ekleyecektir.">Kütüphanemizde bulunmayan bir kitabı önerebilirsiniz. Ekibimiz inceleyip ekleyecektir.</p>
       <form id="book-request-form" class="stack-form">
         <label class="field"><span>Kitap adı</span><input id="book-request-title-input" type="text" maxlength="200" required placeholder="Örn. İhyau Ulumi'd-Din" /></label>
         <label class="field"><span>Yazar</span><input id="book-request-author" type="text" maxlength="200" required placeholder="Örn. İmam Gazali" /></label>

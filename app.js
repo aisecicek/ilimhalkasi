@@ -104,15 +104,10 @@ const state = {
   bookCategory: '',
   bookGenre: '',
   bookQuery: '',
-  bookAuthor: '',
-  bookAuthorExact: false,
   bookDecade: '',
-  bookPublisher: '',
-  bookPublisherExact: false,
   bookFocus: '',
   bookTopic: '',
   bookSort: 'title',
-  bookFilterOptions: null,
   filtersBound: false,
   bookCatalog: [],
   bookGenres: [],
@@ -1596,14 +1591,11 @@ async function loadCatalog(reset = false) {
     const params = new URLSearchParams({ limit: '100', offset: String(state.bookOffset) });
     const filters = {
       q: state.bookQuery, genre: state.bookGenre, category: state.bookCategory,
-      author: state.bookAuthor, publisher: state.bookPublisher,
       decade: state.bookDecade, focus: state.bookFocus, sort: state.bookSort
     };
     Object.entries(filters).forEach(([key, value]) => {
       if (value && value !== 'all') params.set(key, value);
     });
-    if (state.bookAuthorExact) params.set('author_exact', '1');
-    if (state.bookPublisherExact) params.set('publisher_exact', '1');
     const result = await api('/api/books?' + params.toString());
     state.bookGenres = result.genres || [];
     state.bookTotal = Number(result.total || 0);
@@ -1622,7 +1614,6 @@ async function loadCatalog(reset = false) {
 async function loadBookFilterOptions() {
   try {
     const options = await api('/api/books/filters');
-    state.bookFilterOptions = options;
     state.bookGenres = options.genres || [];
     const fill = (selector, values, allLabel, selected) => {
       const el = $(selector);
@@ -1653,13 +1644,6 @@ async function loadBookFilterOptions() {
     }
     fill('#filter-decade', (options.decades || []).map((d) => ({ value: String(d), label: t("{n}'ler", { n: d }) })),
       t('Tüm yıllar'), state.bookDecade);
-    const fillDatalist = (selector, values) => {
-      const el = $(selector);
-      if (el) el.innerHTML = [...(values || [])].sort(compareCatalogNames)
-        .map((value) => `<option value="${esc(value)}"></option>`).join('');
-    };
-    fillDatalist('#filter-authors', options.authors || []);
-    fillDatalist('#filter-publishers', options.publishers || []);
     syncBookFilterInputs();
   } catch (error) {
     toast(error.message);
@@ -1668,9 +1652,8 @@ async function loadBookFilterOptions() {
 
 function resetBookFilterState() {
   Object.assign(state, {
-    bookQuery: '', bookAuthor: '', bookAuthorExact: false,
-    bookPublisher: '', bookPublisherExact: false, bookGenre: '',
-    bookDecade: '', bookCategory: '', bookFocus: '', bookTopic: '', bookSort: 'title'
+    bookQuery: '', bookGenre: '', bookDecade: '', bookCategory: '',
+    bookFocus: '', bookTopic: '', bookSort: 'title'
   });
 }
 
@@ -1679,9 +1662,9 @@ function syncBookFilterInputs() {
     : state.bookGenre ? `genre:${state.bookGenre}`
       : state.bookFocus ? `focus:${state.bookFocus}` : '';
   const values = {
-    '#filter-q': state.bookQuery, '#filter-author': state.bookAuthor,
+    '#filter-q': state.bookQuery,
     '#filter-topic': topic, '#filter-decade': state.bookDecade,
-    '#filter-publisher': state.bookPublisher, '#filter-sort': state.bookSort
+    '#filter-sort': state.bookSort
   };
   Object.entries(values).forEach(([selector, value]) => {
     const el = $(selector);
@@ -1707,28 +1690,6 @@ function bindBookFilters() {
       await loadCatalog(true);
     });
   });
-  const searchFilters = {
-    author: { input: '#filter-author', key: 'bookAuthor', exactKey: 'bookAuthorExact', options: 'authors' },
-    publisher: { input: '#filter-publisher', key: 'bookPublisher', exactKey: 'bookPublisherExact', options: 'publishers' }
-  };
-  const applySearchFilter = async (name) => {
-    const cfg = searchFilters[name];
-    const el = $(cfg.input);
-    if (!el) return;
-    const value = el.value.trim();
-    state[cfg.key] = value;
-    state[cfg.exactKey] = Boolean(value) && (state.bookFilterOptions?.[cfg.options] || []).includes(value);
-    await loadCatalog(true);
-  };
-  Object.entries(searchFilters).forEach(([name, cfg]) => {
-    const el = $(cfg.input);
-    if (!el) return;
-    el.addEventListener('change', () => applySearchFilter(name));
-    el.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); applySearchFilter(name); }
-    });
-  });
-  $$('[data-filter-search]').forEach((btn) => btn.addEventListener('click', () => applySearchFilter(btn.dataset.filterSearch)));
   $('#filter-topic')?.addEventListener('change', async (e) => {
     const value = e.target.value;
     state.bookCategory = '';
@@ -2921,7 +2882,7 @@ function curriculumStepHTML(step, key) {
       <span class="tesbih-progress" aria-label="%${Number(step.pct) || 0}">
         ${Array.from({ length: 5 }, (_, i) => `<span class="${i < Math.round((Number(step.pct) || 0) / 20) ? 'is-on' : ''}"></span>`).join('')}
       </span>`
-    : `<div class="step-progress-row"><small>${t('Katalogda bu eser henüz yok.')}</small><button class="text-btn" type="button" data-book-request-open>${t('Kitap öner')}</button></div>`}
+    : `<div class="step-progress-row"><small>${t('Katalogda bu eser henüz yok.')}</small><button class="btn btn-outline btn-sm btn-compact" type="button" data-book-request-open>${t('Kitap öner')}</button></div>`}
   </li>`;
 }
 
