@@ -329,7 +329,10 @@ class SmokeAPITests(unittest.TestCase):
         self.assertNotIn("admin", body)
         for key in ("tickets", "reports", "follows", "blocked"):
             self.assertEqual(body.get(key), [], "guest bootstrap leaked private " + key)
-        self.assertEqual(body["stats"], {"followers": 0, "following": 0, "circles": 0})
+        self.assertEqual(
+            body["stats"],
+            {"followers": 0, "following": 0, "circles": 0, "ilimSeries": 0},
+        )
 
     def test_guest_member_actions_are_still_server_gated(self) -> None:
         status, body = self.post("/api/posts", {"text": "guest post"}, opener=self.anon_opener)
@@ -392,7 +395,7 @@ class SmokeAPITests(unittest.TestCase):
     def test_favorites_list_seeded_once(self) -> None:
         opener, user = self.register_user()
         names = [item.get("name") for item in self.bootstrap(opener=opener).get("lists") or []]
-        self.assertIn("Favorilerim", names, "new users should receive a favorites list")
+        self.assertIn("Kaydettiklerim", names, "new users should receive a favorites list")
 
         conn = sqlite3.connect(self.tmp_dir / DB_FILENAME)
         try:
@@ -406,7 +409,7 @@ class SmokeAPITests(unittest.TestCase):
 
         favorites = next(
             item for item in self.bootstrap(opener=opener).get("lists") or []
-            if item.get("name") == "Favorilerim"
+            if item.get("name") == "Kaydettiklerim"
         )
         status, body = self.post(
             "/api/lists/delete", {"list_id": favorites["id"]}, opener=opener
@@ -414,7 +417,7 @@ class SmokeAPITests(unittest.TestCase):
         self.assertEqual(status, 200, "deleting favorites failed: {}".format(body))
 
         names = [item.get("name") for item in self.bootstrap(opener=opener).get("lists") or []]
-        self.assertNotIn("Favorilerim", names, "deleted favorites list must not come back")
+        self.assertNotIn("Kaydettiklerim", names, "deleted favorites list must not come back")
 
     def test_list_rename_and_delete_are_owner_only(self) -> None:
         name = _marker("rename-list")
@@ -704,6 +707,140 @@ class SmokeAPITests(unittest.TestCase):
                 "post missing from interactions.{}".format(key),
             )
 
+    def test_ilim_series_counts_real_activity(self) -> None:
+        opener, _ = self.register_user()
+        self.assertEqual(
+            (self.bootstrap(opener=opener).get("stats") or {}).get("ilimSeries"), 0
+        )
+
+        status, body = self.post(
+            "/api/posts",
+            {
+                "text": _marker("series-post"), "book": "Series Book",
+                "writer": "Tester", "type": "quote",
+            },
+            opener=opener,
+        )
+        self.assertEqual(status, 201, "post creation failed: {}".format(body))
+        post_id = (body.get("post") or {}).get("id")
+        self.assertTrue(post_id)
+
+        book_id = self.book_id()
+        for status_name in ("reading", "finished"):
+            status, result = self.post(
+                "/api/shelf", {"book_id": book_id, "status": status_name, "page": 1},
+                opener=opener,
+            )
+            self.assertEqual(status, 200, "{} failed: {}".format(status_name, result))
+
+        status, comment_body = self.post(
+            "/api/posts/{}/comments".format(post_id),
+            {"text": _marker("series-comment")}, opener=opener,
+        )
+        self.assertEqual(status, 201, "comment failed: {}".format(comment_body))
+
+        series = (self.bootstrap(opener=opener).get("stats") or {}).get("ilimSeries")
+        self.assertEqual(series, 4, "series must count post, reading, finish and comment")
+
+    def test_feed_window_keeps_old_posts_out_of_feed_but_not_deleted(self) -> None:
+        opener, user = self.register_user()
+        marker = _marker("feedcap")
+        stamp = time.time()
+        conn = sqlite3.connect(self.tmp_dir / DB_FILENAME)
+        try:
+            for index in range(205):
+                conn.execute(
+                    "INSERT INTO posts (user_id,type,book,writer,text,rating,status,cover,created_at) "
+                    "VALUES (?,?,?,?,?,?,?,?,?)",
+                    (
+                        int(user["id"]), "quote", "Feed Cap Book", "Tester",
+                        "{}-{}".format(marker, index), 0, "", "", stamp - 300 + index,
+                    ),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+
+        data = self.bootstrap(opener=opener)
+        feed = data.get("posts") or []
+        own_posts = data.get("ownPosts") or []
+        self.assertLessEqual(len(feed), 200, "feed must stay within 200 posts")
+        self.assertGreaterEqual(len(own_posts), 205, "own older posts must still be loaded")
+
+        oldest = min(own_posts, key=lambda item: float(item.get("created_at", 0) or 0))
+        feed_ids = {int(item.get("id", 0)) for item in feed}
+        self.assertNotIn(int(oldest.get("id", 0)), feed_ids, "oldest post must leave the feed")
+
+        conn = sqlite3.connect(self.tmp_dir / DB_FILENAME)
+        try:
+            still_there = conn.execute(
+                "SELECT 1 FROM posts WHERE id=?", (int(oldest["id"]),)
+            ).fetchone()
+        finally:
+            conn.close()
+        self.assertIsNotNone(still_there, "feed eviction must not delete the post")
+
+        viewer_opener, _ = self.register_user()
+        status, profile = self.get("/api/users/{}".format(user["id"]), opener=viewer_opener)
+        self.assertEqual(status, 200, "profile failed: {}".format(profile))
+        profile_ids = {
+            int(item.get("id", 0)) for item in (profile.get("user") or {}).get("posts") or []
+        }
+        self.assertIn(int(oldest["id"]), profile_ids, "old post must remain on its author's profile")
+
+    def test_book_posts_endpoint_returns_quotes_and_reviews(self) -> None:
+        opener, _ = self.register_user()
+        book = _marker("bookposts")
+        created = []
+        for ptype in ("quote", "review"):
+            status, body = self.post(
+                "/api/posts",
+                {
+                    "text": "{}-{}".format(book, ptype), "book": book,
+                    "writer": "Tester", "type": ptype, "rating": 4 if ptype == "review" else 0,
+                },
+                opener=opener,
+            )
+            self.assertEqual(status, 201, "{} failed: {}".format(ptype, body))
+            created.append(int((body.get("post") or {}).get("id") or 0))
+
+        status, data = self.get(
+            "/api/posts/by-book?book={}".format(book), opener=self.anon_opener
+        )
+        self.assertEqual(status, 200, "book posts endpoint failed: {}".format(data))
+        found = {int(item.get("id", 0)) for item in data.get("posts") or []}
+        for post_id in created:
+            self.assertIn(post_id, found, "book page is missing post {}".format(post_id))
+        types = {item.get("type") for item in data.get("posts") or []}
+        self.assertIn("quote", types)
+        self.assertIn("review", types)
+
+    def test_nav_center_ink_and_book_posts_ui_are_wired(self) -> None:
+        index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+        app_js = (PROJECT_ROOT / "app.js").read_text(encoding="utf-8")
+        css = (PROJECT_ROOT / "styles.css").read_text(encoding="utf-8")
+        i18n_js = (PROJECT_ROOT / "i18n.js").read_text(encoding="utf-8")
+
+        self.assertNotIn('data-i18n="Ekle"', index_html)
+        self.assertIn('aria-label="Ne paylaşmak istersin?"', index_html)
+        self.assertIn("transform: none;", css)
+        self.assertIn(".ink-ripple {", css)
+        self.assertIn("@keyframes ink-spread", css)
+        self.assertIn("document.addEventListener('pointerdown'", app_js)
+        self.assertIn("quickBtn?.querySelector('.nav-add-circle')", app_js)
+
+        self.assertIn('data-detail-tab="posts"', index_html)
+        self.assertIn('id="book-posts"', index_html)
+        self.assertIn("/api/posts/by-book", app_js)
+        self.assertIn("bookPostsRequest", app_js)
+
+        self.assertIn("0 İlim Serisi", index_html)
+        self.assertNotIn("Paylaşımlık İlim Serisi", app_js + i18n_js + index_html)
+        self.assertNotIn("Favorilerim", app_js + i18n_js + index_html)
+        self.assertIn("'Kaydet':", i18n_js)
+        self.assertIn("'Kaydettiklerim':", i18n_js)
+        self.assertIn("'Paylaşımın kaydedildi':", i18n_js)
+
     def test_book_request_submission_and_admin_approval(self) -> None:
         opener, _ = self.register_user()
         title = _marker("bookrequest")
@@ -923,7 +1060,7 @@ class SmokeAPITests(unittest.TestCase):
             'id="account-sheet"', 'id="account-sheet-text"', 'id="account-create-btn"',
             'id="account-login-btn"', 'id="account-later-btn"',
             'data-i18n="Şimdi oluştur"', 'data-i18n="Sonra"',
-            'data-guest-auth-btn', 'data-member-only', 'data-i18n="Ekle"',
+            'data-guest-auth-btn', 'data-member-only', 'id="quick-add-btn"',
         ):
             self.assertIn(marker, index_html, "missing guest UI marker: " + marker)
 
@@ -966,7 +1103,9 @@ class SmokeAPITests(unittest.TestCase):
         self.assertIn(".btn, .btn-sm, .page-head--tight .btn, .greeting-actions .btn, .sheet-actions .btn {", css)
         self.assertIn("/* Simge + yazı birlikte görünsün. */", css)
         self.assertIn(".top-actions .icon-btn,", css)
-        self.assertIn(".nav-quick-label {", css)
+        self.assertIn(".bottom-nav .nav-add { display: flex; align-items: center; justify-content: center; }", css)
+        self.assertNotIn("nav-quick-label", css)
+        self.assertNotIn("transform: translateY(-7px);", css)
 
         self.assertIn('<span data-i18n="Duyurular">Duyurular</span>', index_html)
         self.assertIn('<span data-i18n="Ara">Ara</span>', index_html)
@@ -1032,10 +1171,10 @@ class SmokeAPITests(unittest.TestCase):
             "font-size: 12px;",  # chip / action / follow
             ".follow-btn { font-size: 12px; min-height: 30px; }",
             ".action { font-size: 12px; }",
-            ".nav-quick-label { font-size: 10px;",
+            ".bottom-nav .nav-add { display: flex;",
         ):
             self.assertIn(marker, uniform, "missing readable label rule: " + marker)
-        self.assertNotIn(".nav-quick-label { font-size: 8.5px;", css)
+        self.assertNotIn("nav-quick-label", css)
         self.assertNotIn(".icon-btn > span:not(.badge-count) { font-size: 9px;", css)
         nav_block = css.split(".app-shell .bottom-nav .nav-item,\n  .app-shell .bottom-nav .nav-item:hover {", 1)[1].split("}", 1)[0]
         self.assertIn("font-size: 10px;", nav_block, "bottom nav labels are still too small")

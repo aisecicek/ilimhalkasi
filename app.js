@@ -84,6 +84,8 @@ function bookMetaHTML(book) {
   return meta.join(' · ');
 }
 
+const FEED_LIMIT = 200;
+
 const state = {
   user: null,
   data: null,
@@ -449,9 +451,22 @@ function startPostPolling() {
   });
 }
 
+function mergeBootstrapPosts(data) {
+  // Akış yalnızca en yeni 200 paylaşımı taşır; kendi eski paylaşımlarımız
+  // profilde görünmeye devam etsin diye ayrı gelen listeyi birleştiririz.
+  const byId = new Map();
+  (data.ownPosts || []).forEach((post) => byId.set(Number(post.id), post));
+  (data.posts || []).forEach((post) => byId.set(Number(post.id), post));
+  data.posts = [...byId.values()].sort(
+    (a, b) => (Number(b.created_at) || 0) - (Number(a.created_at) || 0) || Number(b.id) - Number(a.id)
+  );
+  delete data.ownPosts;
+}
+
 async function refresh() {
   const loadedBooks = state.bookCatalog.slice();
   state.data = await api('/api/bootstrap');
+  mergeBootstrapPosts(state.data);
   state.user = state.data.user;
   state.serverTime = Number(state.data.serverTime) || 0;
   state.lastPostPollTs = latestPostTimestamp();
@@ -1116,7 +1131,7 @@ function postHTML(post) {
         <span class="ico">♥</span><span data-count="likes">${post.likes}</span> ${t('Beğeni')}
       </button>
       <button class="action ${post.favorited ? 'is-on' : ''}" type="button" data-act="favorite" aria-pressed="${post.favorited}">
-        <span class="ico">★</span><span data-count="favorites">${post.favorites}</span> ${t('Favori')}
+        <span class="ico">★</span><span data-count="favorites">${post.favorites}</span> ${t('Kaydet')}
       </button>
       <button class="action" type="button" data-act="comment" aria-expanded="false">
         <span class="ico">❍</span><span data-count="comments">${commentCount}</span> ${t('Yorum')}
@@ -1169,7 +1184,7 @@ function visiblePosts() {
   if (state.filter !== 'all') list = list.filter((p) => p.type === state.filter);
   if (state.sort === 'recent') list.sort((a, b) => b.created_at - a.created_at);
   else list.sort((a, b) => b[state.sort] - a[state.sort]);
-  return list;
+  return list.slice(0, FEED_LIMIT);
 }
 
 function renderFeed() {
@@ -1284,11 +1299,10 @@ function renderIdentity() {
     [finished, t('Toplam okunan')], [pages.toLocaleString('tr-TR'), t('Toplam sayfa')],
     [myPosts().length, t('Paylaşım')], [myReviews().length, t('İnceleme')]
   ].map(([n, label]) => `<div class="profile-stat"><strong>${n}</strong><small>${label}</small></div>`).join('');
-  const streak = myPosts().length;
-  $('#streak-title').textContent = streak ? streak + t(' Paylaşımlık İlim Serisi') : t('İlim serisi seninle başlıyor');
-  $('#streak-desc').textContent = streak
-    ? t('Bugün de halka görevine baktın — seri devam ediyor.')
-    : t('İlk alıntını veya incelemeni paylaştığında serin başlar.');
+  const series = Number(stats.ilimSeries) || 0;
+  $('#streak-title').textContent = `${series} İlim Serisi`;
+  $('#streak-desc').textContent = '';
+  $('#streak-desc').hidden = true;
 
   $('#title-ladder').innerHTML = levels.map((l, i) => `
     <div class="ladder-item ${i < level ? 'is-done' : ''} ${i === level ? 'is-current' : ''}">
@@ -2074,8 +2088,8 @@ function collectNotifications() {
       title = t('Paylaşımın beğenildi');
       body = String(note.text || t('{name} paylaşımını beğendi', { name: actor }));
     } else if (note.kind === 'favorite') {
-      title = t('Paylaşımın favorilere eklendi');
-      body = String(note.text || t('{name} paylaşımını favorilerine ekledi', { name: actor }));
+      title = t('Paylaşımın kaydedildi');
+      body = String(note.text || t('{name} paylaşımını kaydetti', { name: actor }));
     } else if (note.kind === 'book_request') {
       title = t('Kitap önerisi');
       body = String(note.text || '');
@@ -2598,6 +2612,54 @@ function similarBooksHTML(book) {
     </section>`;
 }
 
+let bookPostsRequest = 0;
+
+function bookPostHTML(post) {
+  const isReview = post.type === 'review';
+  const author = post.author || {};
+  return `
+    <article class="book-post-card ${isReview ? 'is-review' : 'is-quote'}">
+      <div class="book-post-head">
+        <button class="book-post-author" type="button" data-profile-user="${esc(author.id || 0)}">
+          ${avatarHTML(author, 'avatar--sm')}
+          <span><strong>${esc(author.display_name || author.name || t('Misafir'))}</strong>
+          <small>${isReview ? t('İnceleme') : t('Alıntı')} · ${esc(timeAgo(post.created_at))}</small></span>
+        </button>
+        ${isReview ? starRow(Number(post.rating) || 0) : ''}
+      </div>
+      <p>${esc(post.text)}</p>
+      <div class="book-post-foot">
+        <span>♥ ${Number(post.likes) || 0}</span>
+        <span>★ ${Number(post.favorites) || 0}</span>
+      </div>
+    </article>`;
+}
+
+function renderBookPosts(posts) {
+  const host = $('#book-posts');
+  if (!host) return;
+  const count = $('#book-post-count');
+  if (count) count.textContent = t('{n} paylaşım', { n: posts.length });
+  host.innerHTML = posts.length
+    ? `<div class="book-post-list">${posts.map(bookPostHTML).join('')}</div>`
+    : `<div class="overview-card"><p>${t('Bu kitap için henüz paylaşım yok.')}</p></div>`;
+}
+
+async function loadBookPosts(book) {
+  const host = $('#book-posts');
+  if (!host) return;
+  const request = ++bookPostsRequest;
+  host.innerHTML = `<div class="overview-card"><p>${t('Paylaşımlar yükleniyor...')}</p></div>`;
+  try {
+    const result = await api('/api/posts/by-book?book=' + encodeURIComponent(book?.title || ''));
+    if (request === bookPostsRequest) renderBookPosts(result.posts || []);
+  } catch (error) {
+    if (request === bookPostsRequest) {
+      host.innerHTML = `<div class="overview-card"><p>${t('Paylaşımlar yüklenemedi.')}</p></div>`;
+    }
+  }
+}
+
 function openBook(key) {
   const scholarBooks = (state.data.scholars || []).flatMap((s) =>
     [...(s.bookItems || []), ...(s.recommendedItems || [])]);
@@ -2618,7 +2680,7 @@ function openBook(key) {
         <p>${esc(book.author || t('Yazar bilinmiyor'))} · ${esc(book.category)}${book.year ? ` · ${book.year}` : ''}</p>
         <div>
           <span class="read-status">${t('{n} müzakere sorusu', { n: (state.data.debates[title] || []).length })}</span>
-          <span class="read-status">${t('{n} paylaşım', { n: state.data.posts.filter((p) => p.book === title).length })}</span>
+          <span class="read-status" id="book-post-count">${t('{n} paylaşım', { n: 0 })}</span>
         </div>
       </div>
     </div>`;
@@ -2645,7 +2707,9 @@ function openBook(key) {
   });
   $('#book-overview').hidden = false;
   $('#book-debate').hidden = true;
+  $('#book-posts').hidden = true;
   renderDebates();
+  loadBookPosts(book);
   switchView('book');
 }
 
@@ -3798,7 +3862,7 @@ $('#refresh-feed').addEventListener('click', async () => { await refresh(); toas
   if (!state.user && ['like', 'favorite', 'follow', 'comment-like'].includes(act)) {
     const label = act === 'follow' ? t('Takip etmek')
       : act === 'like' ? t('Beğenmek')
-        : act === 'favorite' ? t('Favorilere eklemek') : t('Yorumu beğenmek');
+        : act === 'favorite' ? t('Kaydetmek') : t('Yorumu beğenmek');
     requestAccount(label);
     return;
   }
@@ -3889,6 +3953,25 @@ function openQuickSheet() {
 }
 function closeQuickSheet() { if (quickSheet) quickSheet.hidden = true; }
 $('#quick-add-btn')?.addEventListener('click', openQuickSheet);
+
+/* Beğeni ve ortadaki ekleme düğmesinde mürekkep yayılması. */
+document.addEventListener('pointerdown', (e) => {
+  const likeBtn = e.target.closest('[data-act="like"]');
+  const quickBtn = e.target.closest('#quick-add-btn');
+  const host = likeBtn || quickBtn?.querySelector('.nav-add-circle');
+  if (!host) return;
+  const rect = host.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const size = Math.max(rect.width, rect.height) * 2.2;
+  const ripple = document.createElement('span');
+  ripple.className = 'ink-ripple';
+  ripple.style.width = ripple.style.height = size + 'px';
+  ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+  ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+  host.appendChild(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+});
+
 $('#quick-sheet-close')?.addEventListener('click', closeQuickSheet);
 quickSheet?.addEventListener('click', (e) => { if (e.target === quickSheet) closeQuickSheet(); });
 $('#quick-add-quote')?.addEventListener('click', () => { closeQuickSheet(); openModal('quote'); });
@@ -4037,9 +4120,10 @@ $$('.detail-tab').forEach((tab) => tab.addEventListener('click', () => {
   $$('.detail-tab').forEach((t) => { t.classList.remove('is-active'); t.setAttribute('aria-selected', 'false'); });
   tab.classList.add('is-active');
   tab.setAttribute('aria-selected', 'true');
-  const isDebate = tab.dataset.detailTab === 'debate';
-  $('#book-overview').hidden = isDebate;
-  $('#book-debate').hidden = !isDebate;
+  const tabKey = tab.dataset.detailTab;
+  $('#book-overview').hidden = tabKey !== 'overview';
+  $('#book-debate').hidden = tabKey !== 'debate';
+  $('#book-posts').hidden = tabKey !== 'posts';
 }));
 
 $('#book-overview').addEventListener('click', (e) => {
@@ -5008,7 +5092,7 @@ function publicWritingHTML(post) {
         <span class="ico">♥</span><span data-count="likes">${Number(post.likes) || 0}</span> ${t('Beğeni')}
       </button>
       <button class="action ${post.favorited ? 'is-on' : ''}" type="button" data-act="favorite" aria-pressed="${Boolean(post.favorited)}">
-        <span class="ico">★</span><span data-count="favorites">${Number(post.favorites) || 0}</span> ${t('Favori')}
+        <span class="ico">★</span><span data-count="favorites">${Number(post.favorites) || 0}</span> ${t('Kaydet')}
       </button>
       <button class="action" type="button" data-act="public-comment" aria-expanded="false">
         <span class="ico">❍</span><span data-count="comments">${commentCount}</span> ${t('Yorum')}

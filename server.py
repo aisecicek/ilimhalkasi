@@ -1691,14 +1691,39 @@ def init_db() -> None:
     conn.commit()
     conn.close()
     ensure_favorites_list()
+    ensure_ilim_series()
 
 
 def ensure_favorites_list() -> None:
-    """Her kullanıcıya bir kez 'Favorilerim' listesi verir; silinirse tekrar gelmez."""
+    """Her kullanıcıya bir kez 'Kaydettiklerim' listesi verir; silinirse tekrar gelmez."""
     conn = connect()
     try:
         for row in conn.execute("SELECT id FROM users").fetchall():
             uid = row["id"]
+            # Eski veritabanlarındaki "Favorilerim" listesini kaybetmeden taşı.
+            old_lists = conn.execute(
+                "SELECT id FROM book_lists WHERE user_id=? AND name='Favorilerim' ORDER BY id",
+                (uid,),
+            ).fetchall()
+            if old_lists:
+                new_list = conn.execute(
+                    "SELECT id FROM book_lists WHERE user_id=? AND name='Kaydettiklerim' LIMIT 1",
+                    (uid,),
+                ).fetchone()
+                target_id = int(new_list["id"]) if new_list else None
+                for index, old in enumerate(old_lists):
+                    if target_id is None:
+                        conn.execute(
+                            "UPDATE book_lists SET name='Kaydettiklerim' WHERE id=?", (old["id"],)
+                        )
+                        target_id = int(old["id"])
+                        continue
+                    conn.execute(
+                        "INSERT OR IGNORE INTO book_list_items (list_id,book_id,created_at) "
+                        "SELECT ?,book_id,created_at FROM book_list_items WHERE list_id=?",
+                        (target_id, old["id"]),
+                    )
+                    conn.execute("DELETE FROM book_lists WHERE id=?", (old["id"],))
             marker = conn.execute(
                 "SELECT 1 FROM user_meta WHERE user_id=? AND key='favorites_seeded'", (uid,)
             ).fetchone()
@@ -1706,12 +1731,75 @@ def ensure_favorites_list() -> None:
                 continue
             conn.execute(
                 "INSERT OR IGNORE INTO book_lists (user_id,name,created_at) VALUES (?,?,?)",
-                (uid, "Favorilerim", now()),
+                (uid, "Kaydettiklerim", now()),
             )
             conn.execute(
                 "INSERT OR REPLACE INTO user_meta (user_id,key,value) VALUES (?,?,?)",
                 (uid, "favorites_seeded", "1"),
             )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def ilim_series_baseline(conn: sqlite3.Connection, uid: int) -> int:
+    """Eski hesaplar için sayacı mevcut gerçek aktiviteden türetir."""
+    posts = conn.execute("SELECT COUNT(*) FROM posts WHERE user_id=?", (uid,)).fetchone()[0]
+    comments = conn.execute("SELECT COUNT(*) FROM comments WHERE user_id=?", (uid,)).fetchone()[0]
+    shelf = conn.execute(
+        "SELECT COUNT(*) FROM shelf_books WHERE user_id=? AND status IN ('reading','finished')",
+        (uid,),
+    ).fetchone()[0]
+    return int(posts) + int(comments) + int(shelf)
+
+
+def get_ilim_series(conn: sqlite3.Connection, uid: int) -> int:
+    if not uid:
+        return 0
+    row = conn.execute(
+        "SELECT value FROM user_meta WHERE user_id=? AND key='ilim_series'", (uid,)
+    ).fetchone()
+    if row:
+        try:
+            return max(0, int(row["value"] or 0))
+        except (TypeError, ValueError):
+            return 0
+    return ilim_series_baseline(conn, uid)
+
+
+def bump_ilim_series(conn: sqlite3.Connection, uid: int) -> None:
+    """Okuma, paylaşım ve yorum gibi gerçek aktivitelerde sayacı bir artırır."""
+    if not uid:
+        return
+    row = conn.execute(
+        "SELECT value FROM user_meta WHERE user_id=? AND key='ilim_series'", (uid,)
+    ).fetchone()
+    if row:
+        try:
+            value = max(0, int(row["value"] or 0)) + 1
+        except (TypeError, ValueError):
+            value = ilim_series_baseline(conn, uid) + 1
+    else:
+        value = ilim_series_baseline(conn, uid) + 1
+    conn.execute(
+        "INSERT OR REPLACE INTO user_meta (user_id,key,value) VALUES (?,?,?)",
+        (uid, "ilim_series", str(value)),
+    )
+
+
+def ensure_ilim_series() -> None:
+    conn = connect()
+    try:
+        for row in conn.execute("SELECT id FROM users").fetchall():
+            uid = row["id"]
+            exists = conn.execute(
+                "SELECT 1 FROM user_meta WHERE user_id=? AND key='ilim_series'", (uid,)
+            ).fetchone()
+            if not exists:
+                conn.execute(
+                    "INSERT OR IGNORE INTO user_meta (user_id,key,value) VALUES (?,?,?)",
+                    (uid, "ilim_series", str(ilim_series_baseline(conn, uid))),
+                )
         conn.commit()
     finally:
         conn.close()
@@ -2003,7 +2091,7 @@ def serialize_public_profile(conn: sqlite3.Connection, viewer_id: int, row: sqli
         "ORDER BY s.created_at DESC", (row["id"],)
     )]
     data["posts"] = [serialize_post(conn, p, viewer_id) for p in conn.execute(
-        "SELECT * FROM posts WHERE user_id=? ORDER BY created_at DESC LIMIT 60", (row["id"],)
+        "SELECT * FROM posts WHERE user_id=? ORDER BY created_at DESC, id DESC", (row["id"],)
     )]
     return data
 
@@ -2242,7 +2330,18 @@ def build_bootstrap(conn: sqlite3.Connection, user_id: int | None) -> dict:
     # Misafirler de herkese açık akışı/kataloğu görebilir; kişisel alanlar boş kalır.
     user_id = user_id or 0
     user = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
-    posts = conn.execute("SELECT * FROM posts ORDER BY created_at DESC").fetchall()
+    # Akış sabit bir pencereyle sınırlıdır; kullanıcının kendi eski paylaşımları
+    # ayrıca yüklenir ki profilinden kaybolmasın.
+    posts = conn.execute(
+        "SELECT * FROM posts ORDER BY created_at DESC, id DESC LIMIT 200"
+    ).fetchall()
+    own_posts = (
+        conn.execute(
+            "SELECT * FROM posts WHERE user_id=? ORDER BY created_at DESC, id DESC",
+            (user_id,),
+        ).fetchall()
+        if user_id else []
+    )
     shelf = conn.execute(
         "SELECT s.*, b.volume_count, b.title, b.author, b.cover FROM shelf_books s JOIN books b ON b.id=s.book_id "
         "WHERE s.user_id=? ORDER BY s.created_at DESC", (user_id,)
@@ -2343,6 +2442,7 @@ def build_bootstrap(conn: sqlite3.Connection, user_id: int | None) -> dict:
             "ORDER BY CASE WHEN source='curated' THEN 0 ELSE 1 END, id LIMIT 300"
         )],
         "posts": [serialize_post(conn, p, user_id) for p in posts],
+        "ownPosts": [serialize_post(conn, p, user_id) for p in own_posts],
         "shelf": shelf_data,
         "lists": lists,
         "book_requests": [serialize_book_request(conn, r) for r in conn.execute(
@@ -2368,6 +2468,7 @@ def build_bootstrap(conn: sqlite3.Connection, user_id: int | None) -> dict:
                 "SELECT COUNT(*) FROM group_members m JOIN groups g ON g.id=m.group_id "
                 "WHERE m.user_id=? AND g.kind='halka'", (user_id,)
             ).fetchone()[0],
+            "ilimSeries": get_ilim_series(conn, user_id),
         },
     }
 
@@ -2579,6 +2680,28 @@ class Handler(BaseHTTPRequestHandler):
                     "posts": [serialize_post(conn, p, viewer["id"]) for p in rows],
                     "deleted": deleted,
                     "serverTime": now(),
+                })
+            finally:
+                conn.close()
+
+        if path == "/api/posts/by-book":
+            # Kitap sayfası, akışın 200'lük penceresinden bağımsız olarak o
+            # esere ait tüm alıntı ve incelemeleri gösterir.
+            params = urllib.parse.parse_qs(parsed.query)
+            book = params.get("book", [""])[0].strip()[:200]
+            if not book:
+                return self.send_json({"posts": []})
+            viewer = self.current_user()
+            conn = connect()
+            try:
+                rows = conn.execute(
+                    "SELECT * FROM posts WHERE book=? ORDER BY created_at DESC, id DESC LIMIT 300",
+                    (book,),
+                ).fetchall()
+                return self.send_json({
+                    "posts": [
+                        serialize_post(conn, p, viewer["id"] if viewer else 0) for p in rows
+                    ]
                 })
             finally:
                 conn.close()
@@ -3177,11 +3300,15 @@ class Handler(BaseHTTPRequestHandler):
             conn.execute("INSERT INTO sessions (token,user_id,expires_at) VALUES (?,?,?)", (token, uid, expires))
             conn.execute(
                 "INSERT OR IGNORE INTO book_lists (user_id,name,created_at) VALUES (?,?,?)",
-                (uid, "Favorilerim", now()),
+                (uid, "Kaydettiklerim", now()),
             )
             conn.execute(
                 "INSERT OR REPLACE INTO user_meta (user_id,key,value) VALUES (?,?,?)",
                 (uid, "favorites_seeded", "1"),
+            )
+            conn.execute(
+                "INSERT OR REPLACE INTO user_meta (user_id,key,value) VALUES (?,?,?)",
+                (uid, "ilim_series", "0"),
             )
             conn.commit()
             user = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
@@ -3437,6 +3564,7 @@ class Handler(BaseHTTPRequestHandler):
                     add_notification(conn, member["user_id"], "circle_post", uid,
                                      post_id, group_id, text, str(group_id))
             notify_mentions(conn, text, uid, post_id, group_id)
+            bump_ilim_series(conn, uid)
             conn.commit()
             row = conn.execute("SELECT * FROM posts WHERE id=?", (post_id,)).fetchone()
             return self.send_json({"post": serialize_post(conn, row, uid)}, 201)
@@ -3603,6 +3731,14 @@ class Handler(BaseHTTPRequestHandler):
                 "VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (uid, book_id, status, page, progress, rating, stamp, finished_at, page_count, volume),
             )
+            started = status == 'reading' and (
+                previous is None or previous["status"] in ('wishlist', 'abandoned')
+            )
+            finished = status == 'finished' and (
+                previous is None or previous["status"] != 'finished'
+            )
+            if started or finished:
+                bump_ilim_series(conn, uid)
             conn.commit()
             return self.send_json({"ok": True})
         finally:
@@ -4082,7 +4218,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 conn.execute(f"INSERT INTO {table} ({column},user_id) VALUES (?,?)", (post_id, uid))
                 actor = author_of(conn, uid).get("display_name") or "Bir kullanıcı"
-                verb = "paylaşımını beğendi" if kind == "like" else "paylaşımını favorilerine ekledi"
+                verb = "paylaşımını beğendi" if kind == "like" else "paylaşımını kaydetti"
                 add_notification(conn, post["user_id"], kind, uid, post_id, None,
                                  f"{actor} {verb}", str(post_id))
             conn.execute("UPDATE posts SET updated_at=? WHERE id=?", (now(), post_id))
@@ -4123,6 +4259,7 @@ class Handler(BaseHTTPRequestHandler):
                                  None, text, str(post_id))
             notify_mentions(conn, text, uid, post_id, None, notify_ids)
             conn.execute("UPDATE posts SET updated_at=? WHERE id=?", (now(), post_id))
+            bump_ilim_series(conn, uid)
             conn.commit()
             row = conn.execute("SELECT * FROM comments WHERE id=?", (cur.lastrowid,)).fetchone()
             return self.send_json({"comment": serialize_comment(conn, row, uid)}, 201)
