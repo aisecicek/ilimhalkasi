@@ -3,12 +3,16 @@ __pycache__/
 *.log
 
 # Yerel kullanıcı verisi ve sıfırlama bağlantıları
+local.env
 ilimhalkasi.db
 ilimhalkasi.db-journal
 ilimhalkasi.db-wal
 ilimhalkasi.db-shm
 password_reset_outbox.txt
 backups/
+
+# GitHub Actions çıktıları
+artifacts/
 
 # Editör / işletim sistemi
 .idea/

@@ -13,6 +13,8 @@ python server.py
 
 `ilimhalkasi.db` ilk açılışta oluşturulur, şema göçleri otomatik uygulanır. Oturum 30 gün süren `HttpOnly` çerezle tutulur. `python -m http.server` ile açılan statik sürüm çalışmaz; API için `server.py` gerekir.
 
+Bu makinede veritabanı ve yedekler OneDrive dışındaki `C:\ProgramData\IlimHalkasi` dizinindedir. Projedeki `local.env` dosyası `ILIMHALKASI_DB_DIR` değerini bu yola ayarlar; sunucu açılışta bu dosyayı okur ve gerçek ortam değişkenlerini ezmez. `local.env` gitignore içindedir, parola da ekleyebilirsin. Yeni açılan bir terminalde doğrudan `python server.py` çalıştırmak aynı veritabanını kullanır. Başka bir makinede `local.env` değerini senkronize olmayan bir dizine ayarla.
+
 ## Mobil uygulama (Android APK)
 
 `android/` klasörü, sitenin tamamını açan bir WebView kabuğudur. **Tüm özellikler**
@@ -111,7 +113,7 @@ Ayarlar → **Kişisel verilerim** alanında aydınlatma metni ve **Verilerimi d
 
 Sunucu açılışta `PRAGMA integrity_check`, süresi dolan kayıt temizliği, haftada bir `VACUUM` ve günlük SQLite yedeği çalıştırır. Yedekler `backups/` klasöründe tutulur ve `.gitignore` ile dışlanır. Ortam değişkenleri: `ILIMHALKASI_KVKK_CONTACT`, `ILIMHALKASI_DATA_CONTROLLER`. Varsayılan başvuru adresi geliştirme yöneticisidir; dağıtımda değiştirilmelidir.
 
-Veritabanı ve yedeklerin yolu `ILIMHALKASI_DB_DIR` ile değiştirilebilir; varsayılan olarak proje klasörü kullanılır. OneDrive gibi senkronize bir dizinde SQLite dosyasının eşzamanlı yazılması riskli olduğundan yayında sabit bir dizin verin. Şema sürümü `009-production-hardening`'tir; `users.email_verified` ve `email_verifications` bu göçle eklenir.
+Veritabanı ve yedeklerin yolu `ILIMHALKASI_DB_DIR` ile değiştirilebilir; varsayılan olarak proje klasörü kullanılır. OneDrive gibi senkronize bir dizinde SQLite dosyasının eşzamanlı yazılması riskli olduğundan yayında sabit bir dizin verin (bu makinede `C:\ProgramData\IlimHalkasi`). Şema sürümü `009-production-hardening`'tir; `users.email_verified` ve `email_verifications` bu göçle eklenir.
 
 ## Yayın güvenliği
 

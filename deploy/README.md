@@ -74,7 +74,9 @@ hiç veritabanına dokunmadan hata vererek durur. Geliştirmede varsayılanlar k
 | `ILIMHALKASI_RATE_LIMIT` | Varsayılan `1`; giriş/kayıt/sıfırlama uçlarını sınırlar |
 | `HOST` | Ters proxy arkasında `127.0.0.1` önerilir |
 
-Şifreler `/etc/ilimhalkasi.env` içinde `0600` yetkiyle tutulur; repo'ya yazılmaz.
+Şifreler `/etc/ilimhalkasi.env` içinde `0600` yetkiyle tutulur; repo'ya yazılmaz. Başlangıç için
+`deploy/ilimhalkasi.env.example` dosyasını örnek alın. İlk HTTPS doğrulamasından sonra
+Caddy `Strict-Transport-Security` başlığını da ekler (mevcut `Caddyfile` örneğinde hazır).
 Kayıt doğrulama ve şifre sıfırlama bağlantıları API yanıtında **asla** döndürülmez;
 SMTP yoksa yalnızca sunucudaki `password_reset_outbox.txt` dosyasına kaydedilir.
 

@@ -35,6 +35,29 @@ from pathlib import Path
 from scholars_data import SCHOLARS_EXTRA
 
 BASE = Path(__file__).resolve().parent
+
+
+def load_local_env() -> None:
+    """Projedeki local.env dosyasını okur; gerçek ortam değişkenlerini ezmez."""
+    path = BASE / "local.env"
+    if not path.is_file():
+        return
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return
+    for line in lines:
+        text = line.strip()
+        if not text or text.startswith("#") or "=" not in text:
+            continue
+        key, value = text.split("=", 1)
+        key, value = key.strip(), value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+load_local_env()
+
 # Veri dosyaları varsayılan olarak uygulama klasöründe tutulur. Yayında OneDrive
 # gibi senkronize bir dizin yerine ILIMHALKASI_DB_DIR ile sabit bir yol verin.
 DATA_DIR = Path(os.environ.get("ILIMHALKASI_DB_DIR", "")).expanduser().resolve() if os.environ.get("ILIMHALKASI_DB_DIR", "").strip() else BASE

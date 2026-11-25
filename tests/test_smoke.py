@@ -165,6 +165,9 @@ def _launch_server(
         env.pop(name, None)
     env["ILIMHALKASI_RATE_LIMIT"] = "0"
     env["ILIMHALKASI_CSRF"] = "1"
+    # The test server must never inherit the live DB directory or production mode.
+    env.pop("ILIMHALKASI_DB_DIR", None)
+    env.pop("ILIMHALKASI_PRODUCTION", None)
     env.update(env_overrides or {})
     log_handle = (tmp_dir / "server.log").open("wb")
     proc = subprocess.Popen(
@@ -185,7 +188,18 @@ def _copy_sources(tmp_dir: Path) -> None:
         target = tmp_dir / filename
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
-    shutil.copy2(PROJECT_ROOT / DB_FILENAME, tmp_dir / DB_FILENAME)
+    configured_dir = os.environ.get("ILIMHALKASI_DB_DIR", "").strip()
+    if not configured_dir:
+        local_env = PROJECT_ROOT / "local.env"
+        if local_env.is_file():
+            for line in local_env.read_text(encoding="utf-8").splitlines():
+                if line.startswith("ILIMHALKASI_DB_DIR="):
+                    configured_dir = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    break
+    db_source = Path(configured_dir).expanduser() / DB_FILENAME if configured_dir else PROJECT_ROOT / DB_FILENAME
+    if not db_source.is_file():
+        raise RuntimeError("Database not found for smoke tests: " + str(db_source))
+    shutil.copy2(db_source, tmp_dir / DB_FILENAME)
 
 
 class SmokeAPITests(unittest.TestCase):
