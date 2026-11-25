@@ -45,8 +45,7 @@ function bookCoverHTML(book, extraClass = '') {
   if (isImageCover(cover)) {
     return `<img class="${className}" src="${esc(cover)}" alt="${esc(book?.title || '')}${t(' kapağı')}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
       data-fallback-title="${esc(book?.title || '')}" data-fallback-author="${esc(book?.author || '')}"
-      data-fallback-tone="${esc(coverTone(book))}" data-fallback-class="${esc(extraClass)}"
-      onerror="bookCoverFallback(this)" />`;
+      data-fallback-tone="${esc(coverTone(book))}" data-fallback-class="${esc(extraClass)}" />`;
   }
   return placeholderCoverHTML(book, extraClass);
 }
@@ -88,6 +87,7 @@ const FEED_LIMIT = 200;
 
 const state = {
   user: null,
+  csrfToken: '',
   data: null,
   lastPostPollTs: 0,
   serverTime: 0,
@@ -337,12 +337,15 @@ const levels = [
 /* ---------------- API ---------------- */
 
 async function api(path, options = {}) {
+  const method = options.method || (options.body !== undefined ? 'POST' : 'GET');
   let response;
   try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (method !== 'GET' && state.csrfToken) headers['X-CSRF-Token'] = state.csrfToken;
     response = await fetch(path, {
       credentials: 'same-origin',
-      method: options.method || (options.body !== undefined ? 'POST' : 'GET'),
-      headers: { 'Content-Type': 'application/json' },
+      method,
+      headers,
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined
     });
   } catch {
@@ -350,6 +353,7 @@ async function api(path, options = {}) {
   }
   let payload = {};
   try { payload = await response.json(); } catch { /* boş yanıt */ }
+  if (payload.csrfToken) state.csrfToken = payload.csrfToken;
   if (!response.ok) {
     const isAuthCall = /^\/api\/(login|register|forgot-password|reset-password|logout)/.test(path);
     if (response.status === 401 && !state.user && !isAuthCall) {
@@ -359,6 +363,12 @@ async function api(path, options = {}) {
     throw new Error(payload.error || t('Bir sorun oluştu'));
   }
   return payload;
+}
+
+function stripQueryParams(names) {
+  const url = new URL(location.href);
+  names.forEach((name) => url.searchParams.delete(name));
+  history.replaceState(null, '', url.pathname + url.search + url.hash);
 }
 
 let postPollTimer = null;
@@ -1047,6 +1057,15 @@ async function initAppSession() {
 
 async function boot() {
   loadSettings();
+  const params = new URLSearchParams(location.search);
+  if (params.get('verified') === '1') {
+    toast(t('E-postan doğrulandı. Şimdi giriş yapabilirsin.'));
+  } else if (params.get('verify_failed') === '1') {
+    toast(t('Doğrulama bağlantısı geçersiz veya süresi dolmuş.'));
+  }
+  if (params.has('verified') || params.has('verify_failed')) {
+    stripQueryParams(['verified', 'verify_failed']);
+  }
   try {
     const result = await api('/api/me');
     if (!result.user) rememberGuestVisit();
@@ -3606,7 +3625,7 @@ $('#login-form').addEventListener('submit', async (e) => {
 $('#register-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
-    await api('/api/register', {
+    const result = await api('/api/register', {
       method: 'POST',
       body: {
         email: $('#register-email').value.trim(),
@@ -3616,9 +3635,27 @@ $('#register-form').addEventListener('submit', async (e) => {
       }
     });
     clearGuestReminder();
+    if (!result.user) {
+      // E-posta doğrulaması açık: oturum açılmadı, önce bağlantı onaylanmalı.
+      $('#register-error').hidden = true;
+      authTab('login');
+      $('#login-email').value = $('#register-email').value.trim();
+      toast(result.message || t('E-postana doğrulama bağlantısı gönderildi.'));
+      return;
+    }
     await initAppSession();
     toast(t('Halkaya hoş geldin ✧'));
   } catch (error) { showAuthError('register', error.message); }
+});
+
+$('#resend-verification-link')?.addEventListener('click', async () => {
+  const email = $('#login-email').value.trim();
+  if (!email) { showAuthError('login', t('Doğrulama için e-posta adresini gir')); return; }
+  try {
+    const result = await api('/api/resend-verification', { method: 'POST', body: { email } });
+    $('#auth-error').hidden = true;
+    toast(result.message || t('Doğrulama bağlantısı yeniden gönderildi.'));
+  } catch (error) { showAuthError('login', error.message); }
 });
 
 async function logout() {
@@ -3674,11 +3711,7 @@ function openResetStage(token) {
 function closePasswordModal() {
   passwordModal.hidden = true;
   activeResetToken = null;
-  if (location.search.includes('reset=')) {
-    const url = new URL(location.href);
-    url.searchParams.delete('reset');
-    history.replaceState(null, '', url.pathname + url.search + url.hash);
-  }
+  if (location.search.includes('reset=')) stripQueryParams(['reset']);
 }
 
 function showPasswordError(selector, message) {
@@ -3713,14 +3746,10 @@ $('#forgot-submit')?.addEventListener('click', async () => {
   try {
     const result = await api('/api/forgot-password', { method: 'POST', body: { email } });
     $('#forgot-error').hidden = true;
-    if (result.dev_link) {
-      const hint = $('#forgot-dev-hint');
-      hint.hidden = false;
-      hint.innerHTML = `${esc(result.message)} <a href="${esc(result.dev_link)}">${t('Bağlantıyı aç')}</a>`;
-    } else {
-      toast(result.message);
-      closePasswordModal();
-    }
+    const hint = $('#forgot-dev-hint');
+    if (hint) hint.hidden = true;
+    toast(result.message || t('E-posta kayıtlıysa sıfırlama bağlantısı gönderildi.'));
+    closePasswordModal();
   } catch (error) { showPasswordError('#forgot-error', error.message); }
 });
 
@@ -5604,7 +5633,7 @@ const PRIVACY_SECTIONS = [
   },
   {
     title: 'Paylaşım ve üçüncü taraflar',
-    body: 'Reklam ağı, analitik veya harici yazı tipi kullanılmaz. İçerikler yalnızca bu uygulamanın sunucusunda tutulur; halkalara açık paylaşımlar diğer üyeler tarafından okunabilir.'
+    body: 'Reklam ağı, analitik veya harici yazı tipi/ikon kullanılmaz; fontlar ve ikonlar uygulamayla birlikte sunulur. Oturumun yalnızca bu sunucunun HttpOnly çerezinde tutulur. İçerikler bu uygulamanın sunucusunda tutulur; yalnızca katalog kaydında bağlantı bulunan kitap kapakları Open Library / Archive.org üzerinden yüklenir. Halkalara açık paylaşımlar diğer üyeler tarafından okunabilir.'
   },
   {
     title: 'Saklama süreleri',

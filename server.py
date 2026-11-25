@@ -35,7 +35,10 @@ from pathlib import Path
 from scholars_data import SCHOLARS_EXTRA
 
 BASE = Path(__file__).resolve().parent
-DB_PATH = BASE / "ilimhalkasi.db"
+# Veri dosyaları varsayılan olarak uygulama klasöründe tutulur. Yayında OneDrive
+# gibi senkronize bir dizin yerine ILIMHALKASI_DB_DIR ile sabit bir yol verin.
+DATA_DIR = Path(os.environ.get("ILIMHALKASI_DB_DIR", "")).expanduser().resolve() if os.environ.get("ILIMHALKASI_DB_DIR", "").strip() else BASE
+DB_PATH = DATA_DIR / "ilimhalkasi.db"
 PORT = 8765
 SESSION_DAYS = 30
 PBKDF2_ROUNDS = 210_000
@@ -43,10 +46,33 @@ ADMIN_EMAIL = "admin@ilimhalkasi.local"
 ADMIN_USERNAME = "admin"
 KVKK_CONTACT = os.environ.get("ILIMHALKASI_KVKK_CONTACT", ADMIN_EMAIL).strip()
 DATA_CONTROLLER = os.environ.get("ILIMHALKASI_DATA_CONTROLLER", "İlim Halkası").strip()
-BACKUP_DIR = BASE / "backups"
+BACKUP_DIR = DATA_DIR / "backups"
 BACKUP_KEEP = 7
 DELETED_POST_TTL_DAYS = 90
-SCHEMA_VERSION = "008-kvkk-export-maintenance"
+PRODUCTION = os.environ.get("ILIMHALKASI_PRODUCTION", "0").strip().lower() in ("1", "true", "yes")
+REQUIRE_EMAIL_VERIFICATION = os.environ.get(
+    "ILIMHALKASI_REQUIRE_EMAIL_VERIFICATION", "1" if PRODUCTION else "0"
+).strip().lower() in ("1", "true", "yes")
+CSRF_ENABLED = os.environ.get("ILIMHALKASI_CSRF", "1").strip().lower() not in ("0", "false", "no")
+RATE_LIMIT_ENABLED = os.environ.get("ILIMHALKASI_RATE_LIMIT", "1").strip().lower() not in ("0", "false", "no")
+TRUST_PROXY = os.environ.get("ILIMHALKASI_TRUST_PROXY", "1" if PRODUCTION else "0").strip().lower() in ("1", "true", "yes")
+RATE_LIMITS = {
+    "/api/register": (5, 3600),
+    "/api/login": (10, 300),
+    "/api/forgot-password": (5, 3600),
+    "/api/resend-verification": (5, 3600),
+    "/api/reset-password": (10, 3600),
+}
+RATE_STATE: dict[tuple[str, str], list[float]] = {}
+RATE_LOCK = threading.Lock()
+CSRF_EXEMPT = frozenset({
+    "/api/register",
+    "/api/login",
+    "/api/forgot-password",
+    "/api/resend-verification",
+    "/api/reset-password",
+})
+SCHEMA_VERSION = "009-production-hardening"
 MIGRATIONS = (
     "001-schema-baseline",
     "002-notification-kinds",
@@ -55,6 +81,7 @@ MIGRATIONS = (
     "005-group-posts",
     "006-deleted-posts",
     "007-saved-lists-and-series",
+    "008-kvkk-export-maintenance",
     SCHEMA_VERSION,
 )
 RESET_TTL_SECONDS = 3600
@@ -65,9 +92,9 @@ SMTP_USER = os.environ.get("SMTP_USER", "").strip()
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 SMTP_FROM = os.environ.get("SMTP_FROM", "") or SMTP_USER or "İlim Halkası <noreply@ilimhalkasi.local>"
 SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "1").strip() not in ("0", "false", "False", "no")
-RESET_OUTBOX = BASE / "password_reset_outbox.txt"
-# Yalnızca yerel geliştirmede, e-posta olmadan sıfırlama bağlantısını yanıtta döndürür.
-DEV_RESET_LINK = os.environ.get("ILIMHALKASI_DEV_RESET_LINK", "0").strip() == "1"
+# SMTP olmadığında bağlantılar yalnızca sunucu tarafındaki kutuya yazılır;
+# yanıtta asla döndürülmez. DB ile aynı Veri dizininde tutulur.
+RESET_OUTBOX = DATA_DIR / "password_reset_outbox.txt"
 # Ters proxy (Caddy/Nginx) HTTPS sonlandırdığında oturum çerezini Secure yap.
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "0").strip().lower() in ("1", "true", "yes")
 
@@ -77,6 +104,7 @@ STATIC_FILES = {
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/i18n.js": ("i18n.js", "text/javascript; charset=utf-8"),
+    "/vendor/lucide-1.80.0.min.js": ("vendor/lucide-1.80.0.min.js", "text/javascript; charset=utf-8"),
     "/favicon.svg": ("favicon.svg", "image/svg+xml"),
     "/logo.svg": ("logo.svg", "image/svg+xml"),
     "/manifest.webmanifest": ("manifest.webmanifest", "application/manifest+json"),
@@ -115,6 +143,7 @@ CREATE TABLE IF NOT EXISTS users (
   is_admin      INTEGER NOT NULL DEFAULT 0,
   is_system     INTEGER NOT NULL DEFAULT 0,
   blocked       INTEGER NOT NULL DEFAULT 0,
+  email_verified INTEGER NOT NULL DEFAULT 0,
   created_at    REAL NOT NULL
 );
 
@@ -125,6 +154,14 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE TABLE IF NOT EXISTS password_resets (
+  token_hash TEXT PRIMARY KEY,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  used       INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS email_verifications (
   token_hash TEXT PRIMARY KEY,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   expires_at INTEGER NOT NULL,
@@ -1608,6 +1645,7 @@ def start_figure_scheduler() -> None:
 
 
 def init_db() -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
     conn = connect()
     conn.executescript(SCHEMA)
     # Eski veritabanlarında bildirim türleri sınırlıydı; like/favorite eklemek için tabloyu yenile.
@@ -1642,6 +1680,15 @@ def init_db() -> None:
         conn.execute("ALTER TABLE users ADD COLUMN avatar_image TEXT NOT NULL DEFAULT ''")
     if "is_system" not in columns:
         conn.execute("ALTER TABLE users ADD COLUMN is_system INTEGER NOT NULL DEFAULT 0")
+    if "email_verified" not in columns:
+        conn.execute("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0")
+    if REQUIRE_EMAIL_VERIFICATION:
+        conn.execute(
+            "UPDATE users SET email_verified=1 WHERE is_admin=1 OR is_community=1 OR is_system=1"
+        )
+    else:
+        # Geliştirmede SMTP yok; mevcut hesapları doğrulanmış say ki kilitlenmesin.
+        conn.execute("UPDATE users SET email_verified=1 WHERE email_verified=0")
     scholar_columns = {row[1] for row in conn.execute("PRAGMA table_info(scholars)")}
     if "kind" not in scholar_columns:
         conn.execute("ALTER TABLE scholars ADD COLUMN kind TEXT NOT NULL DEFAULT 'alim'")
@@ -2042,6 +2089,90 @@ def privacy_notice() -> dict:
     }
 
 
+def csrf_secret(conn: sqlite3.Connection) -> str:
+    """Kuruluma özel CSRF sırrı; yalnızca sunucuda tutulur."""
+    value = meta_get(conn, "csrf_secret", "")
+    if not value:
+        value = secrets.token_hex(32)
+        meta_set(conn, "csrf_secret", value)
+        conn.commit()
+    return value
+
+
+def csrf_for_token(conn: sqlite3.Connection, session_token: str) -> str:
+    if not session_token:
+        return ""
+    return hmac.new(
+        csrf_secret(conn).encode("utf-8"), session_token.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+
+
+def client_ip(headers, fallback: str) -> str:
+    """Ters proxy arkasında gerçek istemci IP'sini kullanır."""
+    if TRUST_PROXY:
+        forwarded = headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        if forwarded:
+            return forwarded
+    return fallback
+
+
+def rate_limited(bucket: str, ip: str) -> bool:
+    """Basit kaydırmalı pencere; kötüye kullanım uçlarını yavaşlatır."""
+    if not RATE_LIMIT_ENABLED:
+        return False
+    maximum, window = RATE_LIMITS[bucket]
+    stamp = time.time()
+    key = (bucket, ip)
+    with RATE_LOCK:
+        events = [value for value in RATE_STATE.get(key, []) if stamp - value < window]
+        if len(events) >= maximum:
+            RATE_STATE[key] = events
+            return True
+        events.append(stamp)
+        RATE_STATE[key] = events
+        if len(RATE_STATE) > 5000:
+            for stale in [name for name, values in RATE_STATE.items() if not values]:
+                RATE_STATE.pop(stale, None)
+    return False
+
+
+def new_email_verification(conn: sqlite3.Connection, uid: int) -> str:
+    """Tek kullanımlık, 1 saat geçerli e-posta doğrulama bağlantısı üretir."""
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    created = int(now())
+    conn.execute("UPDATE email_verifications SET used=1 WHERE user_id=? AND used=0", (uid,))
+    conn.execute(
+        "INSERT INTO email_verifications (token_hash,user_id,expires_at,created_at) VALUES (?,?,?,?)",
+        (token_hash, uid, created + RESET_TTL_SECONDS, created),
+    )
+    conn.commit()
+    return token
+
+
+def validate_production_config() -> None:
+    """Yayın modunda güvensiz varsayılanlarla açılışı engeller."""
+    if not PRODUCTION:
+        return
+    problems: list[str] = []
+    if not os.environ.get("IH_ADMIN_PASSWORD"):
+        problems.append("IH_ADMIN_PASSWORD tanımlanmalı")
+    if not KVKK_CONTACT or KVKK_CONTACT == ADMIN_EMAIL:
+        problems.append("ILIMHALKASI_KVKK_CONTACT gerçek bir adres olmalı")
+    if not DATA_CONTROLLER or DATA_CONTROLLER == "İlim Halkası":
+        problems.append("ILIMHALKASI_DATA_CONTROLLER gerçek bir kurum adı olmalı")
+    if not COOKIE_SECURE:
+        problems.append("COOKIE_SECURE=1 olmalı (HTTPS zorunlu)")
+    if not SMTP_HOST or not SMTP_USER or not SMTP_PASSWORD:
+        problems.append("SMTP_HOST, SMTP_USER ve SMTP_PASSWORD tanımlanmalı")
+    if "onedrive" in str(DATA_DIR).lower():
+        problems.append("ILIMHALKASI_DB_DIR OneDrive dışında bir dizin olmalı")
+    if problems:
+        raise SystemExit(
+            "Üretim yapılandırması eksik:\n  - " + "\n  - ".join(problems)
+        )
+
+
 def build_user_export(conn: sqlite3.Connection, uid: int) -> dict | None:
     """Kişisel verileri JSON olarak dışa aktarır; kimlik bilgilerini çıkarmaz."""
     user = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
@@ -2215,8 +2346,8 @@ def ensure_admin(conn: sqlite3.Connection) -> None:
         password = secrets.token_urlsafe(12)
     salt, digest = hash_password(password)
     cur = conn.execute(
-        "INSERT INTO users (email,username,password_hash,salt,display_name,bio,avatar,title,is_admin,is_community,created_at) "
-        "VALUES (?,?,?,?,?,?,?,?,1,0,?)",
+        "INSERT INTO users (email,username,password_hash,salt,display_name,bio,avatar,title,is_admin,is_community,email_verified,created_at) "
+        "VALUES (?,?,?,?,?,?,?,?,1,0,1,?)",
         (ADMIN_EMAIL, ADMIN_USERNAME, digest, salt, "İlim Halkası Yönetimi",
          "Topluluğun düzeninden ve duyurulardan sorumlu yönetici.", "olive", "Yönetici", now()),
     )
@@ -2393,6 +2524,8 @@ def user_me(row: sqlite3.Row) -> dict:
     data = user_public(row)
     data["email"] = row["email"]
     data["created_at"] = row["created_at"]
+    keys = row.keys()
+    data["emailVerified"] = bool(row["email_verified"]) if "email_verified" in keys else True
     return data
 
 
@@ -2933,16 +3066,61 @@ class Handler(BaseHTTPRequestHandler):
 
     # ---- yanıt yardımcıları ----
 
+    def security_headers(self) -> None:
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob: https://covers.openlibrary.org https://archive.org; "
+            "font-src 'self' data:; connect-src 'self'; "
+            "manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+        )
+
+    def send_redirect(self, location: str) -> None:
+        self.send_response(302)
+        self.send_header("Location", location)
+        self.send_header("Content-Length", "0")
+        self.send_header("Cache-Control", "no-store")
+        self.security_headers()
+        self.end_headers()
+
     def secure_cookie_suffix(self) -> str:
         forwarded = self.headers.get("X-Forwarded-Proto", "").split(",")[0].strip().lower()
         return "; Secure" if (COOKIE_SECURE or forwarded == "https") else ""
 
-    def send_json(self, data: dict, status: int = 200, cookie: str | None = None, clear_cookie: bool = False) -> None:
+    def current_csrf(self) -> str:
+        token = self.session_token()
+        if not token:
+            return ""
+        conn = connect()
+        try:
+            return csrf_for_token(conn, token)
+        finally:
+            conn.close()
+
+    def send_json(
+        self,
+        data: dict,
+        status: int = 200,
+        cookie: str | None = None,
+        clear_cookie: bool = False,
+        csrf_for: str | None = None,
+    ) -> None:
+        if csrf_for:
+            conn = connect()
+            try:
+                data = {**data, "csrfToken": csrf_for_token(conn, csrf_for)}
+            finally:
+                conn.close()
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.security_headers()
         if cookie:
             self.send_header(
                 "Set-Cookie",
@@ -2973,6 +3151,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         # WebView eski CSS/JS'yi önbellekten okumasın; buton yazıları hemen güncellensin.
         self.send_header("Cache-Control", "no-store")
+        self.security_headers()
         self.end_headers()
         self.wfile.write(body)
 
@@ -3012,18 +3191,41 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"error": "Giriş yapmalısın"}, 401)
         return user
 
+    def check_csrf(self, path: str) -> bool:
+        if not CSRF_ENABLED or path in CSRF_EXEMPT:
+            return True
+        token = self.session_token()
+        if not token:  # oturumsuz isteği require_user zaten reddeder.
+            return True
+        conn = connect()
+        try:
+            expected = csrf_for_token(conn, token)
+        finally:
+            conn.close()
+        supplied = self.headers.get("X-CSRF-Token", "").strip()
+        if not supplied or not hmac.compare_digest(supplied, expected):
+            self.send_json({"error": "Güvenlik doğrulaması başarısız. Sayfayı yenile."}, 403)
+            return False
+        return True
+
     # ---- GET ----
 
     def do_GET(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
         if not path.startswith("/api/"):
+            verify = urllib.parse.parse_qs(parsed.query).get("verify", [""])[0].strip()
+            if verify:
+                return self.verify_email_link(verify)
             self.serve_static(path)
             return
 
         if path == "/api/me":
             user = self.current_user()
-            return self.send_json({"user": user_me(user) if user else None})
+            return self.send_json(
+                {"user": user_me(user) if user else None},
+                csrf_for=self.session_token() if user else None,
+            )
 
         if path == "/api/privacy":
             return self.send_json(privacy_notice())
@@ -3052,7 +3254,9 @@ class Handler(BaseHTTPRequestHandler):
             user = self.current_user()
             conn = connect()
             try:
-                return self.send_json(build_bootstrap(conn, user["id"] if user else None))
+                payload = build_bootstrap(conn, user["id"] if user else None)
+                payload["csrfToken"] = csrf_for_token(conn, self.session_token() or "")
+                return self.send_json(payload)
             finally:
                 conn.close()
 
@@ -3522,12 +3726,19 @@ class Handler(BaseHTTPRequestHandler):
         path = urllib.parse.urlparse(self.path).path
         body = self.read_json()
 
+        if path in RATE_LIMITS and rate_limited(path, client_ip(self.headers, self.client_address[0])):
+            return self.send_json({"error": "Çok fazla deneme. Lütfen biraz sonra yeniden dene."}, 429)
+        if not self.check_csrf(path):
+            return
+
         if path == "/api/register":
             return self.register(body)
         if path == "/api/login":
             return self.login(body)
         if path == "/api/forgot-password":
             return self.forgot_password(body)
+        if path == "/api/resend-verification":
+            return self.resend_verification(body)
         if path == "/api/reset-password":
             return self.reset_password(body)
         if path == "/api/logout":
@@ -3694,16 +3905,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"error": "Bu e-posta zaten kayıtlı"}, 409)
             if conn.execute("SELECT 1 FROM users WHERE username=?", (username,)).fetchone():
                 return self.send_json({"error": "Bu kullanıcı adı alınmış"}, 409)
+            verified = 0 if REQUIRE_EMAIL_VERIFICATION else 1
             cur = conn.execute(
-                "INSERT INTO users (email,username,password_hash,salt,display_name,bio,avatar,title,created_at) "
-                "VALUES (?,?,?,?,?,?,?,?,?)",
-                (email, username, digest, salt, display_name, "", "olive", "Talebe", now()),
+                "INSERT INTO users (email,username,password_hash,salt,display_name,bio,avatar,title,email_verified,created_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (email, username, digest, salt, display_name, "", "olive", "Talebe", verified, now()),
             )
             uid = cur.lastrowid
             # Yeni hesaplar boş başlar: örnek raf, not veya otomatik takip eklenmez.
-            expires = int(now() + SESSION_DAYS * 86400)
-            token = secrets.token_urlsafe(32)
-            conn.execute("INSERT INTO sessions (token,user_id,expires_at) VALUES (?,?,?)", (token, uid, expires))
             conn.execute(
                 "INSERT OR IGNORE INTO book_lists (user_id,name,created_at) VALUES (?,?,?)",
                 (uid, "Kaydettiklerim", now()),
@@ -3717,8 +3926,20 @@ class Handler(BaseHTTPRequestHandler):
                 (uid, "ilim_series", "0"),
             )
             conn.commit()
+            if REQUIRE_EMAIL_VERIFICATION:
+                verify_token = new_email_verification(conn, uid)
+                link = f"{APP_BASE_URL}/?verify={verify_token}"
+                self.send_verification_email(email, display_name, link)
+                return self.send_json({
+                    "ok": True,
+                    "message": "E-postana doğrulama bağlantısı gönderildi."
+                })
+            expires = int(now() + SESSION_DAYS * 86400)
+            token = secrets.token_urlsafe(32)
+            conn.execute("INSERT INTO sessions (token,user_id,expires_at) VALUES (?,?,?)", (token, uid, expires))
+            conn.commit()
             user = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
-            return self.send_json({"user": user_me(user)}, cookie=token)
+            return self.send_json({"user": user_me(user)}, cookie=token, csrf_for=token)
         finally:
             conn.close()
 
@@ -3732,13 +3953,17 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"error": "Hesabın yönetici tarafından askıya alındı"}, 403)
             if not user or user["is_community"] or not verify_password(password, user["salt"], user["password_hash"]):
                 return self.send_json({"error": "E-posta veya şifre hatalı"}, 401)
+            if REQUIRE_EMAIL_VERIFICATION and not user["email_verified"]:
+                return self.send_json({
+                    "error": "E-postanı doğrulaman gerekiyor. Doğrulama bağlantısını yeniden göndermek için giriş ekranını kullan."
+                }, 403)
             token = secrets.token_urlsafe(32)
             conn.execute(
                 "INSERT INTO sessions (token,user_id,expires_at) VALUES (?,?,?)",
                 (token, user["id"], int(now() + SESSION_DAYS * 86400)),
             )
             conn.commit()
-            return self.send_json({"user": user_me(user)}, cookie=token)
+            return self.send_json({"user": user_me(user)}, cookie=token, csrf_for=token)
         finally:
             conn.close()
 
@@ -3775,6 +4000,78 @@ class Handler(BaseHTTPRequestHandler):
             detail += f" Yerel kayıt yazılamadı: {exc}"
         return False, detail
 
+    def send_verification_email(self, email: str, name: str, link: str) -> tuple[bool, str]:
+        message = EmailMessage()
+        message["Subject"] = "İlim Halkası — E-posta doğrulama"
+        message["From"] = SMTP_FROM
+        message["To"] = email
+        message.set_content(
+            f"Merhaba {name},\n\n"
+            "Hesabını doğrulamak için aşağıdaki bağlantıyı aç (1 saat geçerli):\n\n"
+            f"{link}\n\n"
+            "Bu isteği sen yapmadıysan e-postayı yok sayabilirsin.\n\n"
+            "İlim Halkası"
+        )
+        if SMTP_HOST:
+            try:
+                context = ssl.create_default_context()
+                with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as smtp:
+                    if SMTP_USE_TLS:
+                        smtp.starttls(context=context)
+                    if SMTP_USER:
+                        smtp.login(SMTP_USER, SMTP_PASSWORD)
+                    smtp.send_message(message)
+                return True, ""
+            except Exception as exc:
+                detail = f"E-posta gönderilemedi: {exc}"
+        else:
+            detail = "SMTP ayarlanmadı; bağlantı yerel kutuya kaydedildi."
+        try:
+            with RESET_OUTBOX.open("a", encoding="utf-8") as handle:
+                handle.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} | {email} | {link}\n")
+        except OSError as exc:
+            detail += f" Yerel kayıt yazılamadı: {exc}"
+        return False, detail
+
+    def resend_verification(self, body: dict) -> None:
+        email = str(body.get("email", "")).strip().lower()
+        generic = {
+            "ok": True,
+            "message": "Hesap doğrulanmamışsa yeni bir bağlantı gönderildi."
+        }
+        if not REQUIRE_EMAIL_VERIFICATION:
+            return self.send_json(generic)
+        conn = connect()
+        try:
+            user = conn.execute(
+                "SELECT * FROM users WHERE email=? AND is_community=0 AND is_admin=0 AND is_system=0",
+                (email,),
+            ).fetchone()
+            if user and not user["email_verified"]:
+                token = new_email_verification(conn, user["id"])
+                link = f"{APP_BASE_URL}/?verify={token}"
+                self.send_verification_email(email, user["display_name"], link)
+            return self.send_json(generic)
+        finally:
+            conn.close()
+
+    def verify_email_link(self, token: str) -> None:
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        conn = connect()
+        try:
+            row = conn.execute(
+                "SELECT * FROM email_verifications WHERE token_hash=? AND used=0 AND expires_at>?",
+                (token_hash, int(now())),
+            ).fetchone()
+            if row:
+                conn.execute("UPDATE users SET email_verified=1 WHERE id=?", (row["user_id"],))
+                conn.execute("UPDATE email_verifications SET used=1 WHERE token_hash=?", (token_hash,))
+                conn.commit()
+                return self.send_redirect("/?verified=1")
+            return self.send_redirect("/?verify_failed=1")
+        finally:
+            conn.close()
+
     def forgot_password(self, body: dict) -> None:
         email = str(body.get("email", "")).strip().lower()
         conn = connect()
@@ -3802,14 +4099,10 @@ class Handler(BaseHTTPRequestHandler):
             conn.commit()
             link = f"{APP_BASE_URL}/?reset={token}"
             sent, detail = self.send_reset_email(email, user["display_name"], link)
-            result = {
+            return self.send_json({
                 "ok": True,
                 "message": "E-posta kayıtlıysa sıfırlama bağlantısı gönderildi."
-            }
-            if not sent and DEV_RESET_LINK:
-                result["dev_link"] = link
-                result["note"] = detail
-            return self.send_json(result)
+            })
         finally:
             conn.close()
 
@@ -5058,6 +5351,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    validate_production_config()
     init_db()
     run_startup_maintenance()
     start_figure_scheduler()

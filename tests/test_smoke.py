@@ -42,6 +42,7 @@ SOURCE_FILES = (
     "app.js",
     "i18n.js",
     "styles.css",
+    "vendor/lucide-1.80.0.min.js",
     "favicon.svg",
     "logo.svg",
     "fonts/amiri-400-arabic.woff2",
@@ -88,9 +89,21 @@ def _request(
     """Return (http_status, parsed_json). HTTP error bodies are parsed too."""
     data = None
     headers: dict[str, str] = {}
+    jar = next(
+        (
+            handler.cookiejar
+            for handler in getattr(opener, "handlers", [])
+            if isinstance(handler, urllib.request.HTTPCookieProcessor)
+        ),
+        None,
+    )
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
+    if method != "GET" and jar is not None:
+        token = getattr(jar, "ih_csrf_token", "")
+        if token:
+            headers["X-CSRF-Token"] = token
     request = urllib.request.Request(
         "http://127.0.0.1:{}{}".format(_CURRENT_PORT, path),
         data=data,
@@ -113,6 +126,8 @@ def _request(
         body = json.loads(raw.decode("utf-8"))
     except (ValueError, UnicodeDecodeError):
         body = {}
+    if isinstance(body, dict) and body.get("csrfToken") and jar is not None:
+        setattr(jar, "ih_csrf_token", body["csrfToken"])
     return status, body if isinstance(body, dict) else {}
 
 
@@ -126,6 +141,53 @@ def _marker(prefix: str) -> str:
     return "smoke-{}-{}".format(prefix, uuid.uuid4().hex[:10])
 
 
+def _launch_server(
+    tmp_dir: Path, port: int, env_overrides: dict | None = None
+) -> tuple[subprocess.Popen, object]:
+    """Copy the server into tmp_dir, rewrite its port and start it locally."""
+    server_path = tmp_dir / "server.py"
+    text = server_path.read_text(encoding="utf-8")
+    patched, count = re.subn(
+        r"(?m)^PORT(?:\s*:\s*int)?\s*=\s*\d+\s*$",
+        "PORT = {}".format(port),
+        text,
+        count=1,
+    )
+    if count != 1:
+        raise RuntimeError("Could not rewrite PORT in the copied server.py")
+    server_path.write_text(patched, encoding="utf-8")
+
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+    env["IH_ADMIN_PASSWORD"] = ADMIN_PASSWORD
+    # Deterministic behaviour: no real SMTP, no rate-limit interference.
+    for name in ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "SMTP_USE_TLS"):
+        env.pop(name, None)
+    env["ILIMHALKASI_RATE_LIMIT"] = "0"
+    env["ILIMHALKASI_CSRF"] = "1"
+    env.update(env_overrides or {})
+    log_handle = (tmp_dir / "server.log").open("wb")
+    proc = subprocess.Popen(
+        [sys.executable, "server.py"],
+        cwd=str(tmp_dir),
+        stdout=log_handle,
+        stderr=subprocess.STDOUT,
+        env=env,
+    )
+    return proc, log_handle
+
+
+def _copy_sources(tmp_dir: Path) -> None:
+    for filename in SOURCE_FILES:
+        source = PROJECT_ROOT / filename
+        if not source.is_file():
+            raise RuntimeError("Missing source file required by smoke tests: " + filename)
+        target = tmp_dir / filename
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+    shutil.copy2(PROJECT_ROOT / DB_FILENAME, tmp_dir / DB_FILENAME)
+
+
 class SmokeAPITests(unittest.TestCase):
     """End-to-end checks against an isolated, temporary server instance."""
 
@@ -136,53 +198,13 @@ class SmokeAPITests(unittest.TestCase):
         cls._tmp = tempfile.TemporaryDirectory(prefix="ilimhalkasi-smoke-")
         cls.tmp_dir = Path(cls._tmp.name)
         try:
-            for filename in SOURCE_FILES:
-                source = PROJECT_ROOT / filename
-                if not source.is_file():
-                    raise RuntimeError("Missing source file required by smoke tests: " + filename)
-                target = cls.tmp_dir / filename
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source, target)
-            shutil.copy2(PROJECT_ROOT / DB_FILENAME, cls.tmp_dir / DB_FILENAME)
-
+            _copy_sources(cls.tmp_dir)
             cls.port = _free_port()
             _CURRENT_PORT = cls.port
             cls.base_url = "http://127.0.0.1:{}".format(cls.port)
-
-            server_path = cls.tmp_dir / "server.py"
-            source_text = server_path.read_text(encoding="utf-8")
-            patched, count = re.subn(
-                r"(?m)^PORT(?:\s*:\s*int)?\s*=\s*\d+\s*$",
-                "PORT = {}".format(cls.port),
-                source_text,
-                count=1,
-            )
-            if count != 1:
-                raise RuntimeError("Could not rewrite PORT in the copied server.py")
             # DB_PATH is `BASE / "ilimhalkasi.db"` and BASE is the copied file's
             # directory, so the server now necessarily uses the copied DB.
-            server_path.write_text(patched, encoding="utf-8")
-
-            env = os.environ.copy()
-            env["PYTHONUNBUFFERED"] = "1"
-            env["IH_ADMIN_PASSWORD"] = ADMIN_PASSWORD
-            # Deterministic password-reset behaviour: always use the local
-            # outbox inside the temporary directory, never a real SMTP server.
-            for name in ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "SMTP_USE_TLS"):
-                env.pop(name, None)
-            # Enable the development reset link explicitly.  This makes the
-            # admin-exclusion assertion meaningful: a normal user DOES get a
-            # dev_link, while the admin account must never receive one.
-            env["ILIMHALKASI_DEV_RESET_LINK"] = "1"
-
-            cls.log_handle = (cls.tmp_dir / "server.log").open("wb")
-            cls.proc = subprocess.Popen(
-                [sys.executable, "server.py"],
-                cwd=str(cls.tmp_dir),
-                stdout=cls.log_handle,
-                stderr=subprocess.STDOUT,
-                env=env,
-            )
+            cls.proc, cls.log_handle = _launch_server(cls.tmp_dir, cls.port)
             cls._wait_until_ready()
 
             cls.admin_opener, cls.admin_jar = _new_opener()
@@ -1069,19 +1091,38 @@ class SmokeAPITests(unittest.TestCase):
                 self.assertEqual(status, 404, "{} returned {} ({})".format(path, status, body))
                 self.assertIn("error", body, "{} did not return JSON error: {}".format(path, body))
 
+    def test_post_requires_csrf_token(self) -> None:
+        # Copy the authenticated admin cookies but deliberately omit the CSRF
+        # header, so the request reaches the CSRF check with a valid session.
+        opener, jar = _new_opener()
+        for cookie in self.admin_jar:
+            jar.set_cookie(cookie)
+        status, body = self.post("/api/posts", {}, opener=opener)
+        self.assertEqual(status, 403, "missing CSRF token must be rejected: {}".format(body))
+        self.assertIn("error", body)
+
+        status, body = self.post(
+            "/api/posts",
+            {"kind": "note", "text": "", "visibility": "public"},
+            opener=self.admin_opener,
+        )
+        self.assertNotEqual(status, 403, "normal requests with CSRF token must pass the check")
+
     def test_forgot_password_excludes_admin(self) -> None:
         status, body = self.post("/api/forgot-password", {"email": ADMIN_EMAIL}, opener=self.anon_opener)
         self.assertEqual(status, 200, "forgot-password failed: {}".format(body))
         self.assertTrue(body.get("ok"))
-        self.assertNotIn("dev_link", body, "admin/system accounts must not get a reset link")
+        self.assertNotIn("dev_link", body, "reset links must never be returned to the client")
 
-        # Positive control: an ordinary user still gets the local dev link.
+        # Positive control: an ordinary user receives a generic response too.
         normal_opener, user = self.register_user()
         status, normal_body = self.post(
             "/api/forgot-password", {"email": user["email"]}, opener=normal_opener
         )
         self.assertEqual(status, 200)
-        self.assertIn("dev_link", normal_body, "normal users should still get a reset link")
+        self.assertNotIn("dev_link", normal_body, "reset links must never be returned to the client")
+        outbox = (self.tmp_dir / "password_reset_outbox.txt").read_text(encoding="utf-8")
+        self.assertIn(user["email"], outbox, "the link should be stored server-side only")
 
     def test_non_admin_cannot_use_admin_endpoints(self) -> None:
         opener, user = self.register_user()
@@ -1576,6 +1617,203 @@ class SmokeAPITests(unittest.TestCase):
             ".settings-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 18px; }",
         ):
             self.assertIn(marker, css, "missing layout marker: " + marker)
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Keep 302 responses visible so redirect targets can be asserted."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+class EmailVerificationTests(unittest.TestCase):
+    """Second isolated server: email verification and rate limits are enabled."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        global _CURRENT_PORT
+        cls._tmp = tempfile.TemporaryDirectory(prefix="ilimhalkasi-verify-")
+        cls.tmp_dir = Path(cls._tmp.name)
+        try:
+            _copy_sources(cls.tmp_dir)
+            cls.port = _free_port()
+            _CURRENT_PORT = cls.port
+            cls.base_url = "http://127.0.0.1:{}".format(cls.port)
+            cls.proc, cls.log_handle = _launch_server(
+                cls.tmp_dir,
+                cls.port,
+                {
+                    "ILIMHALKASI_REQUIRE_EMAIL_VERIFICATION": "1",
+                    "ILIMHALKASI_RATE_LIMIT": "1",
+                },
+            )
+            cls.opener, cls.jar = _new_opener()
+            cls._wait_until_ready()
+        except Exception:
+            cls._stop_resources()
+            raise
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._stop_resources()
+
+    @classmethod
+    def _stop_resources(cls) -> None:
+        proc = getattr(cls, "proc", None)
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=5)
+        handle = getattr(cls, "log_handle", None)
+        if handle is not None and not handle.closed:
+            handle.close()
+        tmp = getattr(cls, "_tmp", None)
+        if tmp is not None:
+            tmp.cleanup()
+
+    @classmethod
+    def _wait_until_ready(cls) -> None:
+        deadline = time.monotonic() + STARTUP_TIMEOUT
+        last_error = None
+        while time.monotonic() < deadline:
+            if cls.proc.poll() is not None:
+                raise RuntimeError(
+                    "Verification test server exited during startup.\n"
+                    + (cls.tmp_dir / "server.log").read_text(encoding="utf-8", errors="replace")
+                )
+            try:
+                with urllib.request.urlopen(cls.base_url + "/api/me", timeout=1) as response:
+                    response.read()
+                return
+            except urllib.error.HTTPError:
+                return
+            except urllib.error.URLError as exc:
+                last_error = exc
+                time.sleep(0.1)
+        raise RuntimeError("Verification test server did not start: {}".format(last_error))
+
+    def get(self, path: str) -> tuple[int, dict]:
+        return _request(self.opener, "GET", path)
+
+    def post(self, path: str, payload: dict) -> tuple[int, dict]:
+        return _request(self.opener, "POST", path, payload)
+
+    def _register(self, email: str, password: str) -> None:
+        status, body = self.post(
+            "/api/register",
+            {
+                "email": email,
+                "username": email.split("@")[0].replace("-", "_")[:20],
+                "display_name": "Doğrulama Testi",
+                "password": password,
+            },
+        )
+        self.assertEqual(status, 200, "register failed: {}".format(body))
+        self.assertTrue(body.get("ok"))
+        self.assertNotIn("user", body, "unverified accounts must not be logged in")
+        self.assertNotIn("csrfToken", body, "no session means no CSRF token")
+
+    def _verify_token(self, email: str) -> str:
+        outbox = self.tmp_dir / "password_reset_outbox.txt"
+        lines = outbox.read_text(encoding="utf-8").splitlines()
+        match = [line for line in lines if email in line]
+        self.assertTrue(match, "no verification link stored for {}".format(email))
+        return match[-1].split("?verify=", 1)[1].strip()
+
+    def test_registration_login_and_verification_flow(self) -> None:
+        email = _marker("verify") + "@example.test"
+        password = "VerifyPass-123"
+        self._register(email, password)
+
+        status, body = self.post("/api/login", {"email": email, "password": password})
+        self.assertEqual(status, 403, "unverified login must be refused: {}".format(body))
+
+        token = self._verify_token(email)
+        no_redirect = urllib.request.build_opener(_NoRedirect)
+        with self.assertRaises(urllib.error.HTTPError) as context:
+            no_redirect.open(self.base_url + "/?verify=" + token, timeout=REQUEST_TIMEOUT)
+        self.assertEqual(context.exception.code, 302)
+        self.assertEqual(context.exception.headers.get("Location"), "/?verified=1")
+        context.exception.close()
+
+        status, body = self.post("/api/login", {"email": email, "password": password})
+        self.assertEqual(status, 200, "verified login failed: {}".format(body))
+        self.assertTrue(body.get("csrfToken"), "login must return a CSRF token")
+        status, me = self.get("/api/me")
+        self.assertEqual(status, 200)
+        self.assertTrue(me["user"]["emailVerified"])
+
+    def test_invalid_verification_and_resend(self) -> None:
+        email = _marker("resend") + "@example.test"
+        self._register(email, "ResendPass-123")
+
+        no_redirect = urllib.request.build_opener(_NoRedirect)
+        with self.assertRaises(urllib.error.HTTPError) as context:
+            no_redirect.open(self.base_url + "/?verify=not-a-real-token", timeout=REQUEST_TIMEOUT)
+        self.assertEqual(context.exception.code, 302)
+        self.assertEqual(context.exception.headers.get("Location"), "/?verify_failed=1")
+        context.exception.close()
+
+        status, body = self.post("/api/resend-verification", {"email": email})
+        self.assertEqual(status, 200)
+        self.assertTrue(body.get("ok"))
+        self.assertNotIn("token", body)
+        self.assertTrue(self._verify_token(email), "resend must create a fresh link")
+
+    def test_rate_limit_on_forgot_password(self) -> None:
+        for index in range(6):
+            status, body = self.post(
+                "/api/forgot-password", {"email": "nobody{}@example.test".format(index)}
+            )
+            if index < 5:
+                self.assertEqual(status, 200, "early request was limited: {}".format(body))
+            else:
+                self.assertEqual(status, 429, "sixth request must be rate limited: {}".format(body))
+
+
+class ProductionConfigTests(unittest.TestCase):
+    def test_production_refuses_insecure_defaults(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ilimhalkasi-prod-") as folder:
+            tmp_dir = Path(folder)
+            shutil.copy2(PROJECT_ROOT / "server.py", tmp_dir / "server.py")
+            shutil.copy2(PROJECT_ROOT / "scholars_data.py", tmp_dir / "scholars_data.py")
+            env = os.environ.copy()
+            for name in (
+                "IH_ADMIN_PASSWORD",
+                "ILIMHALKASI_KVKK_CONTACT",
+                "ILIMHALKASI_DATA_CONTROLLER",
+                "ILIMHALKASI_DB_DIR",
+                "ILIMHALKASI_PRODUCTION",
+                "ILIMHALKASI_REQUIRE_EMAIL_VERIFICATION",
+                "ILIMHALKASI_RATE_LIMIT",
+                "ILIMHALKASI_CSRF",
+                "ILIMHALKASI_TRUST_PROXY",
+                "COOKIE_SECURE",
+                "APP_BASE_URL",
+                "SMTP_HOST",
+                "SMTP_PORT",
+                "SMTP_USER",
+                "SMTP_PASSWORD",
+                "SMTP_FROM",
+                "SMTP_USE_TLS",
+            ):
+                env.pop(name, None)
+            env["ILIMHALKASI_PRODUCTION"] = "1"
+            result = subprocess.run(
+                [sys.executable, "server.py"],
+                cwd=str(tmp_dir),
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertNotEqual(result.returncode, 0, "production must fail fast on defaults")
+            output = result.stdout + result.stderr
+            self.assertIn("IH_ADMIN_PASSWORD", output)
+            self.assertIn("COOKIE_SECURE", output)
 
 
 if __name__ == "__main__":

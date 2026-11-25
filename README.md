@@ -25,7 +25,7 @@ APK kendi içinde arayüz dosyaları taşımaz; sunucudan yükler. Bu yüzden
 **arayüzde yaptığın bir değişiklik için yeni APK gerekmez** — sunucuya geçtiğinde
 telefondaki uygulama yeni sürümü açtığında görür.
 
-Domain henüz yoksa ilk APK ev Wi-Fi'sindeki `http://192.168.0.102:8765` adresine
+Domain henüz yoksa ilk APK ev Wi-Fi'sindeki `http://192.168.0.107:8765` adresine
 bağlanır (telefon ve bilgisayar aynı ağda olmalı). Uygulama içinden sunucu adresi
 değiştirilebilir; LAN aşamasında HTTP'ye izin verilir. Domain alınınca `APP_URL`
 değişkenine HTTPS adresini yazman yeterli.
@@ -43,9 +43,11 @@ E-posta: admin@ilimhalkasi.local
 Şifre:   k9Mq-c5gipJRP41-
 ```
 
-Şifre büyük/küçük harfe duyarlıdır ve veritabanında PBKDF2 ile tuzlanmış saklanır. Yönetim menüsü yalnızca bu hesapta görünür.
+Şifre büyük/küçük harfe duyarlıdır ve veritabanında PBKDF2 ile tuzlanmış saklanır. Yönetim menüsü yalnızca bu hesapta görünür. Üretimde `IH_ADMIN_PASSWORD` tanımlanmalı; varsayılan şifre yalnızca yerel geliştirme içindir.
 
-**Şifremi unuttum:** Kayıtlı olup olmamadan aynı yanıt döner; hesap varlığı sızmaz. Yönetici ve sistem hesapları şifre sıfırlamadan hariç tutulur. Tek kullanımlık, 1 saat geçerli bağlantının yalnızca SHA-256 özeti saklanır. SMTP tanımlıysa e-posta gönderilir; tanımlı değilse bağlantı `password_reset_outbox.txt` dosyasına yazılır. API yanıtında `dev_link` yalnızca `ILIMHALKASI_DEV_RESET_LINK=1` ayarlandığında döner (varsayılan kapalıdır). Ortam değişkenleri: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_USE_TLS`, `APP_BASE_URL`.
+**Şifremi unuttum:** Kayıtlı olup olmamadan aynı yanıt döner; hesap varlığı sızmaz. Yönetici ve sistem hesapları şifre sıfırlamadan hariç tutulur. Tek kullanımlık, 1 saat geçerli bağlantının yalnızca SHA-256 özeti saklanır. SMTP tanımlıysa e-posta gönderilir; tanımlı değilse bağlantı sunucudaki `password_reset_outbox.txt` dosyasına yazılır. Bağlantı API yanıtında **asla** döndürülmez. Ortam değişkenleri: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_USE_TLS`, `APP_BASE_URL`.
+
+**E-posta doğrulaması:** Üretimde (`ILIMHALKASI_PRODUCTION=1`) kayıt sonrası oturum açılmaz; tek kullanımlık doğrulama bağlantısı e-postaya gönderilir. Giriş ekranındaki **Doğrulama bağlantısını yeniden gönder** düğmesi yeni bağlantı ister. Geliştirmede doğrulama varsayılan olarak kapalıdır, böylece SMTP olmadan giriş yapılabilir.
 
 ## Neler var?
 
@@ -109,6 +111,17 @@ Ayarlar → **Kişisel verilerim** alanında aydınlatma metni ve **Verilerimi d
 
 Sunucu açılışta `PRAGMA integrity_check`, süresi dolan kayıt temizliği, haftada bir `VACUUM` ve günlük SQLite yedeği çalıştırır. Yedekler `backups/` klasöründe tutulur ve `.gitignore` ile dışlanır. Ortam değişkenleri: `ILIMHALKASI_KVKK_CONTACT`, `ILIMHALKASI_DATA_CONTROLLER`. Varsayılan başvuru adresi geliştirme yöneticisidir; dağıtımda değiştirilmelidir.
 
+Veritabanı ve yedeklerin yolu `ILIMHALKASI_DB_DIR` ile değiştirilebilir; varsayılan olarak proje klasörü kullanılır. OneDrive gibi senkronize bir dizinde SQLite dosyasının eşzamanlı yazılması riskli olduğundan yayında sabit bir dizin verin. Şema sürümü `009-production-hardening`'tir; `users.email_verified` ve `email_verifications` bu göçle eklenir.
+
+## Yayın güvenliği
+
+- Oturumlu tüm POST isteklerinde `X-CSRF-Token` zorunludur; token `/api/bootstrap`, `/api/me`, giriş ve kayıt yanıtlarında döner. Kayıt/giriş/sıfırlama uçları bu kontrolden muaftır.
+- Giriş, kayıt, şifre sıfırlama, doğrulama ve yeniden gönderme uçları kaydırmalı pencereyle sınırlanır (`ILIMHALKASI_RATE_LIMIT`). Ters proxy arkasında `ILIMHALKASI_TRUST_PROXY=1` ile gerçek istemci IP'si kullanılır.
+- Tüm yanıtlarda CSP, `nosniff`, `X-Frame-Options` ve `Referrer-Policy` başlıkları vardır. Statik dosyalar `Cache-Control: no-store` ile sunulur. Harici CDN yoktur; ikonlar `vendor/` içinden yüklenir.
+- `ILIMHALKASI_PRODUCTION=1` iken varsayılan admin şifresi, geliştirme KVKK adresi, `COOKIE_SECURE=0`, SMTP eksikliği veya OneDrive dizini sunucunun açılmasını engeller. Tam liste ve Caddy/systemd örnekleri [`deploy/README.md`](deploy/README.md) dosyasındadır.
+
+Bu önlemler HTTPS ve gerçek SMTP ile birlikte anlamlıdır; LAN HTTP adresi yalnızca geliştirme içindir.
+
 `Hz. Ali (r.a.)`, Dostoyevski, İmam Gazali, Mevlânâ ve Yunus Emre sistem hesaplarıdır (`is_system=1`); kendi sözlerinden alıntı paylaşırlar, inceleme yazmazlar.
 
 ## Bakım betikleri
@@ -139,8 +152,9 @@ Testler kaynak dosyaları ve veritabanının bir kopyasını geçici dizine alı
 - `ilimhalkasi.db` — SQLite veritabanı
 - `scholars_data.py` — âlim/yazar verisi
 - `favicon.svg` — statik amblem yedeği (çalışma anında tema ile yeniden üretilir)
-- `password_reset_outbox.txt` — SMTP yokken sıfırlama bağlantılarının yazıldığı dosya
+- `vendor/lucide-1.80.0.min.js` — yerel ikon kütüphanesi (harici CDN kullanılmaz)
+- `password_reset_outbox.txt` — SMTP yokken sıfırlama/doğrulama bağlantılarının yazıldığı dosya
 
 ## Not
 
-Bu kurulum yerel geliştirme içindir. İnternete açmadan önce HTTPS, CSRF koruması, e-posta doğrulaması ve oran sınırlama eklenmelidir.
+Bu kurulum yerel geliştirme içindir. Kod tarafında CSRF, oran sınırlama, e-posta doğrulama altyapısı, güvenlik başlıkları ve üretim ayar doğrulaması hazırdır; internete açmadan önce gerçek HTTPS (Caddy/Let's Encrypt), SMTP ve sunucu gözetimi tamamlanmalıdır.

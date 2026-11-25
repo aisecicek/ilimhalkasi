@@ -7,11 +7,12 @@ ilimhalkasi.example.com {
 
     header {
         X-Content-Type-Options "nosniff"
-        Referrer-Policy "strict-origin-when-cross-origin"
+        Referrer-Policy "no-referrer"
         -Server
     }
 
     # APK ve web aynı origin'i kullandığından oturum çerezi aynı kalır.
+    # Caddy X-Forwarded-For'u otomatik ekler; sunucu TRUST_PROXY=1 ile okur.
     reverse_proxy 127.0.0.1:8765 {
         header_up X-Forwarded-Proto https
         header_up X-Forwarded-Host {host}

@@ -1,0 +1,41 @@
+[Unit]
+Description=İlim Halkası API sunucusu
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ilimhalkasi
+Group=ilimhalkasi
+WorkingDirectory=/opt/ilimhalkasi
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+Environment=HOST=127.0.0.1
+Environment=ILIMHALKASI_PRODUCTION=1
+Environment=ILIMHALKASI_DB_DIR=/var/lib/ilimhalkasi
+Environment=ILIMHALKASI_KVKK_CONTACT=kvkk@example.com
+Environment=ILIMHALKASI_DATA_CONTROLLER=İlim Halkası Derneği
+Environment=APP_BASE_URL=https://ilimhalkasi.example.com
+Environment=ILIMHALKASI_TRUST_PROXY=1
+Environment=COOKIE_SECURE=1
+Environment=SMTP_HOST=smtp.example.com
+Environment=SMTP_PORT=587
+Environment=SMTP_USER=noreply@example.com
+Environment=SMTP_FROM=İlim Halkası <noreply@example.com>
+Environment=SMTP_USE_TLS=1
+# Parolaları ve gerçek iletişim adreslerini buraya YAZMAYIN.
+# /etc/ilimhalkasi.env dosyasını 0600 yetkiyle oluşturun:
+#   IH_ADMIN_PASSWORD=...
+#   SMTP_PASSWORD=...
+EnvironmentFile=/etc/ilimhalkasi.env
+ExecStart=/usr/bin/python3 /opt/ilimhalkasi/server.py
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/ilimhalkasi
+
+[Install]
+WantedBy=multi-user.target

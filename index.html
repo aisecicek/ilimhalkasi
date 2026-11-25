@@ -1336,7 +1336,10 @@
             <button class="password-toggle" type="button" data-password-toggle="login-password" aria-label="Şifreyi göster" aria-pressed="false" title="Şifreyi göster"><i data-lucide="eye" aria-hidden="true"></i></button>
           </span>
         </label>
-        <button class="auth-forgot" type="button" id="forgot-password-link">Şifremi unuttum</button>
+        <div class="auth-links">
+          <button class="auth-forgot" type="button" id="forgot-password-link">Şifremi unuttum</button>
+          <button class="auth-forgot" type="button" id="resend-verification-link" data-i18n="Doğrulama bağlantısını yeniden gönder">Doğrulama bağlantısını yeniden gönder</button>
+        </div>
         <p class="auth-error" id="auth-error" hidden></p>
         <button class="btn btn-gold btn-block" type="submit" data-i18n="Giriş yap">Giriş yap</button>
       </form>
@@ -1627,7 +1630,7 @@
   </template>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="/vendor/lucide-1.80.0.min.js"></script>
   <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
