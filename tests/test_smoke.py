@@ -1010,6 +1010,7 @@ class SmokeAPITests(unittest.TestCase):
         # Karşılama kartındaki aktif kitap ve paylaşım kontrolleri aynı ölçüde.
         self.assertIn("  .greeting-stats .stat-chip,\n  .greeting-actions .btn {", css)
         self.assertIn("    height: 34px;\n    min-height: 34px;\n    padding: 6px 10px;", css)
+        self.assertIn("    font-size: 13px;\n    font-weight: 600;\n    line-height: 1.3;", css)
 
         # Kütüphane düğmeleri arasında nefes alan boşluk var.
         self.assertIn("    gap: 10px;\n    margin-top: 4px;\n  }\n  .page-head--library .head-actions .btn {", css)
@@ -1028,7 +1029,7 @@ class SmokeAPITests(unittest.TestCase):
         uniform = uniform.split("/* ---------- ", 1)[0]
         for marker in (
             "font-size: 13px;",  # btn / tab
-            "font-size: 12px;",  # chip / action / follow / text-btn
+            "font-size: 12px;",  # chip / action / follow
             ".follow-btn { font-size: 12px; min-height: 30px; }",
             ".action { font-size: 12px; }",
             ".nav-quick-label { font-size: 10px;",
@@ -1083,11 +1084,13 @@ class SmokeAPITests(unittest.TestCase):
             '--display: "Lora", Georgia, serif;',
             '--sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;',
             '--arabic: "Amiri", "Traditional Arabic", "Noto Naskh Arabic", serif;',
-            '--brand-size: clamp(19px, 5vw, 23px);',
-            '--title-size: clamp(22px, 5.4vw, 30px);',
-            '--heading-size: clamp(16px, 4.2vw, 18px);',
-            '--reading-size: clamp(16px, 4.2vw, 18px);',
-            '--reading-line: 1.75;',
+            '--brand-size: clamp(19px, 4.4vw, 21px);',
+            '--title-size: clamp(21px, 4.8vw, 25px);',
+            '--heading-size: clamp(15px, 3.8vw, 17px);',
+            '--card-title-size: clamp(14px, 3.6vw, 15px);',
+            '--card-body-size: clamp(12px, 3.3vw, 13px);',
+            '--reading-size: clamp(15px, 4vw, 16px);',
+            '--reading-line: 1.7;',
             '[data-theme="gece"] .top-brand { font-weight: 600; letter-spacing: .8px; }',
         ):
             self.assertIn(marker, css, "missing typography token: " + marker)
@@ -1095,6 +1098,38 @@ class SmokeAPITests(unittest.TestCase):
         self.assertGreaterEqual(css.count("--brand-ink: var(--accent-primary);"), 4)
         self.assertIn("h2, h3 { font-size: var(--heading-size); line-height: 1.35; }", css)
         self.assertIn("font-size: var(--reading-size);\n  line-height: var(--reading-line);", css)
+
+        # Başlık / açıklama / buton ölçekleri kartlarda ve sayfa başlarında dengeli.
+        self.assertIn(
+            ".feed-head p, .page-head p { margin: 5px 0 0; color: var(--ink-soft); "
+            "font-size: var(--card-body-size); line-height: 1.5; }",
+            css,
+        )
+        self.assertIn(
+            ".group-card h3 { margin: 11px 0 5px; font-family: var(--serif); "
+            "font-size: var(--card-title-size); color: var(--olive-deep); line-height: 1.35; }",
+            css,
+        )
+        self.assertIn(
+            ".group-card p { margin: 0 0 12px; color: var(--ink-soft); "
+            "font-size: var(--card-body-size); line-height: 1.5; min-height: 40px; }",
+            css,
+        )
+        self.assertIn("  font-size: 11px;\n  font-weight: 700;\n}\n.group-card-actions", css)
+        self.assertIn(".text-btn { font-size: 13px; }", css)
+        self.assertIn(
+            ".debate-form button, .chat-form button, .answer-form button,\n"
+            ".admin-reply button, .goal-edit button, .list-rename-form button,\n"
+            ".shelf-add-btn, .search-detail-btn { font-size: 13px; }",
+            css,
+        )
+        self.assertIn(
+            ".comment-meta button, .note-actions button, .admin-delete,\n"
+            ".auth-forgot, .footer-links button { font-size: 12px; }",
+            css,
+        )
+        self.assertNotIn(".app-shell:not(.nav-mini) .btn-gold { font-size: 12px; }", css)
+        self.assertIn(".app-shell:not(.nav-mini) .sidebar .btn-gold { font-size: 12px; }", css)
 
         for font_name in (
             "amiri-400-arabic.woff2", "amiri-400-latin-ext.woff2", "amiri-400-latin.woff2",
