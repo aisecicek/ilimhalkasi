@@ -15,7 +15,7 @@ const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 }[ch]));
 
-const isImageCover = (cover) => /^(https?:\/\/|data:image\/)/i.test(String(cover || '').trim());
+const isImageCover = (cover) => /^(https?:\/\/|\/cover\/|data:image\/)/i.test(String(cover || '').trim());
 const COVER_TONES = ['olive', 'sand', 'copper', 'ink'];
 
 function coverTone(book) {
@@ -1604,7 +1604,7 @@ $('#stats-panel')?.addEventListener('keydown', (e) => {
 });
 
 function rememberBook(book) {
-  if (!book || !book.id) return;
+  if (!book || !book.id || !state.data) return;
   const index = state.data.books.findIndex((b) => b.id === book.id);
   if (index >= 0) state.data.books[index] = book;
   else state.data.books.push(book);
@@ -2497,15 +2497,16 @@ function renderDebates() {
 }
 
 function turkishBookDescription(book) {
+  // Yalnızca elden geçirilmiş katalog metinlerini gösteriyoruz. Dış kaynaktan
+  // gelen ham açıklamalar çoğu zaman İngilizce olduğu için sayfada saçma duruyor.
   const description = String(book?.description || '').trim();
   if (book?.source === 'curated' && description) return description;
-  const title = String(book?.title || t('Bu eser'));
+  const title = String(book?.title || '').trim() || t('Bu eser');
   const author = String(book?.author || '').trim();
-  const genre = bookGenres(book)[0] || 'ilim ve edebiyat';
-  const year = book?.year ? ` ${t('{n} yılında yayımlanmıştır.', { n: book.year })}` : '';
-  return `${t('{n}, İlim Halkası kütüphanesinde {m} alanında yer alan bir eserdir.', { n: title, m: genre })}${
-    author ? ` ${t('Yazarı:')} ${author}.` : ''
-  }${year} ${t('Kapağı, türü ve yayımlanma bilgileri bu sayfada toplanmıştır; alıntılarını ve müzakere sorularını toplulukla paylaşabilirsin.')}`;
+  const intro = author
+    ? t('{n}, {m} tarafından yazılmış bir eserdir.', { n: title, m: author })
+    : t('{n}, kataloğumuzda kayıtlı bir eserdir.', { n: title });
+  return `${intro} ${t('Bu eser hakkında katalogda ayrıntılı bir açıklama bulunmuyor. Alıntılarını ve müzakere sorularını toplulukla paylaşabilirsin.')}`;
 }
 
 function shelfEntryFor(book) {
@@ -2679,14 +2680,44 @@ async function loadBookPosts(book) {
   }
 }
 
-function openBook(key) {
-  const scholarBooks = (state.data.scholars || []).flatMap((s) =>
+let bookOpenRequest = 0;
+
+function findLocalBook(key) {
+  const books = state.data?.books || [];
+  const scholarBooks = (state.data?.scholars || []).flatMap((s) =>
     [...(s.bookItems || []), ...(s.recommendedItems || [])]);
-  const book = state.data.books.find((b) => String(b.id) === String(key))
-    || scholarBooks.find((b) => String(b.id) === String(key))
-    || state.data.books.find((b) => b.title === key)
+  const id = String(key ?? '');
+  return books.find((b) => String(b.id) === id)
+    || scholarBooks.find((b) => String(b.id) === id)
+    || books.find((b) => b.title === key)
     || scholarBooks.find((b) => b.title === key)
-    || { title: String(key), author: t('Bilinmeyen yazar'), category: t('Genel'), cover: '' };
+    || null;
+}
+
+async function openBook(key) {
+  if (!state.data) return;
+  const request = ++bookOpenRequest;
+  let book = findLocalBook(key);
+  const keyText = String(key ?? '').trim();
+  if (!book && /^\d+$/.test(keyText)) {
+    // Arama sonuçları bootstrap'taki ilk 300 kitabın dışından gelebiliyor.
+    // Kitabı API'den almazsak sayıyı başlık sanıp boş bir sayfa açıyorduk.
+    try {
+      const result = await api('/api/books/' + encodeURIComponent(keyText));
+      if (request !== bookOpenRequest) return;
+      book = result.book || null;
+      if (book) rememberBook(book);
+    } catch (_) { /* bağlantı yoksa aşağıdaki güvenli başlıkla devam et */ }
+  } else if (!book && keyText) {
+    try {
+      const result = await api('/api/books?q=' + encodeURIComponent(keyText) + '&limit=5');
+      if (request !== bookOpenRequest) return;
+      const exact = (result.books || []).find((b) => b.title === keyText);
+      if (exact) { book = exact; rememberBook(book); }
+    } catch (_) { /* bağlantı yoksa aşağıdaki güvenli başlıkla devam et */ }
+  }
+  if (request !== bookOpenRequest) return;
+  book = book || { title: keyText || t('Bu eser'), author: '', category: t('Genel'), cover: '' };
   const title = book.title;
   state.currentBook = title;
   state.bookDetailBook = book;

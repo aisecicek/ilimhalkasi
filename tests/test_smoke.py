@@ -383,6 +383,33 @@ class SmokeAPITests(unittest.TestCase):
             status, _ = self.get(path, opener=self.anon_opener)
             self.assertEqual(status, 200, "public catalog endpoint failed: " + path)
 
+    def test_book_detail_endpoint_returns_real_metadata(self) -> None:
+        books = self.bootstrap().get("books") or []
+        sample = next((b for b in books if b.get("title")), None)
+        self.assertIsNotNone(sample, "bootstrap contains no book")
+        status, body = self.get("/api/books/{}".format(sample["id"]), opener=self.anon_opener)
+        self.assertEqual(status, 200, "public book detail failed: {}".format(body))
+        detail = body.get("book") or {}
+        self.assertEqual(detail.get("title"), sample.get("title"))
+        self.assertEqual(detail.get("author"), sample.get("author"))
+        self.assertNotRegex(
+            str(detail.get("cover", "")), r"^https?://", "covers must be served from our own origin"
+        )
+
+    def test_unknown_book_detail_returns_404(self) -> None:
+        status, body = self.get("/api/books/99999999", opener=self.anon_opener)
+        self.assertEqual(status, 404)
+        self.assertIn("error", body)
+
+    def test_cover_proxy_returns_an_image(self) -> None:
+        request = urllib.request.Request(self.base_url + "/cover/3996717-M.jpg")
+        with urllib.request.urlopen(request, timeout=15) as response:
+            body = response.read()
+            content_type = response.headers.get("Content-Type", "")
+            self.assertEqual(response.status, 200)
+        self.assertTrue(content_type.startswith("image/"), content_type)
+        self.assertTrue(body.startswith(b"\xff\xd8"), "expected JPEG bytes from cover proxy")
+
     def test_shelf_accepts_valid_book(self) -> None:
         book_id = self.book_id()
         status, body = self.post("/api/shelf", {"book_id": book_id, "status": "reading", "page": 1})

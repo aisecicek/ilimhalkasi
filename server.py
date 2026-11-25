@@ -1438,6 +1438,76 @@ def cover_url(value) -> str:
     return "https://" + text[7:] if text.startswith("http://") else text
 
 
+# Open Library kapakları tarayıcıda archive.org adresine 3xx ile yönlendiriliyor.
+# Bu yüzden bazı kapaklar yüklenmiyor ve ağ sekmesinde yönlendirme uyarısı görünüyor.
+# Kapakları kendi sunucumuzdan (/cover/id) sunuyoruz; yönlendirme sunucu tarafında
+# çözülüyor, tarayıcı yalnızca aynı kökenli tek bir istek yapıyor.
+COVER_PROXY_RE = re.compile(
+    r"^https?://covers\.openlibrary\.org/b/id/(\d+)-(?:S|M|L)\.jpg(?:\?.*)?$", re.IGNORECASE
+)
+COVER_CACHE: dict[str, tuple[bytes, str, float]] = {}
+COVER_MISSES: dict[str, float] = {}
+COVER_CACHE_TTL = 7 * 24 * 3600
+COVER_MISS_TTL = 3600
+COVER_CACHE_LIMIT = 256
+COVER_MAX_BYTES = 3 * 1024 * 1024
+
+
+def local_cover(value) -> str:
+    """Uzak kapak adresini yerel proxy adresine çevirir; diğerlerini korur."""
+    text = cover_url(value)
+    match = COVER_PROXY_RE.match(text)
+    if match:
+        return "/cover/{}-M.jpg".format(match.group(1))
+    return text
+
+
+def localize_cover_urls(conn: sqlite3.Connection) -> None:
+    """Mevcut kayıtları yerel kapak yoluna geçirir; tekrar çalıştırmak güvenli."""
+    rows = conn.execute(
+        "SELECT id,cover FROM books WHERE cover LIKE 'http%openlibrary.org/b/id/%'"
+    ).fetchall()
+    for row in rows:
+        local = local_cover(row["cover"])
+        if local != row["cover"]:
+            conn.execute("UPDATE books SET cover=? WHERE id=?", (local, row["id"]))
+    conn.execute(
+        "UPDATE book_requests SET cover=replace(cover, "
+        "'https://covers.openlibrary.org/b/id/', '/cover/') "
+        "WHERE cover LIKE 'https://covers.openlibrary.org/b/id/%'"
+    )
+
+
+def fetch_cover(cover_id: int, size: str) -> tuple[bytes, str] | None:
+    """Kapağı sunucu tarafında indirir; kısa süreli önbellek ve hata önbelleği tutar."""
+    key = "{}-{}".format(cover_id, size)
+    now_ts = time.time()
+    cached = COVER_CACHE.get(key)
+    if cached and now_ts - cached[2] < COVER_CACHE_TTL:
+        return cached[0], cached[1]
+    if now_ts - COVER_MISSES.get(key, 0) < COVER_MISS_TTL:
+        return None
+    url = "https://covers.openlibrary.org/b/id/{}-{}.jpg".format(cover_id, size)
+    request = urllib.request.Request(url, headers={"User-Agent": "IlimHalkasi/1.0 (cover proxy)"})
+    try:
+        with urllib.request.urlopen(request, timeout=8) as response:
+            content_type = str(response.headers.get("Content-Type") or "image/jpeg").split(";")[0].strip()
+            if not content_type.startswith("image/"):
+                COVER_MISSES[key] = now_ts
+                return None
+            body = response.read(COVER_MAX_BYTES + 1)
+    except Exception:
+        COVER_MISSES[key] = now_ts
+        return None
+    if not body or len(body) > COVER_MAX_BYTES:
+        COVER_MISSES[key] = now_ts
+        return None
+    if len(COVER_CACHE) >= COVER_CACHE_LIMIT:
+        COVER_CACHE.pop(next(iter(COVER_CACHE)), None)
+    COVER_CACHE[key] = (body, content_type, now_ts)
+    return body, content_type
+
+
 def enrich_curated_books(conn: sqlite3.Connection) -> None:
     """Mevcut yerel katalog kayıtlarını yeni tür/özet alanlarıyla tamamlar."""
     for title, info in BOOK_DETAILS.items():
@@ -1528,6 +1598,7 @@ def cache_book(conn: sqlite3.Connection, data: dict) -> dict | None:
     if not title:
         return None
     author = clean_text(data.get("author")).strip()
+    cover = local_cover(data.get("cover", ""))
     try:
         rating = float(data.get("rating") or 0) or None
     except (TypeError, ValueError):
@@ -1553,7 +1624,7 @@ def cache_book(conn: sqlite3.Connection, data: dict) -> dict | None:
             "description=CASE WHEN description='' THEN ? ELSE description END, "
             "page_count=CASE WHEN page_count=0 THEN ? ELSE page_count END, "
             "isbn=CASE WHEN isbn='' THEN ? ELSE isbn END WHERE id=?",
-            (data.get("cover", ""), data.get("genre", ""), data.get("year"), rating,
+            (cover, data.get("genre", ""), data.get("year"), rating,
              rating_count, data.get("publisher", ""), data.get("work_key", ""),
              data.get("description", ""), page_count, data.get("isbn", ""), existing["id"]),
         )
@@ -1562,7 +1633,7 @@ def cache_book(conn: sqlite3.Connection, data: dict) -> dict | None:
             "INSERT INTO books (title,author,category,cover,isbn,description,genre,year,rating,"
             "rating_count,publisher,work_key,page_count,source,created_at) "
             "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (title, author, data.get("category") or "Keşfedilen", data.get("cover", ""),
+            (title, author, data.get("category") or "Keşfedilen", cover,
              data.get("isbn", ""), data.get("description", ""), data.get("genre", ""),
              data.get("year"), rating, rating_count, data.get("publisher", ""),
              data.get("work_key", ""), page_count, data.get("source") or "google", now()),
@@ -1780,6 +1851,7 @@ def init_db() -> None:
         seed(conn)
     enrich_curated_books(conn)
     normalize_book_genres(conn)
+    localize_cover_urls(conn)
     ensure_admin(conn)
     seed_scholars(conn)
     ensure_scholar_books(conn)
@@ -3000,10 +3072,13 @@ def build_bootstrap(conn: sqlite3.Connection, user_id: int | None) -> dict:
         "serverTime": now(),
         "notifications": notifications_for(conn, user_id),
         # Katalog büyüdükçe bootstrap'ı hafif tut; kütüphane /api/books ile sayfalanır.
-        "books": [dict(b) for b in conn.execute(
-            "SELECT * FROM books WHERE hidden=0 "
-            "ORDER BY CASE WHEN source='curated' THEN 0 ELSE 1 END, id LIMIT 300"
-        )],
+        "books": [
+            {**dict(b), "cover": local_cover(b["cover"])}
+            for b in conn.execute(
+                "SELECT * FROM books WHERE hidden=0 "
+                "ORDER BY CASE WHEN source='curated' THEN 0 ELSE 1 END, id LIMIT 300"
+            )
+        ],
         "posts": [serialize_post(conn, p, user_id) for p in posts],
         "ownPosts": [serialize_post(conn, p, user_id) for p in own_posts],
         "shelf": shelf_data,
@@ -3205,6 +3280,25 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def serve_cover(self, cover_id: int, size: str) -> None:
+        result = fetch_cover(cover_id, size)
+        if not result:
+            # Tarayıcı hata olayını yakalayıp kitap adıyla placeholder kapak gösteriyor.
+            self.send_response(404)
+            self.send_header("Content-Length", "0")
+            self.send_header("Cache-Control", "public, max-age=3600")
+            self.security_headers()
+            self.end_headers()
+            return
+        body, content_type = result
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "public, max-age=604800")
+        self.security_headers()
+        self.end_headers()
+        self.wfile.write(body)
+
     def read_json(self) -> dict:
         try:
             length = int(self.headers.get("Content-Length") or 0)
@@ -3263,6 +3357,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
+        cover_match = re.fullmatch(r"/cover/(\d+)-(S|M|L)\.jpg", path)
+        if cover_match:
+            return self.serve_cover(int(cover_match.group(1)), cover_match.group(2))
         if not path.startswith("/api/"):
             verify = urllib.parse.parse_qs(parsed.query).get("verify", [""])[0].strip()
             if verify:
@@ -3514,6 +3611,19 @@ class Handler(BaseHTTPRequestHandler):
             finally:
                 conn.close()
 
+        match = re.fullmatch(r"/api/books/(\d+)", path)
+        if match:
+            conn = connect()
+            try:
+                row = conn.execute(
+                    "SELECT * FROM books WHERE id=? AND hidden=0", (int(match.group(1)),)
+                ).fetchone()
+                if not row:
+                    return self.send_json({"error": "Kitap bulunamadı"}, 404)
+                return self.send_json({"book": {**dict(row), "cover": local_cover(row["cover"])}})
+            finally:
+                conn.close()
+
         if path == "/api/books":
             params = urllib.parse.parse_qs(parsed.query)
             query = params.get("q", [""])[0].strip()
@@ -3572,9 +3682,12 @@ class Handler(BaseHTTPRequestHandler):
                 total = conn.execute(
                     "SELECT COUNT(*) FROM (" + sql + ")", args
                 ).fetchone()[0]
-                books = [dict(r) for r in conn.execute(
-                    sql + " ORDER BY " + sort + " LIMIT ? OFFSET ?", args + [limit, offset]
-                )]
+                books = [
+                    {**dict(r), "cover": local_cover(r["cover"])}
+                    for r in conn.execute(
+                        sql + " ORDER BY " + sort + " LIMIT ? OFFSET ?", args + [limit, offset]
+                    )
+                ]
                 genres = sorted({
                     part.strip()
                     for row in conn.execute("SELECT genre FROM books WHERE hidden=0")
@@ -3697,7 +3810,7 @@ class Handler(BaseHTTPRequestHandler):
                         "title": info.get("title"),
                         "author": ", ".join(info.get("authors") or []),
                         "category": "Keşfedilen",
-                        "cover": cover_url(image.get("thumbnail") or image.get("smallThumbnail")),
+                        "cover": local_cover(image.get("thumbnail") or image.get("smallThumbnail")),
                         "isbn": isbn,
                         "description": clean_text(info.get("description")),
                         "genre": book_genre(info.get("categories") or []),
@@ -3748,7 +3861,9 @@ class Handler(BaseHTTPRequestHandler):
                             "title": doc.get("title"),
                             "author": ", ".join((doc.get("author_name") or [])[:3]),
                             "category": "Keşfedilen",
-                            "cover": f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg" if cover_id else "",
+                            "cover": local_cover(
+                                f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg"
+                            ) if cover_id else "",
                             "isbn": isbns[0] if isbns else "",
                             "description": clean_text(doc.get("description")),
                             "genre": book_genre(subjects + genre_names),
