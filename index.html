@@ -324,16 +324,16 @@
             <div>
               <h1 id="discover-title">İlim halkasını birlikte büyütelim</h1>
             </div>
-            <button class="btn btn-gold btn-sm" type="button" id="invite-btn"><i data-lucide="user-plus"></i> Arkadaşlarını Davet Et</button>
+            <button class="btn btn-gold btn-sm btn-compact" type="button" id="invite-btn"><i data-lucide="user-plus"></i> Arkadaşlarını Davet Et</button>
           </div>
 
-          <div class="page-head page-head--small">
+          <div class="page-head page-head--small page-head--section">
             <div><h2>En yeni paylaşımlar</h2></div>
             <button class="text-btn" type="button" data-view="home">Akışa git →</button>
           </div>
           <div class="writing-list" id="discover-latest-posts"></div>
 
-          <div class="page-head page-head--small">
+          <div class="page-head page-head--small page-head--section">
             <div><h2>Popüler kitaplar</h2></div>
             <button class="text-btn" type="button" data-view="library">Tüm kitaplar →</button>
           </div>
@@ -346,10 +346,9 @@
         <section class="view" id="view-users" aria-labelledby="users-title">
           <div class="page-head">
             <div>
-              <h1 id="users-title">İlim yolcuları</h1>
-              <p>Platformdaki diğer ilim yolcularını ara, profillerini incele ve takip et.</p>
+              <h1 id="users-title" data-i18n="Kullanıcılar">Kullanıcılar</h1>
             </div>
-            <button class="btn btn-gold btn-sm" type="button" id="users-invite-btn"><i data-lucide="user-plus"></i> Arkadaşlarını Davet Et</button>
+            <button class="btn btn-gold btn-sm btn-compact" type="button" id="users-invite-btn"><i data-lucide="user-plus"></i> Arkadaşlarını Davet Et</button>
           </div>
 
           <div class="discover-search-card">
@@ -455,12 +454,29 @@
             </div>
             <div class="circle-grid" id="circle-grid"></div>
             <div class="page-head page-head--small">
-              <div><h2>Katılabileceğin Halkalar</h2><p>Bir halkaya katıldığında üstteki listeye eklenir.</p></div>
+              <div><h2>Katılabileceğin Halkalar</h2></div>
             </div>
             <div class="discover-grid" id="discover-circles"></div>
           </div>
 
           <div id="community-meclis" hidden>
+            <div class="community-functions" aria-label="Meclislerin işlevleri">
+              <article class="function-card">
+                <span class="function-icon"><i data-lucide="messages-square"></i></span>
+                <h3 data-i18n="Müzakere">Müzakere</h3>
+                <p data-i18n="Sorularını sor, farklı bakış açılarıyla birlikte düşün.">Sorularını sor, farklı bakış açılarıyla birlikte düşün.</p>
+              </article>
+              <article class="function-card">
+                <span class="function-icon"><i data-lucide="quote"></i></span>
+                <h3 data-i18n="Paylaşım">Paylaşım</h3>
+                <p data-i18n="Öne çıkan alıntıları ve incelemeleri halkayla paylaş.">Öne çıkan alıntıları ve incelemeleri halkayla paylaş.</p>
+              </article>
+              <article class="function-card">
+                <span class="function-icon"><i data-lucide="book-open"></i></span>
+                <h3 data-i18n="Ortak okuma">Ortak okuma</h3>
+                <p data-i18n="Aynı eseri birlikte oku, ilerlemeyi paylaş.">Aynı eseri birlikte oku, ilerlemeyi paylaş.</p>
+              </article>
+            </div>
             <div class="meclis-grid" id="meclis-grid"></div>
           </div>
 
@@ -723,7 +739,7 @@
             <div>
               <h1 id="messages-title">Mesajlar</h1>
             </div>
-            <button class="btn btn-gold btn-sm" type="button" id="new-direct-btn">Yeni Mesaj</button>
+            <button class="btn btn-gold btn-sm btn-compact" type="button" id="new-direct-btn">Yeni Mesaj</button>
           </div>
           <div class="messages-layout">
             <aside class="conversation-list" id="conversation-list"></aside>
@@ -841,9 +857,9 @@
               </div>
               <p id="profile-handle-line">@—</p>
               <p class="profile-bio" id="profile-bio" hidden></p>
-              <div class="follow-counts" id="follow-counts"></div>
             </div>
-            <button class="btn btn-outline btn-sm" type="button" id="edit-profile-btn" data-i18n="Profilini Düzenle">Profilini Düzenle</button>
+            <div class="follow-counts" id="follow-counts"></div>
+            <button class="btn btn-outline btn-sm btn-compact" type="button" id="edit-profile-btn" data-i18n="Profilini Düzenle">Profilini Düzenle</button>
           </div>
 
           <div class="karne-card">
@@ -867,7 +883,7 @@
           <div id="shelf-panel"></div>
 
           <div class="page-head page-head--small">
-            <div><h2 data-i18n="Hatıratım">Hatıratım</h2><p data-i18n="Altını çizdiklerin ve kaleme aldıkların.">Altını çizdiklerin ve kaleme aldıkların.</p></div>
+            <div><h2 data-i18n="Hatıratım">Hatıratım</h2></div>
           </div>
           <div class="profile-tabs" role="tablist" aria-label="Hatıratım">
             <button class="profile-tab is-active" role="tab" aria-selected="true" data-library-tab="quotes" type="button" data-i18n="Alıntılarım">Alıntılarım</button>
@@ -886,10 +902,7 @@
           <div class="profile-curricula" id="profile-curricula"></div>
 
           <div class="page-head page-head--small">
-            <div>
-              <h2 data-i18n="İlim Yolculuğum">İlim Yolculuğum</h2>
-              <p data-i18n="Her kitap ve paylaşım seni bir sonraki seviyeye taşır.">Her kitap ve paylaşım seni bir sonraki seviyeye taşır.</p>
-            </div>
+            <div><h2 data-i18n="İlim Yolculuğum">İlim Yolculuğum</h2></div>
           </div>
           <div class="level-ladder" id="title-ladder"></div>
 
@@ -910,7 +923,7 @@
             <div>
               <h1 id="notifications-title" data-i18n="Bildirimlerim">Bildirimlerim</h1>
             </div>
-            <button class="btn btn-outline btn-sm" type="button" id="notifications-view-mark-read" data-i18n="Tümünü okundu işaretle">Tümünü okundu işaretle</button>
+            <button class="btn btn-outline btn-sm btn-compact" type="button" id="notifications-view-mark-read" data-i18n="Tümünü okundu işaretle">Tümünü okundu işaretle</button>
           </div>
           <div class="notifications-panel notifications-panel--page">
             <div class="notifications-list" id="notifications-view-list"></div>

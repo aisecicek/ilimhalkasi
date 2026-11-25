@@ -555,7 +555,7 @@ class SmokeAPITests(unittest.TestCase):
         self.assertIn("bottomNavEl?.addEventListener('click'", app_js)
         self.assertIn("data-i18n-aria=\"Ne paylaşmak istersin?\"", index_html)
         self.assertIn(">Halkalar ve Meclisler<", index_html)
-        self.assertIn("grid-template-columns: 86px minmax(0, 1fr)", css)
+        self.assertIn("grid-template-columns: 86px minmax(0, 1fr) auto", css)
         self.assertIn(".page-head--tight .head-actions {", css)
 
         self.assertIn('id="notifications-btn"', index_html)
@@ -1185,6 +1185,50 @@ class SmokeAPITests(unittest.TestCase):
             )
 
         self.assertIn("yerel WOFF2", readme)
+
+    def test_section_rhythm_and_compact_actions_are_wired(self) -> None:
+        index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+        css = (PROJECT_ROOT / "styles.css").read_text(encoding="utf-8")
+
+        for removed in (
+            "<p>Bir halkaya katıldığında üstteki listeye eklenir.</p>",
+            "<p>Platformdaki diğer ilim yolcularını ara, profillerini incele ve takip et.</p>",
+            '<p data-i18n="Altını çizdiklerin ve kaleme aldıkların.">Altını çizdiklerin ve kaleme aldıkların.</p>',
+            '<p data-i18n="Her kitap ve paylaşım seni bir sonraki seviyeye taşır.">Her kitap ve paylaşım seni bir sonraki seviyeye taşır.</p>',
+        ):
+            self.assertNotIn(removed, index_html, "stale helper text still present: " + removed)
+
+        self.assertIn('<h1 id="users-title" data-i18n="Kullanıcılar">Kullanıcılar</h1>', index_html)
+        meclis = index_html.split('<div id="community-meclis" hidden>', 1)[1]
+        self.assertIn('class="community-functions"', meclis)
+
+        for button_id in (
+            "invite-btn",
+            "users-invite-btn",
+            "new-direct-btn",
+            "notifications-view-mark-read",
+            "edit-profile-btn",
+        ):
+            match = re.search(
+                r'<button[^>]*id="' + re.escape(button_id) + r'"[^>]*>', index_html
+            )
+            self.assertIsNotNone(match, "missing button: " + button_id)
+            self.assertIn("btn-compact", match.group(0), button_id + " should stay compact")
+
+        for marker in (
+            ".page-head { display: flex; align-items: end; justify-content: space-between; gap: 18px; padding-top: 14px; margin-bottom: 14px; }",
+            ".page-head.page-head--section { gap: 6px !important; margin-bottom: 16px !important; }",
+            "#view-circles .tabs { margin-bottom: 18px; }",
+            ".btn.btn-compact {",
+            ".page-head > .btn.btn-compact {",
+            ".discover-writing-head strong { font-size: var(--card-title-size) !important;",
+            ".profile-hero .follow-counts b {",
+            "font-size: 13px !important;",
+            ".profile-hero .profile-bio { font-size: 14px !important;",
+            '"stats stats action"',
+            ".profile-hero > #edit-profile-btn { grid-area: action; justify-self: end; margin-top: 0; }",
+        ):
+            self.assertIn(marker, css, "missing layout marker: " + marker)
 
 
 if __name__ == "__main__":
