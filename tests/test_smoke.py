@@ -14,6 +14,7 @@ Run from the project root::
 
 from __future__ import annotations
 
+import hashlib
 import http.cookiejar
 import json
 import os
@@ -841,6 +842,157 @@ class SmokeAPITests(unittest.TestCase):
         self.assertIn("'Kaydettiklerim':", i18n_js)
         self.assertIn("'Paylaşımın kaydedildi':", i18n_js)
 
+    def test_privacy_notice_and_personal_data_export(self) -> None:
+        status, notice = self.get("/api/privacy", opener=self.anon_opener)
+        self.assertEqual(status, 200, "privacy notice failed: {}".format(notice))
+        self.assertTrue(notice.get("contact"), "KVKK contact must be configured")
+        self.assertEqual(notice["retention"]["sessions_days"], 30)
+        self.assertEqual(notice["retention"]["reset_link_hours"], 1)
+        self.assertEqual(notice["retention"]["deleted_post_tombstone_days"], 90)
+
+        status, body = self.get("/api/me/export", opener=self.anon_opener)
+        self.assertEqual(status, 401, "anonymous export must be rejected")
+
+        opener, _ = self.register_user()
+        marker = _marker("export")
+        status, created = self.post(
+            "/api/posts",
+            {"text": marker, "book": "Export Book", "writer": "Tester", "type": "quote"},
+            opener=opener,
+        )
+        self.assertEqual(status, 201, "post creation failed: {}".format(created))
+
+        status, result = self.get("/api/me/export", opener=opener)
+        self.assertEqual(status, 200, "export failed: {}".format(result))
+        data = result.get("data") or {}
+        raw = json.dumps(data, ensure_ascii=False)
+        self.assertIn(marker, raw, "export must include the user's own post")
+        self.assertIn("posts", data)
+        self.assertIn("shelf", data)
+        self.assertIn("user_meta", data)
+        self.assertNotIn("password_hash", raw, "password hash must never be exported")
+        self.assertNotIn("salt", raw, "password salt must never be exported")
+        self.assertNotIn("token_hash", raw, "reset token hash must never be exported")
+
+        status, me = self.get("/api/me", opener=opener)
+        self.assertEqual(status, 200)
+        self.assertEqual(data["profile"]["email"], me["user"]["email"])
+
+    def test_maintenance_cleanup_backup_and_migration_log(self) -> None:
+        opener, user = self.register_user()
+        uid = int(user["id"])
+        stamp = time.time()
+        stale_token = _marker("stale-reset")
+        active_token = _marker("active-reset")
+        stale_session = _marker("stale-session")
+        active_session = _marker("active-session")
+        stale_post_id = 2_000_000_000 + int.from_bytes(uuid.uuid4().bytes[:4], "big")
+        active_post_id = stale_post_id + 1
+        hash_of = lambda token: hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+        conn = sqlite3.connect(self.tmp_dir / DB_FILENAME)
+        try:
+            conn.execute(
+                "INSERT INTO password_resets (token_hash,user_id,expires_at,created_at,used) "
+                "VALUES (?,?,?,?,1)",
+                (hash_of(stale_token), uid, int(stamp + 3600), int(stamp)),
+            )
+            conn.execute(
+                "INSERT INTO password_resets (token_hash,user_id,expires_at,created_at,used) "
+                "VALUES (?,?,?,?,0)",
+                (hash_of(active_token), uid, int(stamp + 3600), int(stamp)),
+            )
+            conn.execute("INSERT INTO sessions (token,user_id,expires_at) VALUES (?,?,?)",
+                         (stale_session, uid, int(stamp - 10)))
+            conn.execute("INSERT INTO sessions (token,user_id,expires_at) VALUES (?,?,?)",
+                         (active_session, uid, int(stamp + 3600)))
+            conn.execute("INSERT INTO deleted_posts (id,deleted_at) VALUES (?,?)",
+                         (stale_post_id, stamp - 91 * 86400))
+            conn.execute("INSERT INTO deleted_posts (id,deleted_at) VALUES (?,?)",
+                         (active_post_id, stamp))
+            conn.commit()
+        finally:
+            conn.close()
+
+        link = "http://localhost:8765/?reset="
+        outbox = self.tmp_dir / "password_reset_outbox.txt"
+        outbox.write_text(
+            "2026-01-01 00:00:00 | stale@example.test | {}{}\n"
+            "2026-01-01 00:00:00 | active@example.test | {}{}\n".format(
+                link, stale_token, link, active_token
+            ),
+            encoding="utf-8",
+        )
+
+        status, result = self.post("/api/admin/maintenance/run", {})
+        self.assertEqual(status, 200, "maintenance run failed: {}".format(result))
+        self.assertEqual(result.get("integrity"), "ok")
+        self.assertGreaterEqual(result.get("removed", {}).get("password_resets", 0), 1)
+        self.assertGreaterEqual(result.get("removed", {}).get("sessions", 0), 1)
+        self.assertGreaterEqual(result.get("removed", {}).get("deleted_posts", 0), 1)
+        self.assertGreaterEqual(result.get("removed", {}).get("outbox_lines", 0), 1)
+
+        status, db_status = self.get("/api/admin/db-status")
+        self.assertEqual(status, 200, "db status failed: {}".format(db_status))
+        self.assertEqual(db_status.get("integrity"), "ok")
+        self.assertIn("008-kvkk-export-maintenance", db_status.get("migrations") or [])
+        self.assertGreaterEqual(db_status.get("backupCount", 0), 1)
+
+        conn = sqlite3.connect(self.tmp_dir / DB_FILENAME)
+        try:
+            self.assertIsNone(conn.execute(
+                "SELECT 1 FROM password_resets WHERE token_hash=?", (hash_of(stale_token),)
+            ).fetchone())
+            self.assertIsNotNone(conn.execute(
+                "SELECT 1 FROM password_resets WHERE token_hash=?", (hash_of(active_token),)
+            ).fetchone())
+            self.assertIsNone(conn.execute(
+                "SELECT 1 FROM sessions WHERE token=?", (stale_session,)
+            ).fetchone())
+            self.assertIsNotNone(conn.execute(
+                "SELECT 1 FROM sessions WHERE token=?", (active_session,)
+            ).fetchone())
+            self.assertIsNone(conn.execute(
+                "SELECT 1 FROM deleted_posts WHERE id=?", (stale_post_id,)
+            ).fetchone())
+            self.assertIsNotNone(conn.execute(
+                "SELECT 1 FROM deleted_posts WHERE id=?", (active_post_id,)
+            ).fetchone())
+        finally:
+            conn.close()
+
+        kept = outbox.read_text(encoding="utf-8")
+        self.assertNotIn(stale_token, kept)
+        self.assertIn(active_token, kept)
+
+        backup_name = (db_status.get("backups") or [{}])[0].get("file")
+        self.assertTrue(backup_name, "no backup reported")
+        backup_path = self.tmp_dir / "backups" / backup_name
+        self.assertTrue(backup_path.exists(), "backup file is missing")
+        backup_conn = sqlite3.connect(backup_path)
+        try:
+            self.assertEqual(backup_conn.execute("PRAGMA integrity_check").fetchone()[0], "ok")
+        finally:
+            backup_conn.close()
+
+    def test_kvkk_ui_is_wired(self) -> None:
+        index_html = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+        app_js = (PROJECT_ROOT / "app.js").read_text(encoding="utf-8")
+        i18n_js = (PROJECT_ROOT / "i18n.js").read_text(encoding="utf-8")
+        gitignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
+
+        self.assertIn('id="privacy-open-btn"', index_html)
+        self.assertIn('id="export-data-btn"', index_html)
+        self.assertIn('id="privacy-modal"', index_html)
+        self.assertIn("/api/privacy", app_js)
+        self.assertIn("/api/me/export", app_js)
+        self.assertIn("PRIVACY_SECTIONS", app_js)
+        self.assertIn("JSON.stringify(data, null, 2)", app_js)
+        self.assertIn("'Verilerimi dışa aktar (JSON)':", i18n_js)
+        self.assertIn("'Toplanan veriler':", i18n_js)
+        self.assertIn("'Başvuru':", i18n_js)
+        self.assertIn("backups/", gitignore)
+
     def test_book_request_submission_and_admin_approval(self) -> None:
         opener, _ = self.register_user()
         title = _marker("bookrequest")
@@ -1399,7 +1551,7 @@ class SmokeAPITests(unittest.TestCase):
             source = app_js if "data-book-request-open" in added else index_html
             self.assertIn(added, source, "missing updated markup: " + added)
 
-        settings = index_html.split('<div class="settings-actions">', 1)[1].split("</div>", 1)[0]
+        settings = index_html.rsplit('<div class="settings-actions">', 1)[1].split("</div>", 1)[0]
         self.assertLess(
             settings.index('id="settings-reset"'),
             settings.index('id="settings-save"'),

@@ -8,6 +8,7 @@ ilimhalkasi.db-journal
 ilimhalkasi.db-wal
 ilimhalkasi.db-shm
 password_reset_outbox.txt
+backups/
 
 # Editör / işletim sistemi
 .idea/

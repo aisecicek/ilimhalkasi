@@ -5592,6 +5592,100 @@ $('#settings-reset')?.addEventListener('click', () => {
   if (state.data) renderAll();
 });
 
+/* KVKK aydınlatma metni ve kişisel veri dışa aktarma */
+const PRIVACY_SECTIONS = [
+  {
+    title: 'Toplanan veriler',
+    body: 'Profil bilgilerin; görünen adın, kullanıcı adın, e-posta adresin, biyografin ve profil fotoğrafındır. Paylaşımların, kitap rafların, okuma durumların, yorumların, beğenilerin, kaydettiklerin, takiplerin, engellerin, halka ve meclis mesajların, bildirimlerin ile destek taleplerin de işlenir.'
+  },
+  {
+    title: 'İşleme amacı',
+    body: 'Verilerin uygulamayı sunmak, profilini ve istatistiklerini oluşturmak, paylaşımlarını ve etkileşimlerini göstermek, bildirim göndermek ve güvenliği sağlamak için işlenir.'
+  },
+  {
+    title: 'Paylaşım ve üçüncü taraflar',
+    body: 'Reklam ağı, analitik veya harici yazı tipi kullanılmaz. İçerikler yalnızca bu uygulamanın sunucusunda tutulur; halkalara açık paylaşımlar diğer üyeler tarafından okunabilir.'
+  },
+  {
+    title: 'Saklama süreleri',
+    body: 'Oturumlar 30 gün, şifre sıfırlama bağlantıları 1 saat geçerlidir. Kullanılmayan veya süresi dolan kayıtlar açılışta temizlenir. Akıştan düşen paylaşımların silme kaydı 90 gün tutulur. Yedekler günlük alınır ve son 7 gün saklanır. Paylaşımların, yorumların, rafların ve mesajların hesabını silene kadar kalır; hesap silme işlemiyle kaldırılır.'
+  },
+  {
+    title: 'Hakların',
+    body: 'Verilerine erişme, düzeltme, silme, dışa aktarma ve işlemeye itiraz etme hakkın vardır. Dışa aktarma ve hesap silme işlemlerini Ayarlar bölümünden yapabilirsin.'
+  },
+  {
+    title: 'Başvuru',
+    body: 'Diğer KVKK taleplerin için {contact} adresine yazabilirsin. Veri sorumlusu: {controller}.'
+  }
+];
+
+const privacyModal = $('#privacy-modal');
+
+function renderPrivacyNotice(notice) {
+  const host = $('#privacy-content');
+  if (!host) return;
+  const vars = { contact: notice?.contact || '', controller: notice?.controller || '' };
+  host.innerHTML = PRIVACY_SECTIONS.map((section) => `
+    <section class="privacy-section">
+      <h3>${t(section.title)}</h3>
+      <p>${esc(t(section.body, vars))}</p>
+    </section>`).join('');
+}
+
+async function openPrivacyModal() {
+  if (!privacyModal) return;
+  privacyModal.hidden = false;
+  const host = $('#privacy-content');
+  if (host) host.innerHTML = `<p>${t('Bilgi yükleniyor...')}</p>`;
+  try {
+    renderPrivacyNotice(await api('/api/privacy'));
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+function closePrivacyModal() {
+  if (privacyModal) privacyModal.hidden = true;
+}
+
+$('#privacy-open-btn')?.addEventListener('click', openPrivacyModal);
+$$('[data-close-privacy]').forEach((el) => el.addEventListener('click', closePrivacyModal));
+privacyModal?.addEventListener('click', (e) => {
+  if (e.target === privacyModal) closePrivacyModal();
+});
+
+async function exportMyData() {
+  if (!state.user) {
+    requestAccount(t('Verilerimi dışa aktarmak'));
+    return;
+  }
+  const button = $('#export-data-btn');
+  if (button) button.disabled = true;
+  try {
+    const result = await api('/api/me/export');
+    const data = result.data || {};
+    // Tema, dil ve yazı boyutu gibi cihaz tercihleri tarayıcıda tutulur.
+    data.preferences = { ...state.settings };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ilimhalkasi-verilerim-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast(t('Verilerin JSON olarak indirildi'));
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+$('#export-data-btn')?.addEventListener('click', exportMyData);
+
 /* Hesap silme */
 const deleteAccountModal = $('#delete-account-modal');
 

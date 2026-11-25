@@ -78,7 +78,9 @@ SQLite tabloları: `users`, `sessions`, `password_resets`, `books`, `shelf_books
 - `books`: katalog metadata’sı; `page_count` toplam sayfa, `volume_count` toplam cilt sayısı. Başlık sıralaması `BOOKTITLE` özel sıralamasıyla yapılır.
 - `shelf_books`: kullanıcının raf kaydı; `page`, `volume`, `page_count` anlık görüntüsü ve `finished_at`.
 - `posts`: `group_id` alanı halka akışını gösterir; boşsa genel akışa ait paylaşımdır. `updated_at`, düzenleme/beğeni/yorum değişikliklerini izler. Halkaya paylaşım için üyelik zorunludur.
-- `deleted_posts`: silinen paylaşımların kimliklerini tutar; istemci akıştan kaldırabilir.
+- `deleted_posts`: silinen paylaşımların kimliklerini tutar; istemci akıştan kaldırabilir. 90 gün sonra temizlenir.
+- `app_meta`: son bütünlük kontrolü, temizlik, yedekleme ve `VACUUM` zamanlarını tutar.
+- `schema_migrations`: uygulanan şema göçlerinin sürüm ve tarih kaydıdır.
 - `notifications`: takip, halka paylaşımı, yorum, anma ve meclis mesajı bildirimlerini saklar; `GET /api/bootstrap` içinde `notifications` olarak gelir.
 - `GET /api/bootstrap` giriş yapan kullanıcının tüm kişisel verisini taşır; akış için en yeni 200 paylaşımı `posts`, kullanıcının kendi eski paylaşımlarını `ownPosts`, kalıcı aktiflik sayacını `stats.ilimSeries` olarak döndürür. Ayrıca senkronizasyon için `serverTime` vardır. Kütüphane `GET /api/books` ile sayfalanır.
 - `GET /api/posts/recent?after=<zaman>` yeni/düzenlenen paylaşımları, silinen paylaşım kimliklerini (`deleted`) ve `serverTime` döndürür; istemci canlı akış güncellemesi için bunu kullanır.
@@ -87,6 +89,25 @@ SQLite tabloları: `users`, `sessions`, `password_resets`, `books`, `shelf_books
 - `POST /api/shelf` yalnızca güncel sayfa ve cilt alır; toplam sayfa/cilt katalogdan okunur.
 - `GET /api/users/<id>` herkese açık profili döndürür.
 - `POST /api/admin/books/<id>/volumes` yöneticiye cilt sayısını 1–1000 aralığında ayarlar.
+- `GET /api/privacy` veri sorumlusu, başvuru adresi ve saklama sürelerini döndürür; giriş gerekmez.
+- `GET /api/me/export` kullanıcının kendi verisini JSON olarak döndürür; şifre, tuz ve oturum/sıfırlama token'leri çıkarılır. Arayüz buna cihaz tercihlerini de ekleyerek dosya olarak indirir.
+- `GET /api/admin/db-status` bütünlük sonucu, göç kayıtları ve yedekleri yöneticiye gösterir.
+- `POST /api/admin/maintenance/run` yöneticiye temizlik, bütünlük kontrolü, `VACUUM` ve yedeklemeyi yeniden çalıştırır.
+
+## KVKK ve veri güvenliği
+
+Ayarlar → **Kişisel verilerim** alanında aydınlatma metni ve **Verilerimi dışa aktar (JSON)** düğmesi vardır. Hesap silme aynı sayfada, şifre ve kullanıcı adı onayıyla çalışır. Metin, uygulamanın gerçek davranışını anlatır; yayına çıkmadan önce hukuki olarak gözden geçirilmelidir.
+
+| Veri | Saklama süresi |
+| --- | --- |
+| Oturumlar | 30 gün; süresi dolanlar açılışta silinir |
+| Şifre sıfırlama bağlantıları | 1 saat; kullanılmış/süresi dolan kayıtlar ve yerel kutup temizlenir |
+| Silinen paylaşım kimlikleri | 90 gün; akış senkronizasyonu için tutulur |
+| Yedekler | Günlük alınır, son 7 gün tutulur |
+| Paylaşımlar, yorumlar, raflar, mesajlar | Hesap silinene kadar; silme işlemiyle kaldırılır |
+| Tercihler (tema, dil, yazı boyutu) | Yalnızca cihazda; dışa aktarıma eklenir |
+
+Sunucu açılışta `PRAGMA integrity_check`, süresi dolan kayıt temizliği, haftada bir `VACUUM` ve günlük SQLite yedeği çalıştırır. Yedekler `backups/` klasöründe tutulur ve `.gitignore` ile dışlanır. Ortam değişkenleri: `ILIMHALKASI_KVKK_CONTACT`, `ILIMHALKASI_DATA_CONTROLLER`. Varsayılan başvuru adresi geliştirme yöneticisidir; dağıtımda değiştirilmelidir.
 
 `Hz. Ali (r.a.)`, Dostoyevski, İmam Gazali, Mevlânâ ve Yunus Emre sistem hesaplarıdır (`is_system=1`); kendi sözlerinden alıntı paylaşırlar, inceleme yazmazlar.
 

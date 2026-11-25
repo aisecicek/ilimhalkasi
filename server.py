@@ -41,6 +41,22 @@ SESSION_DAYS = 30
 PBKDF2_ROUNDS = 210_000
 ADMIN_EMAIL = "admin@ilimhalkasi.local"
 ADMIN_USERNAME = "admin"
+KVKK_CONTACT = os.environ.get("ILIMHALKASI_KVKK_CONTACT", ADMIN_EMAIL).strip()
+DATA_CONTROLLER = os.environ.get("ILIMHALKASI_DATA_CONTROLLER", "İlim Halkası").strip()
+BACKUP_DIR = BASE / "backups"
+BACKUP_KEEP = 7
+DELETED_POST_TTL_DAYS = 90
+SCHEMA_VERSION = "008-kvkk-export-maintenance"
+MIGRATIONS = (
+    "001-schema-baseline",
+    "002-notification-kinds",
+    "003-user-and-book-columns",
+    "004-shelf-status-and-progress",
+    "005-group-posts",
+    "006-deleted-posts",
+    "007-saved-lists-and-series",
+    SCHEMA_VERSION,
+)
 RESET_TTL_SECONDS = 3600
 APP_BASE_URL = os.environ.get("APP_BASE_URL", f"http://localhost:{PORT}").rstrip("/")
 SMTP_HOST = os.environ.get("SMTP_HOST", "").strip()
@@ -232,6 +248,17 @@ CREATE TABLE IF NOT EXISTS user_meta (
   key     TEXT NOT NULL,
   value   TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (user_id, key)
+);
+
+-- Bakım, yedekleme ve göç kayıtları (KVKK şeffaflığı için de kullanılır).
+CREATE TABLE IF NOT EXISTS app_meta (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL DEFAULT '',
+  updated_at REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version    TEXT PRIMARY KEY,
+  applied_at REAL NOT NULL
 );
 
 -- Kullanıcıların katalogda olmayan bir eser için gönderdiği öneriler.
@@ -1805,6 +1832,359 @@ def ensure_ilim_series() -> None:
         conn.close()
 
 
+def meta_get(conn: sqlite3.Connection, key: str, default: str = "") -> str:
+    row = conn.execute("SELECT value FROM app_meta WHERE key=?", (key,)).fetchone()
+    return row["value"] if row else default
+
+
+def meta_set(conn: sqlite3.Connection, key: str, value: object) -> None:
+    conn.execute(
+        "INSERT OR REPLACE INTO app_meta (key,value,updated_at) VALUES (?,?,?)",
+        (key, str(value), now()),
+    )
+
+
+def record_migrations(conn: sqlite3.Connection) -> None:
+    """Geçmişte elle yapılan göçleri de kayıt altına alır."""
+    for version in MIGRATIONS:
+        conn.execute(
+            "INSERT OR IGNORE INTO schema_migrations (version,applied_at) VALUES (?,?)",
+            (version, now()),
+        )
+
+
+def cleanup_reset_outbox(conn: sqlite3.Connection) -> int:
+    """Yerel kutuda yalnızca hâlâ geçerli sıfırlama bağlantılarını bırakır."""
+    if not RESET_OUTBOX.exists():
+        return 0
+    try:
+        lines = RESET_OUTBOX.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return 0
+    active = {
+        row[0] for row in conn.execute(
+            "SELECT token_hash FROM password_resets WHERE used=0 AND expires_at>?",
+            (int(now()),),
+        )
+    }
+    kept = []
+    for line in lines:
+        parts = line.split(" | ", 2)
+        if len(parts) < 3:
+            continue
+        link = parts[2].strip()
+        token = urllib.parse.parse_qs(urllib.parse.urlparse(link).query).get("reset", [""])[0]
+        if token and hashlib.sha256(token.encode("utf-8")).hexdigest() in active:
+            kept.append(line)
+    try:
+        if kept:
+            RESET_OUTBOX.write_text("\n".join(kept) + "\n", encoding="utf-8")
+        else:
+            RESET_OUTBOX.unlink(missing_ok=True)
+    except OSError:
+        return 0
+    return max(0, len(lines) - len(kept))
+
+
+def cleanup_expired_data(conn: sqlite3.Connection) -> dict:
+    """Süresi dolan oturum/token ve eski silme kayıtlarını temizler."""
+    stamp = now()
+    resets = conn.execute(
+        "DELETE FROM password_resets WHERE used=1 OR expires_at<=?", (int(stamp),)
+    ).rowcount
+    sessions = conn.execute(
+        "DELETE FROM sessions WHERE expires_at<=?", (int(stamp),)
+    ).rowcount
+    tombstones = conn.execute(
+        "DELETE FROM deleted_posts WHERE deleted_at<?",
+        (stamp - DELETED_POST_TTL_DAYS * 86400,),
+    ).rowcount
+    conn.commit()
+    return {
+        "password_resets": max(0, resets),
+        "sessions": max(0, sessions),
+        "deleted_posts": max(0, tombstones),
+        "outbox_lines": cleanup_reset_outbox(conn),
+    }
+
+
+def backup_database() -> str:
+    """Günlük SQLite anlık görüntüsü alır, son yedi yedeği tutar."""
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    day = time.strftime("%Y-%m-%d")
+    target = BACKUP_DIR / f"ilimhalkasi-{day}.db"
+    if target.exists():
+        return str(target)
+    temp = BACKUP_DIR / f".ilimhalkasi-{day}-{os.getpid()}.tmp"
+    temp.unlink(missing_ok=True)
+    source = None
+    destination = None
+    try:
+        source = sqlite3.connect(DB_PATH, timeout=10)
+        destination = sqlite3.connect(temp)
+        source.backup(destination)
+    finally:
+        if destination is not None:
+            destination.close()
+        if source is not None:
+            source.close()
+    temp.replace(target)
+    backups = sorted(
+        BACKUP_DIR.glob("ilimhalkasi-*.db"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    )
+    for old in backups[BACKUP_KEEP:]:
+        old.unlink(missing_ok=True)
+    return str(target)
+
+
+def run_startup_maintenance() -> dict:
+    """Açılışta ve yönetici talebiyle çalışan bakım işlemleri."""
+    conn = connect()
+    report: dict = {"schemaVersion": SCHEMA_VERSION}
+    try:
+        record_migrations(conn)
+        integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
+        report["integrity"] = integrity
+        meta_set(conn, "integrity_check", integrity)
+        meta_set(conn, "last_integrity_check", int(now()))
+        conn.commit()
+
+        report["removed"] = cleanup_expired_data(conn)
+
+        last_vacuum = float(meta_get(conn, "last_vacuum_at", "0") or 0)
+        vacuumed = now() - last_vacuum >= 7 * 86400
+        if vacuumed:
+            conn.commit()
+            conn.execute("VACUUM")
+            meta_set(conn, "last_vacuum_at", int(now()))
+            conn.commit()
+        report["vacuumed"] = vacuumed
+
+        today = time.strftime("%Y-%m-%d")
+        last_backup = meta_get(conn, "last_backup_file", "")
+        backup_path = Path(last_backup) if last_backup else None
+        # Kopyalanan veritabanında başka bir kurulumun mutlak yolu bulunabilir.
+        # Yalnızca bu kurulumun yedek klasöründeki dosyayı geçerli say.
+        if backup_path:
+            try:
+                if backup_path.parent.resolve() != BACKUP_DIR.resolve():
+                    backup_path = None
+            except OSError:
+                backup_path = None
+        if not backup_path or not backup_path.exists() or backup_path.name != f"ilimhalkasi-{today}.db":
+            try:
+                backup_path = Path(backup_database())
+                report["backupFile"] = backup_path.name
+            except Exception as exc:  # yedek alınamazsa uygulama yine açılsın
+                report["backupError"] = str(exc)
+                backup_path = None
+        else:
+            report["backupFile"] = backup_path.name
+        if backup_path:
+            meta_set(conn, "last_backup_file", str(backup_path))
+            meta_set(conn, "last_backup_at", int(now()))
+        meta_set(conn, "last_cleanup_at", int(now()))
+        conn.commit()
+        return report
+    finally:
+        conn.close()
+
+
+def db_status() -> dict:
+    conn = connect()
+    try:
+        meta = {row["key"]: row["value"] for row in conn.execute("SELECT key,value FROM app_meta")}
+        backups = []
+        for path in sorted(BACKUP_DIR.glob("ilimhalkasi-*.db"), key=lambda p: p.stat().st_mtime, reverse=True):
+            try:
+                backups.append({
+                    "file": path.name,
+                    "bytes": path.stat().st_size,
+                    "created_at": path.stat().st_mtime,
+                })
+            except OSError:
+                continue
+        migrations = [
+            row[0] for row in conn.execute(
+                "SELECT version FROM schema_migrations ORDER BY applied_at, version"
+            )
+        ]
+        return {
+            "integrity": meta.get("integrity_check", ""),
+            "lastIntegrityCheck": int(meta.get("last_integrity_check", "0") or 0),
+            "lastCleanupAt": int(meta.get("last_cleanup_at", "0") or 0),
+            "lastVacuumAt": int(meta.get("last_vacuum_at", "0") or 0),
+            "lastBackupAt": int(meta.get("last_backup_at", "0") or 0),
+            "schemaVersion": SCHEMA_VERSION,
+            "migrations": migrations,
+            "backupCount": len(backups),
+            "backups": backups,
+            "databaseBytes": DB_PATH.stat().st_size if DB_PATH.exists() else 0,
+        }
+    finally:
+        conn.close()
+
+
+def privacy_notice() -> dict:
+    return {
+        "controller": DATA_CONTROLLER,
+        "contact": KVKK_CONTACT,
+        "retention": {
+            "sessions_days": SESSION_DAYS,
+            "reset_link_hours": int(RESET_TTL_SECONDS / 3600),
+            "deleted_post_tombstone_days": DELETED_POST_TTL_DAYS,
+            "backup_days": BACKUP_KEEP,
+            "user_content": "account_lifetime",
+        },
+        "schemaVersion": SCHEMA_VERSION,
+    }
+
+
+def build_user_export(conn: sqlite3.Connection, uid: int) -> dict | None:
+    """Kişisel verileri JSON olarak dışa aktarır; kimlik bilgilerini çıkarmaz."""
+    user = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+    if not user:
+        return None
+
+    def rows(sql: str, args: tuple = ()) -> list[dict]:
+        return [dict(row) for row in conn.execute(sql, args)]
+
+    groups = conn.execute(
+        "SELECT g.* FROM groups g JOIN group_members m ON m.group_id=g.id "
+        "WHERE m.user_id=? ORDER BY g.created_at DESC", (uid,)
+    ).fetchall()
+    group_messages = []
+    if groups:
+        placeholders = ",".join("?" for _ in groups)
+        group_messages = rows(
+            f"SELECT group_id,text,created_at FROM group_messages "
+            f"WHERE sender_id=? AND group_id IN ({placeholders}) ORDER BY created_at",
+            (uid, *[g["id"] for g in groups]),
+        )
+
+    lists = []
+    for row in conn.execute("SELECT id,name FROM book_lists WHERE user_id=? ORDER BY name", (uid,)):
+        lists.append({
+            "id": row["id"],
+            "name": row["name"],
+            "books": rows(
+                "SELECT b.id,b.title,b.author FROM book_list_items li "
+                "JOIN books b ON b.id=li.book_id WHERE li.list_id=? ORDER BY li.created_at DESC",
+                (row["id"],),
+            ),
+        })
+
+    return {
+        "exported_at": now(),
+        "controller": DATA_CONTROLLER,
+        "note": "Şifre, tuz, oturum token'i ve sıfırlama token'i güvenlik nedeniyle dahil edilmez.",
+        "profile": user_me(user),
+        "account": rows(
+            "SELECT created_at,email,username,display_name,bio,avatar,avatar_image,title,"
+            "is_admin,is_community,is_system,blocked FROM users WHERE id=?", (uid,)
+        )[0],
+        "sessions": rows(
+            "SELECT expires_at FROM sessions WHERE user_id=? ORDER BY expires_at DESC", (uid,)
+        ),
+        "password_resets": rows(
+            "SELECT created_at,expires_at,used FROM password_resets "
+            "WHERE user_id=? ORDER BY created_at DESC", (uid,)
+        ),
+        "user_meta": rows("SELECT key,value FROM user_meta WHERE user_id=? ORDER BY key", (uid,)),
+        "stats": {
+            "followers": conn.execute(
+                "SELECT COUNT(*) FROM follows WHERE followed_id=?", (uid,)
+            ).fetchone()[0],
+            "following": conn.execute(
+                "SELECT COUNT(*) FROM follows WHERE follower_id=?", (uid,)
+            ).fetchone()[0],
+            "circles": conn.execute(
+                "SELECT COUNT(*) FROM group_members m JOIN groups g ON g.id=m.group_id "
+                "WHERE m.user_id=? AND g.kind='halka'", (uid,)
+            ).fetchone()[0],
+            "ilimSeries": get_ilim_series(conn, uid),
+        },
+        "posts": [
+            serialize_post(conn, row, uid) for row in conn.execute(
+                "SELECT * FROM posts WHERE user_id=? ORDER BY created_at DESC, id DESC", (uid,)
+            )
+        ],
+        "comments": rows(
+            "SELECT id,post_id,parent_id,text,created_at FROM comments "
+            "WHERE user_id=? ORDER BY created_at DESC", (uid,)
+        ),
+        "post_likes": rows(
+            "SELECT p.id,p.book,p.text FROM post_likes l JOIN posts p ON p.id=l.post_id "
+            "WHERE l.user_id=? ORDER BY p.created_at DESC", (uid,)
+        ),
+        "saved_posts": rows(
+            "SELECT p.id,p.book,p.text FROM post_favorites f JOIN posts p ON p.id=f.post_id "
+            "WHERE f.user_id=? ORDER BY p.created_at DESC", (uid,)
+        ),
+        "comment_likes": rows(
+            "SELECT c.id,c.text FROM comment_likes l JOIN comments c ON c.id=l.comment_id "
+            "WHERE l.user_id=? ORDER BY c.created_at DESC", (uid,)
+        ),
+        "shelf": rows(
+            "SELECT s.status,s.page,s.progress,s.rating,s.created_at,s.finished_at,"
+            "s.page_count,s.volume,b.id AS book_id,b.title,b.author "
+            "FROM shelf_books s JOIN books b ON b.id=s.book_id "
+            "WHERE s.user_id=? ORDER BY s.created_at DESC", (uid,)
+        ),
+        "lists": lists,
+        "follows": rows(
+            "SELECT u.id,u.display_name,u.username FROM follows f "
+            "JOIN users u ON u.id=f.followed_id WHERE f.follower_id=? ORDER BY u.display_name", (uid,)
+        ),
+        "blocked": rows(
+            "SELECT u.id,u.display_name,u.username FROM blocks b "
+            "JOIN users u ON u.id=b.blocked_id WHERE b.blocker_id=? ORDER BY u.display_name", (uid,)
+        ),
+        "notifications": notifications_for(conn, uid),
+        "groups": [serialize_group(conn, group, uid) for group in groups],
+        "group_messages": group_messages,
+        "chat_messages": rows(
+            "SELECT circle,text,created_at FROM chat_messages "
+            "WHERE user_id=? ORDER BY created_at", (uid,)
+        ),
+        "debates": rows(
+            "SELECT id,book_title,text,created_at FROM debates "
+            "WHERE user_id=? ORDER BY created_at DESC", (uid,)
+        ),
+        "debate_answers": rows(
+            "SELECT a.debate_id,a.text,a.created_at FROM debate_answers a "
+            "WHERE a.user_id=? ORDER BY a.created_at", (uid,)
+        ),
+        "book_requests": [
+            serialize_book_request(conn, row) for row in conn.execute(
+                "SELECT * FROM book_requests WHERE user_id=? ORDER BY created_at DESC", (uid,)
+            )
+        ],
+        "tickets": [
+            serialize_ticket(conn, row) for row in conn.execute(
+                "SELECT * FROM support_tickets WHERE user_id=? ORDER BY created_at DESC", (uid,)
+            )
+        ],
+        "reports": [
+            serialize_report(conn, row) for row in conn.execute(
+                "SELECT * FROM user_reports WHERE reporter_id=? ORDER BY created_at DESC", (uid,)
+            )
+        ],
+        "scholar_comments": rows(
+            "SELECT slug,text,created_at FROM scholar_comments "
+            "WHERE user_id=? ORDER BY created_at", (uid,)
+        ),
+        "curriculum_follows": rows(
+            "SELECT c_key FROM curriculum_follows WHERE user_id=? ORDER BY c_key", (uid,)
+        ),
+        "assembly_rsvps": rows(
+            "SELECT a_key FROM assembly_rsvps WHERE user_id=? ORDER BY a_key", (uid,)
+        ),
+    }
+
+
 def seed_groups(conn: sqlite3.Connection) -> None:
     """Açık ilim halkaları; meclis ise kullanıcılar kurar, hazır meclis yoktur."""
     if conn.execute("SELECT 1 FROM groups WHERE kind='halka' LIMIT 1").fetchone():
@@ -2645,6 +3025,28 @@ class Handler(BaseHTTPRequestHandler):
             user = self.current_user()
             return self.send_json({"user": user_me(user) if user else None})
 
+        if path == "/api/privacy":
+            return self.send_json(privacy_notice())
+
+        if path == "/api/me/export":
+            viewer = self.require_user()
+            if not viewer:
+                return
+            conn = connect()
+            try:
+                data = build_user_export(conn, viewer["id"])
+                if not data:
+                    return self.send_json({"error": "Hesap bulunamadı"}, 404)
+                return self.send_json({"data": data})
+            finally:
+                conn.close()
+
+        if path == "/api/admin/db-status":
+            viewer = self.current_user()
+            if not viewer or not self.require_admin(viewer["id"]):
+                return
+            return self.send_json(db_status())
+
         if path == "/api/bootstrap":
             # Giriş yapmasa da herkese açık içerik yüklenir; state.user null olur.
             user = self.current_user()
@@ -3174,6 +3576,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.update_profile(uid, body)
         if path == "/api/account/delete":
             return self.delete_account(uid, body)
+        if path == "/api/admin/maintenance/run":
+            if not self.require_admin(uid):
+                return
+            return self.send_json(run_startup_maintenance())
         if path == "/api/groups/halka":
             return self.create_halka(uid, body)
         if path == "/api/groups/meclis":
@@ -4653,6 +5059,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> None:
     init_db()
+    run_startup_maintenance()
     start_figure_scheduler()
     # Telefon/apk aynı Wi-Fi'den bağlanabildiği için tüm arayüzlere aç.
     host = os.environ.get("HOST", "0.0.0.0")

@@ -822,6 +822,15 @@
             <label class="switch-row"><span>Profilimde katılım yılını göster</span><input type="checkbox" data-setting="showJoinYear" checked /></label>
           </div>
 
+          <div class="settings-card" id="privacy-card">
+            <h3 data-i18n="Kişisel verilerim">Kişisel verilerim</h3>
+            <p data-i18n="Hangi verileri tuttuğumuzu, ne kadar sakladığımızı ve haklarını görebilirsin.">Hangi verileri tuttuğumuzu, ne kadar sakladığımızı ve haklarını görebilirsin.</p>
+            <div class="settings-actions">
+              <button class="btn btn-outline btn-sm btn-compact" type="button" id="privacy-open-btn" data-i18n="Aydınlatma metnini oku">Aydınlatma metnini oku</button>
+              <button class="btn btn-outline btn-sm btn-compact" type="button" id="export-data-btn" data-i18n="Verilerimi dışa aktar (JSON)">Verilerimi dışa aktar (JSON)</button>
+            </div>
+          </div>
+
           <div class="settings-card settings-card--danger" id="delete-account-card">
             <h3>Hesabı sil</h3>
             <p>Hesabınla birlikte paylaşımların, rafların, takiplerin ve özel sohbetlerin kalıcı olarak kaldırılır. Bu işlem geri alınamaz.</p>
@@ -1108,6 +1117,19 @@
           <button class="btn btn-danger" type="submit">Evet, hesabımı sil</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- KVKK AYDINLATMA METNİ -->
+  <div class="modal-backdrop" id="privacy-modal" hidden>
+    <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
+      <button class="modal-close" type="button" data-close-privacy data-i18n-aria="Kapat" aria-label="Kapat">×</button>
+      <h2 id="privacy-title" data-i18n="Gizlilik ve KVKK aydınlatma metni">Gizlilik ve KVKK aydınlatma metni</h2>
+      <p class="modal-desc" data-i18n="İlim Halkası’da kişisel verilerin şeffaf ve ölçülü biçimde işlenir.">İlim Halkası’da kişisel verilerin şeffaf ve ölçülü biçimde işlenir.</p>
+      <div id="privacy-content"></div>
+      <div class="modal-actions">
+        <button class="btn btn-gold" type="button" data-close-privacy data-i18n="Anladım">Anladım</button>
+      </div>
     </div>
   </div>
 
