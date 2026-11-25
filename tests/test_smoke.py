@@ -1149,6 +1149,25 @@ class SmokeAPITests(unittest.TestCase):
         self.assertIn("#book-detail-title { font-size: var(--title-size) !important;", final)
         self.assertIn("body:not(.text-large) .post-body", final)
 
+        # Unvan merdiveni ve etkileşim alıntıları kart ölçeğiyle aynı ritimde.
+        self.assertIn(
+            ".ladder-item strong { display: block; margin-top: 7px; font-family: var(--serif); "
+            "font-size: var(--card-title-size); line-height: 1.35; color: var(--olive-deep); }",
+            css,
+        )
+        self.assertIn(
+            ".ladder-item small { display: block; color: var(--ink-faint); "
+            "font-size: var(--meta-size); line-height: 1.45; margin-top: 4px; }",
+            css,
+        )
+        self.assertIn("body:not(.text-large) .writing-item p.interaction-text {", final)
+        self.assertIn("font-size: var(--card-body-size) !important;", final)
+        self.assertIn(
+            "/* Sayfa başı: başlık, açıklama ve işlemler aynı dikey ritimde dizilir. */",
+            css,
+        )
+        self.assertIn(".page-head:not(.page-head--tight) {", css)
+
         for font_name in (
             "amiri-400-arabic.woff2", "amiri-400-latin-ext.woff2", "amiri-400-latin.woff2",
             "amiri-700-arabic.woff2", "amiri-700-latin-ext.woff2", "amiri-700-latin.woff2",

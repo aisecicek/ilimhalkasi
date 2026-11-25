@@ -1419,10 +1419,11 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
 /* ---- Etkileşimler ve kitap önerileri ---- */
 .interaction-item { position: relative; }
 .interaction-item .book-cover { width: 42px; height: 60px; font-size: 8px; }
+.interaction-item small { display: block; color: var(--ink-faint); font-size: var(--meta-size); line-height: 1.45; }
 .interaction-text { margin: 6px 0 0; font-family: var(--serif); font-size: var(--card-body-size); line-height: 1.65; color: var(--ink-soft); }
 .interaction-kind {
   position: absolute; right: 10px; bottom: 8px;
-  color: var(--ink-faint); font-size: 9px; letter-spacing: .08em;
+  color: var(--ink-faint); font-size: var(--meta-size); letter-spacing: .06em;
 }
 .book-request-item .admin-item-head { flex-wrap: wrap; }
 .book-request-body { display: flex; align-items: flex-start; gap: 10px; margin-top: 8px; }
@@ -1622,9 +1623,10 @@ img.book-cover { display: block; padding: 0; object-fit: cover; background: #F2E
 .ladder-item { padding: 15px 12px; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.65); text-align: center; opacity: .62; }
 .ladder-item.is-done { opacity: .85; }
 .ladder-item.is-current { opacity: 1; border-color: var(--gold); background: linear-gradient(150deg, #F2EFE9, #E6E2D8); box-shadow: 0 0 0 2px rgba(166,110,56,.12); }
-.ladder-icon { display: block; font-size: 20px; color: var(--gold); }
-.ladder-item strong { display: block; margin-top: 5px; font-family: var(--serif); font-size: 13px; color: var(--olive-deep); }
-.ladder-item small { display: block; color: var(--ink-faint); font-size: 9px; line-height: 1.4; margin-top: 2px; }
+.ladder-icon { display: block; font-size: 22px; line-height: 1; color: var(--gold); }
+.ladder-icon svg { width: 22px; height: 22px; }
+.ladder-item strong { display: block; margin-top: 7px; font-family: var(--serif); font-size: var(--card-title-size); line-height: 1.35; color: var(--olive-deep); }
+.ladder-item small { display: block; color: var(--ink-faint); font-size: var(--meta-size); line-height: 1.45; margin-top: 4px; }
 .profile-circles { display: flex; flex-direction: column; gap: 10px; }
 .profile-circle-row { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.78); }
 .profile-circle-row > div { flex: 1; min-width: 0; }
@@ -3318,6 +3320,32 @@ body::before {
   .content { padding: 8px 14px calc(98px + env(safe-area-inset-bottom, 0px)); }
   .site-footer { display: none !important; }
 
+  /* Sayfa başı: başlık, açıklama ve işlemler aynı dikey ritimde dizilir. */
+  .page-head:not(.page-head--tight) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding-top: 8px;
+  }
+  .page-head:not(.page-head--tight) > div:first-child { min-width: 0; }
+  .page-head:not(.page-head--tight) h1,
+  .page-head:not(.page-head--tight) h2 { line-height: 1.25; }
+  .page-head:not(.page-head--tight) p { margin-top: 4px; }
+  .page-head:not(.page-head--tight) .head-actions,
+  .page-head:not(.page-head--tight) > .btn {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 0;
+  }
+  .page-head:not(.page-head--tight) .head-actions .btn,
+  .page-head:not(.page-head--tight) > .btn {
+    flex: 1 1 140px;
+    min-width: 0;
+    min-height: 40px;
+  }
+
   .page-head--library {
     flex-direction: column;
     align-items: stretch;
@@ -3772,4 +3800,11 @@ body:not(.text-large) .public-note p, body:not(.text-large) .mini-postcard p {
   font-family: var(--serif) !important;
   font-size: var(--reading-size) !important;
   line-height: var(--reading-line) !important;
+}
+
+/* Etkileşim kartındaki alıntı bir özetdir; uzun okuma metni gibi büyümez. */
+body:not(.text-large) .writing-item p.interaction-text {
+  font-family: var(--serif) !important;
+  font-size: var(--card-body-size) !important;
+  line-height: 1.6 !important;
 }
