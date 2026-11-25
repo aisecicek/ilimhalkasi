@@ -45,7 +45,7 @@ jobs:
           import html, os, pathlib, re
           # Domain yoksa ilk APK ev Wi-Fi'sindeki sunucuya bağlanır.
           # Domain alınınca APP_URL değişkenine https://... adresini yazman yeterli.
-          url = (os.environ.get("APP_URL") or "http://192.168.0.102:8765").strip()
+          url = (os.environ.get("APP_URL") or "http://192.168.0.107:8765").strip()
           target = pathlib.Path("android/app/src/main/res/values/strings.xml")
           text = target.read_text(encoding="utf-8")
           pattern = r'(<string name="app_host">)[^<]*(</string>)'
