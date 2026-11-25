@@ -110,8 +110,12 @@ sonraki aşamada `assembleRelease` + upload key ile imzalama eklenir.
 
 ## 3. Telefona kurulum
 
-- APK'yı telefona indirip açın; Android "bilinmeyen kaynaktan kurulum" izni isteyebilir.
+- Bu makinede hazır APK: `artifacts/ilimhalkasi-apk/app-debug.apk` (kopyası
+  `Downloads\ilimhalkasi-app-debug.apk`). Telefona bu dosyayı gönderip açın;
+  Android "bilinmeyen kaynaktan kurulum" izni isteyebilir.
 - Uygulama `APP_URL` adresine bağlanır. Giriş bilgileri web sitesiyle aynıdır.
+- KVKK metninin gerçek davranışla uyumu ve avukatın karar vermesi gereken
+  başlıklar [`KVKK-review.md`](KVKK-review.md) dosyasında.
 - Dil, tema ve diğer tercihler WebView `localStorage` alanında tutulur; giriş çerezi
   de WebView içinde kalır, uygulama kapatılıp açıldığında oturum korunur.
 

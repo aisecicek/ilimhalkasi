@@ -5633,11 +5633,11 @@ const PRIVACY_SECTIONS = [
   },
   {
     title: 'Paylaşım ve üçüncü taraflar',
-    body: 'Reklam ağı, analitik veya harici yazı tipi/ikon kullanılmaz; fontlar ve ikonlar uygulamayla birlikte sunulur. Oturumun yalnızca bu sunucunun HttpOnly çerezinde tutulur. İçerikler bu uygulamanın sunucusunda tutulur; yalnızca katalog kaydında bağlantı bulunan kitap kapakları Open Library / Archive.org üzerinden yüklenir. Halkalara açık paylaşımlar diğer üyeler tarafından okunabilir.'
+    body: 'Reklam ağı, analitik veya harici yazı tipi/ikon kullanılmaz; fontlar ve ikonlar uygulamayla birlikte sunulur. Oturumun yalnızca bu sunucunun HttpOnly çerezinde tutulur. İçerikler bu uygulamanın sunucusunda tutulur; yalnızca katalog kaydında bağlantı bulunan kitap kapakları Open Library / Archive.org üzerinden yüklenir. Üretim modunda e-posta doğrulama ve şifre sıfırlama bağlantıları SMTP sağlayıcısı aracılığıyla gönderilir. Halkalara açık paylaşımlar diğer üyeler tarafından okunabilir.'
   },
   {
     title: 'Saklama süreleri',
-    body: 'Oturumlar 30 gün, şifre sıfırlama bağlantıları 1 saat geçerlidir. Kullanılmayan veya süresi dolan kayıtlar açılışta temizlenir. Akıştan düşen paylaşımların silme kaydı 90 gün tutulur. Yedekler günlük alınır ve son 7 gün saklanır. Paylaşımların, yorumların, rafların ve mesajların hesabını silene kadar kalır; hesap silme işlemiyle kaldırılır.'
+    body: 'Oturumlar 30 gün, şifre sıfırlama ve e-posta doğrulama bağlantıları 1 saat geçerlidir. Süresi dolan oturum ve bağlantılar açılışta ve bakım sırasında temizlenir. Akışa sığmayan en eski paylaşımlar akıştan çıkar, silinmez; silme kaydı 90 gün tutulur. Yedekler günlük alınır ve son 7 gün saklanır; hesabını sildikten sonra verilerin yedeklerden en fazla 7 gün içinde kaldırılır. Paylaşımların, yorumların, rafların ve mesajların hesabını silene kadar kalır; hesap silme işlemiyle kaldırılır.'
   },
   {
     title: 'Hakların',
