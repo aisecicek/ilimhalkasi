@@ -1091,6 +1091,9 @@ class SmokeAPITests(unittest.TestCase):
             '--card-body-size: clamp(12px, 3.3vw, 13px);',
             '--reading-size: clamp(15px, 4vw, 16px);',
             '--reading-line: 1.7;',
+            '--button-size: 13px;',
+            '--ui-size: 13px;',
+            '--meta-size: 11px;',
             '[data-theme="gece"] .top-brand { font-weight: 600; letter-spacing: .8px; }',
         ):
             self.assertIn(marker, css, "missing typography token: " + marker)
@@ -1130,6 +1133,21 @@ class SmokeAPITests(unittest.TestCase):
         )
         self.assertNotIn(".app-shell:not(.nav-mini) .btn-gold { font-size: 12px; }", css)
         self.assertIn(".app-shell:not(.nav-mini) .sidebar .btn-gold { font-size: 12px; }", css)
+
+        # Son söz bloğu tüm metinli kontrolleri tek ölçekte sabitler.
+        final = css.split("/* ---------- Son söz: tek etkileşim ve metin ölçeği ---------- */", 1)[1]
+        button_block = final.split("/* Kart açıklamaları", 1)[0]
+        self.assertIn("button:not([class])", button_block)
+        self.assertIn(".chat-profile-link, .side-user, .avatar-choice, .menu-btn,", button_block)
+        self.assertIn(".bottom-nav .nav-item", button_block)
+        self.assertIn("font-size: var(--button-size) !important;", button_block)
+        self.assertNotIn("font-size: 10px", button_block)
+        self.assertNotIn("font-size: 11px", button_block)
+        self.assertNotIn("font-size: 12px", button_block)
+        self.assertIn("font-size: var(--ui-size) !important;", final)
+        self.assertIn("font-size: var(--meta-size) !important;", final)
+        self.assertIn("#book-detail-title { font-size: var(--title-size) !important;", final)
+        self.assertIn("body:not(.text-large) .post-body", final)
 
         for font_name in (
             "amiri-400-arabic.woff2", "amiri-400-latin-ext.woff2", "amiri-400-latin.woff2",

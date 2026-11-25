@@ -3706,3 +3706,70 @@ body::before {
   }
   .greeting-actions .btn svg { width: 14px; height: 14px; }
 }
+
+/* ---------- Son söz: tek etkileşim ve metin ölçeği ---------- */
+:root {
+  --button-size: 13px;
+  --ui-size: 13px;
+  --meta-size: 11px;
+}
+
+/* Metin taşıyan her kontrol 13 px. Simge, yıldız, kapatma ve marka düğmeleri hariç. */
+.btn, .btn-sm, .btn-gold, .btn-outline, .btn-ghost,
+.text-btn, .chip, .stat-chip, .chart-chip, .rsvp, .circle-shortcut,
+.auth-tab, .share-type-btn, .tab, .detail-tab, .profile-tab, .md-tab,
+.action, .follow-btn, .nav-item, .bottom-nav .nav-item,
+.sheet-action, .post-author-name, .post-author-handle,
+.comment-meta button, .note-actions button, .admin-delete,
+.auth-forgot, .footer-links button, .debate-form button, .chat-form button,
+.answer-form button, .admin-reply button, .goal-edit button,
+.list-rename-form button, .shelf-add-btn, .search-detail-btn,
+.public-block-btn, .public-report-btn, .user-card-handle, .follow-counts button,
+.theme-choice, .conversation-item, .member-option,
+.chat-profile-link, .side-user, .avatar-choice, .menu-btn,
+button:not([class]) {
+  font-size: var(--button-size) !important;
+  line-height: 1.35 !important;
+}
+
+/* Kart açıklamaları, durum metinleri ve form içi yardımcı metinler 13 px. */
+.circle-card p, .group-card p, .assembly-card p, .settings-card p,
+.function-card p, .selection-card p, .author-hero p, .author-about p,
+.journal-card p, .roadmap-card p, .support-item p, .admin-item p,
+.interaction-text, .book-request-body p, .debate-answer, .chat-bubble,
+.conversation-empty p, .scholar-hero p, .rail-muted, .rail-circle-list li,
+.profile-hero p, .curriculum-intro p, .modal-desc, .notification-body p,
+.notifications-empty, .announcement-empty, .admin-section > p,
+.sheet-note, .reset-hint, .follow-list-sub, .follow-list-empty,
+.support-reply p, .curriculum-step, .home-book-group > h3 small {
+  font-size: var(--ui-size) !important;
+  line-height: 1.55 !important;
+}
+
+/* Küçük etiketler ve sayaçlar 11 px; daha küçüğü okunmuyor. */
+.curriculum-meta, .mobile-continue-copy > p, .hadith-source, .status-badge,
+.note-visibility, .announcement-kind, .title-badge, .event-meta span,
+.field-hint, .goal-edit label, .goal-edit > span, .chart-caption,
+.streak-row p, .profile-stat small, .profile-circle-row small,
+.hatirat-shortcut small, .similar-book small, .search-result-row small {
+  font-size: var(--meta-size) !important;
+  line-height: 1.45 !important;
+}
+
+/* Kalan iki başlık sapması da aynı ölçeğe bağlanır. */
+.admin-subhead { font-size: var(--card-title-size) !important; line-height: 1.35 !important; }
+#book-detail-title { font-size: var(--title-size) !important; line-height: 1.18 !important; }
+
+/* Uzun okuma metni 16 px / 1.7; kullanıcı "büyük yazı" seçerse 18 px / 1.75. */
+body:not(.text-large) .post-body, body:not(.text-large) .review-text,
+body:not(.text-large) .quote-text, body:not(.text-large) .hadith-card blockquote,
+body:not(.text-large) .writing-item p, body:not(.text-large) .public-quote-text,
+body:not(.text-large) .public-review-text, body:not(.text-large) .about-guide p,
+body:not(.text-large) .about-rules > p, body:not(.text-large) .about-rules li,
+body:not(.text-large) .roadmap-intro p, body:not(.text-large) .scholar-section p,
+body:not(.text-large) .overview-card p, body:not(.text-large) .announcement-card p,
+body:not(.text-large) .public-note p, body:not(.text-large) .mini-postcard p {
+  font-family: var(--serif) !important;
+  font-size: var(--reading-size) !important;
+  line-height: var(--reading-line) !important;
+}
