@@ -13,20 +13,12 @@ Environment=PYTHONUNBUFFERED=1
 Environment=HOST=127.0.0.1
 Environment=ILIMHALKASI_PRODUCTION=1
 Environment=ILIMHALKASI_DB_DIR=/var/lib/ilimhalkasi
-Environment=ILIMHALKASI_KVKK_CONTACT=kvkk@example.com
-Environment=ILIMHALKASI_DATA_CONTROLLER=İlim Halkası Derneği
-Environment=APP_BASE_URL=https://ilimhalkasi.example.com
 Environment=ILIMHALKASI_TRUST_PROXY=1
 Environment=COOKIE_SECURE=1
-Environment=SMTP_HOST=smtp.example.com
-Environment=SMTP_PORT=587
-Environment=SMTP_USER=noreply@example.com
-Environment=SMTP_FROM=İlim Halkası <noreply@example.com>
-Environment=SMTP_USE_TLS=1
-# Parolaları ve gerçek iletişim adreslerini buraya YAZMAYIN.
-# /etc/ilimhalkasi.env dosyasını 0600 yetkiyle oluşturun:
-#   IH_ADMIN_PASSWORD=...
-#   SMTP_PASSWORD=...
+# Parolalar, gerçek KVKK/SMTP bilgileri ve APP_BASE_URL buraya YAZILMAZ.
+# /etc/ilimhalkasi.env dosyasını 0600 yetkiyle oluşturun; şablon:
+#   deploy/ilimhalkasi.env.example
+# Eksik veya örnek değer varsa sunucu açılışta durur.
 EnvironmentFile=/etc/ilimhalkasi.env
 ExecStart=/usr/bin/python3 /opt/ilimhalkasi/server.py
 Restart=always

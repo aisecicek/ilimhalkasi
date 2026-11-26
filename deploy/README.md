@@ -19,7 +19,7 @@ Domain almadan da telefonunda çalışan bir APK yapabiliriz. Tek şart: **telef
 > Bilgisayarın IP'si değişirse `Get-NetIPAddress` komutuyla yeni IP'yi bulup `APP_URL`'i güncelle.
 > Telefon aynı Wi-Fi'de olmasına rağmen bağlanmıyorsa Windows Güvenlik Duvarı 8765 portunu
 > engelliyor olabilir. Yönetici olarak açılan PowerShell'de şunu çalıştır:
-> `New-NetFirewallRule -DisplayName "İlim Halkası 8765" -Direction Inbound -Protocol TCP -LocalPort 8765 -Action Allow`
+> `New-NetFirewallRule -DisplayName "Ilim Halkasi 8765" -Direction Inbound -Protocol TCP -LocalPort 8765 -Action Allow`
 > Bu adres sadece ev Wi-Fi'sinde çalışır; dışarıdan/Play Store için HTTPS domain gerekir (aşağıdaki bölüm).
 > Şu an `network_security_config.xml` LAN HTTP'sine izin veriyor; HTTPS yayına geçince tekrar kapatılmalı.
 
@@ -55,8 +55,11 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
 ### Ortam değişkenleri
 
-`ILIMHALKASI_PRODUCTION=1` iken bunların tamamı zorunludur; eksikse sunucu açılışta
-hiç veritabanına dokunmadan hata vererek durur. Geliştirmede varsayılanlar kullanılır.
+`ILIMHALKASI_PRODUCTION=1` iken bunların tamamı zorunludur; eksikse ya da
+`DEGISTIRIN`/`example.com`/`ilimhalkasi.local` gibi örnek değerler bırakılmışsa sunucu
+açılışta hiç veritabanına dokunmadan hata vererek durur. Geliştirmede varsayılanlar
+kullanılır. Şablon dosyası [`ilimhalkasi.env.example`](ilimhalkasi.env.example) içindeki
+yer tutucular doğrudan kabul edilmez; hepsi gerçek değerlerle değiştirilmelidir.
 
 | Değişken | Açıklama |
 | --- | --- |
@@ -103,8 +106,9 @@ Derleme GitHub Actions'ta yapılır; yerinde JDK/Android SDK kurmanıza gerek yo
 4. İş bitince `ilimhalkasi-apk` artifact'inden `app-debug.apk` dosyasını indirin.
 
 `main`/`master` branch'ine her push'ta derleme otomatik tetiklenir. `APP_URL`
-tanımlı değilse `strings.xml` içindeki örnek domain kullanılır — APK o adrese
-bağlanır, bu yüzden gerçek domain'i mutlaka girin.
+tanımlı değilse `strings.xml` içindeki LAN adresi (`http://192.168.0.107:8765`)
+kullanılır — APK o adrese bağlanır. Gerçek HTTPS yayınında `APP_URL` değişkenini
+mutlaka `https://` adresiyle tanımlayın.
 
 Debug APK doğrudan kurulabilir (imzası debug anahtarıyledir). Play Store için
 sonraki aşamada `assembleRelease` + upload key ile imzalama eklenir.

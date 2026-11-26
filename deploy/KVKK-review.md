@@ -25,7 +25,8 @@ avukatın karar vermesi gereken başlıkları özetler. Uygulama içi metin
 
 1. **Gerçek veri sorumlusu ve başvuru adresi.** `ILIMHALKASI_DATA_CONTROLLER` ve
    `ILIMHALKASI_KVKK_CONTACT` şu an şablon değer. Üretim açılışında zorunlu hale
-   getirildi; gerçek kurum unvanı, MERSİS/vergi bilgisi ve e-posta girilmeli.
+   getirildi; `DEGISTIRIN`/`example.com` gibi yer tutucular da reddediliyor. Gerçek
+   kurum unvanı, MERSİS/vergi bilgisi ve e-posta girilmeli.
 2. **İşleme dayanağı.** Metin amaçları sayıyor ama KVKK m.5/6 kapsamındaki hukuki
    sebebi (sözleşme, meşru menfaat, açık rıza) belirtmiyor. Özellikle bildirimler,
    istatistikler ve halka açık paylaşımlar için dayanak netleştirilmeli.

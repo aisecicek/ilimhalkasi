@@ -1856,6 +1856,67 @@ class ProductionConfigTests(unittest.TestCase):
             self.assertIn("IH_ADMIN_PASSWORD", output)
             self.assertIn("COOKIE_SECURE", output)
 
+    def test_production_rejects_placeholder_values(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ilimhalkasi-prod-") as folder:
+            tmp_dir = Path(folder)
+            shutil.copy2(PROJECT_ROOT / "server.py", tmp_dir / "server.py")
+            shutil.copy2(PROJECT_ROOT / "scholars_data.py", tmp_dir / "scholars_data.py")
+            env = os.environ.copy()
+            for name in (
+                "IH_ADMIN_PASSWORD",
+                "ILIMHALKASI_KVKK_CONTACT",
+                "ILIMHALKASI_DATA_CONTROLLER",
+                "ILIMHALKASI_DB_DIR",
+                "ILIMHALKASI_PRODUCTION",
+                "ILIMHALKASI_REQUIRE_EMAIL_VERIFICATION",
+                "ILIMHALKASI_RATE_LIMIT",
+                "ILIMHALKASI_CSRF",
+                "ILIMHALKASI_TRUST_PROXY",
+                "COOKIE_SECURE",
+                "APP_BASE_URL",
+                "SMTP_HOST",
+                "SMTP_PORT",
+                "SMTP_USER",
+                "SMTP_PASSWORD",
+                "SMTP_FROM",
+                "SMTP_USE_TLS",
+            ):
+                env.pop(name, None)
+            # Her alan dolu görünüyor ama hepsi şablon değer.
+            env.update({
+                "ILIMHALKASI_PRODUCTION": "1",
+                "COOKIE_SECURE": "1",
+                "ILIMHALKASI_DB_DIR": str(tmp_dir / "data"),
+                "IH_ADMIN_PASSWORD": "DEGISTIRIN_GUC_BIR_SIFRE",
+                "ILIMHALKASI_KVKK_CONTACT": "kvkk@example.com",
+                "ILIMHALKASI_DATA_CONTROLLER": "İlim Halkası Derneği",
+                "APP_BASE_URL": "https://ilimhalkasi.example.com",
+                "SMTP_HOST": "smtp.example.com",
+                "SMTP_PORT": "587",
+                "SMTP_USER": "noreply@example.com",
+                "SMTP_PASSWORD": "DEGISTIRIN_SMTP_SIFRESI",
+                "SMTP_FROM": "İlim Halkası <noreply@example.com>",
+                "SMTP_USE_TLS": "1",
+            })
+            result = subprocess.run(
+                [sys.executable, "server.py"],
+                cwd=str(tmp_dir),
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertNotEqual(result.returncode, 0, "placeholders must not pass production")
+            output = result.stdout + result.stderr
+            for name in (
+                "IH_ADMIN_PASSWORD",
+                "ILIMHALKASI_KVKK_CONTACT",
+                "ILIMHALKASI_DATA_CONTROLLER",
+                "APP_BASE_URL",
+                "SMTP_HOST",
+            ):
+                self.assertIn(name, output)
+
 
 if __name__ == "__main__":
     unittest.main()

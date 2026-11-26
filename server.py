@@ -2245,21 +2245,44 @@ def new_email_verification(conn: sqlite3.Connection, uid: int) -> str:
     return token
 
 
+def _is_placeholder_env(value: str) -> bool:
+    """Örnek/shablon ortam değerlerini gerçek sanıp kabul etmemek için kontrol."""
+    normalized = (value or "").strip().casefold()
+    return (
+        not normalized
+        or "degistir" in normalized
+        or "change-me" in normalized
+        or "change_me" in normalized
+        or "example.com" in normalized
+        or "example.org" in normalized
+        or "example.net" in normalized
+        or "ilimhalkasi.local" in normalized
+        or normalized in {"admin", "password", "123456", "test"}
+    )
+
+
 def validate_production_config() -> None:
     """Yayın modunda güvensiz varsayılanlarla açılışı engeller."""
     if not PRODUCTION:
         return
     problems: list[str] = []
-    if not os.environ.get("IH_ADMIN_PASSWORD"):
-        problems.append("IH_ADMIN_PASSWORD tanımlanmalı")
-    if not KVKK_CONTACT or KVKK_CONTACT == ADMIN_EMAIL:
+    if _is_placeholder_env(os.environ.get("IH_ADMIN_PASSWORD", "")):
+        problems.append("IH_ADMIN_PASSWORD gerçek ve güçlü bir şifre olmalı")
+    if _is_placeholder_env(KVKK_CONTACT) or KVKK_CONTACT == ADMIN_EMAIL:
         problems.append("ILIMHALKASI_KVKK_CONTACT gerçek bir adres olmalı")
-    if not DATA_CONTROLLER or DATA_CONTROLLER == "İlim Halkası":
+    if _is_placeholder_env(DATA_CONTROLLER) or DATA_CONTROLLER in (
+        "İlim Halkası", "İlim Halkası Derneği"
+    ):
         problems.append("ILIMHALKASI_DATA_CONTROLLER gerçek bir kurum adı olmalı")
     if not COOKIE_SECURE:
         problems.append("COOKIE_SECURE=1 olmalı (HTTPS zorunlu)")
-    if not SMTP_HOST or not SMTP_USER or not SMTP_PASSWORD:
-        problems.append("SMTP_HOST, SMTP_USER ve SMTP_PASSWORD tanımlanmalı")
+    for name in ("SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM"):
+        if _is_placeholder_env(os.environ.get(name, "")):
+            problems.append(f"{name} gerçek bir değer olmalı")
+    if _is_placeholder_env(APP_BASE_URL) or not APP_BASE_URL.startswith("https://"):
+        problems.append("APP_BASE_URL https:// ile başlayan gerçek bir adres olmalı")
+    if not os.environ.get("ILIMHALKASI_DB_DIR", "").strip():
+        problems.append("ILIMHALKASI_DB_DIR tanımlanmalı")
     if "onedrive" in str(DATA_DIR).lower():
         problems.append("ILIMHALKASI_DB_DIR OneDrive dışında bir dizin olmalı")
     if problems:
