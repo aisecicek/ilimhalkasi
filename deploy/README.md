@@ -82,9 +82,10 @@ SMTP yoksa yalnızca sunucudaki `password_reset_outbox.txt` dosyasına kaydedili
 
 Güvenlik başlıkları (CSP, `nosniff`, `X-Frame-Options`, `Referrer-Policy`) sunucu
 tarafından gönderilir. Harici CDN kullanılmaz: fontlar `fonts/`, ikonlar
-`vendor/lucide-1.80.0.min.js` içindendir. CSP, yalnızca kitap kapakları için
-`https://covers.openlibrary.org` ve yönlendirilen `https://archive.org` görsel
-alanlarına izin verir; bu istisna KVKK aydınlatma metninde de belirtilir.
+`vendor/lucide-1.80.0.min.js` içindendir. Kitap kapakları `/cover/<id>` üzerinden
+sunucu tarafından indirilir; tarayıcı Open Library / Archive.org adreslerine
+yönlendirilmez. CSP'de bu iki alan görsel istisnası olarak kalmaya devam eder;
+KVKK aydınlatma metninde kapakların sunucu tarafından alındığı belirtilir.
 
 HTTPS yayına geçip APK'yı `https://` adresine yönlendirdikten sonra
 `android/app/src/main/res/xml/network_security_config.xml` içindeki

@@ -14,7 +14,7 @@ avukatın karar vermesi gereken başlıkları özetler. Uygulama içi metin
 | 200 paylaşım sınırı, eskisi akıştan çıkar, silinmez | sunucu + istemci cap, `deleted_posts` 90 gün | Uyumlu |
 | Günlük yedek, son 7 gün | `backup_database()`, `BACKUP_KEEP = 7` | Uyumlu |
 | Hesap silmeyle içerik kaldırılır | `delete_account()` + `PRAGMA foreign_keys=ON`, `ON DELETE CASCADE` | Uyumlu |
-| Kapaklar Open Library / Archive.org | CSP `img-src` istisnası ve KVKK metni | Uyumlu |
+| Kapaklar sunucu tarafından Open Library / Archive.org’dan alınır (`/cover` proxy); tarayıcı yönlendirme görmez | Kapak proxy'si, CSP `img-src` istisnası ve KVKK metni | Uyumlu |
 | Harici reklam/analitik/font/ikon yok | Yerel `fonts/`, `vendor/lucide-*.js` | Uyumlu |
 | SMTP ile e-posta gönderimi (yalnızca üretimde) | `SMTP_*` ayarları, doğrulama/sıfırlama akışı | Metne eklendi |
 | Yedeklerde silinen verinin en fazla 7 gün kalması | 7 günlük yedek döngüsü | Metne eklendi |

@@ -5664,7 +5664,7 @@ const PRIVACY_SECTIONS = [
   },
   {
     title: 'Paylaşım ve üçüncü taraflar',
-    body: 'Reklam ağı, analitik veya harici yazı tipi/ikon kullanılmaz; fontlar ve ikonlar uygulamayla birlikte sunulur. Oturumun yalnızca bu sunucunun HttpOnly çerezinde tutulur. İçerikler bu uygulamanın sunucusunda tutulur; yalnızca katalog kaydında bağlantı bulunan kitap kapakları Open Library / Archive.org üzerinden yüklenir. Üretim modunda e-posta doğrulama ve şifre sıfırlama bağlantıları SMTP sağlayıcısı aracılığıyla gönderilir. Halkalara açık paylaşımlar diğer üyeler tarafından okunabilir.'
+    body: 'Reklam ağı, analitik veya harici yazı tipi/ikon kullanılmaz; fontlar ve ikonlar uygulamayla birlikte sunulur. Oturumun yalnızca bu sunucunun HttpOnly çerezinde tutulur. İçerikler bu uygulamanın sunucusunda tutulur; katalogda bağlantısı bulunan kitap kapakları yalnızca sunucu tarafından Open Library / Archive.org’dan alınıp uygulama üzerinden gösterilir, tarayıcın bu sitelere doğrudan bağlanmaz. Üretim modunda e-posta doğrulama ve şifre sıfırlama bağlantıları SMTP sağlayıcısı aracılığıyla gönderilir. Halkalara açık paylaşımlar diğer üyeler tarafından okunabilir.'
   },
   {
     title: 'Saklama süreleri',

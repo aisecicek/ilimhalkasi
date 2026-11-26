@@ -63,7 +63,7 @@ DB_FILENAME = "ilimhalkasi.db"
 
 ADMIN_EMAIL = "admin@ilimhalkasi.local"
 ADMIN_PASSWORD = "k9Mq-c5gipJRP41-"  # documented in README.md
-REQUEST_TIMEOUT = 5
+REQUEST_TIMEOUT = 15  # 8.000+ kayıtlı katalogda yükleme anında 5s yetmiyordu
 STARTUP_TIMEOUT = 20
 
 
